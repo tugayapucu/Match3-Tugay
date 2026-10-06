@@ -1,0 +1,5 @@
+{
+    "name": "Match3.Core",
+    "rootNamespace": "Match3.Core",
+    "noEngineReferences": true
+}

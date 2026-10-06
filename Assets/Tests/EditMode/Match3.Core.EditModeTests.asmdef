@@ -1,0 +1,14 @@
+{
+    "name": "Match3.Core.EditModeTests",
+    "rootNamespace": "Match3.Core.Tests",
+    "references": [
+        "Match3.Core"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": false
+}
