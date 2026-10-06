@@ -87,3 +87,5 @@ Builds/
 
 .vsconfig
 *.slnx
+# Local embedded package copy
+Packages/com.coplaydev.unity-mcp/
