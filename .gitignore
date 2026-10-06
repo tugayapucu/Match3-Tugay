@@ -83,3 +83,7 @@ MemoryCaptures/
 Build/
 Builds/
 .vs/
+
+
+.vsconfig
+*.slnx
