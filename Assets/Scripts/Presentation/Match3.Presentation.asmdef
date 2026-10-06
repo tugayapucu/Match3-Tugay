@@ -1,0 +1,8 @@
+{
+    "name": "Match3.Presentation",
+    "rootNamespace": "Match3.Presentation",
+    "references": [
+        "Match3.Core"
+    ],
+    "noEngineReferences": false
+}
