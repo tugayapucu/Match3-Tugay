@@ -7,14 +7,20 @@ namespace Match3.Presentation
 {
     public sealed class BoardView : MonoBehaviour
     {
+        // The tile template to copy for each cell; assign it in the Inspector.
         [SerializeField] private TileView tilePrefab;
+        // Optional parent and coordinate origin for the visual grid.
         [SerializeField] private Transform tileRoot;
+        // Distance between cell centers in the root's local space.
         [SerializeField] private float tileSpacing = 1f;
 
+        // Track only our own clones so cleanup does not remove unrelated objects.
         private readonly List<TileView> tileViews = new List<TileView>();
 
+        // Display the supplied board by reading its cells, without changing its data.
         public void Render(Board board)
         {
+            // Validate inputs before removing the current display.
             if (board == null)
             {
                 throw new ArgumentNullException(nameof(board));
@@ -30,21 +36,31 @@ namespace Match3.Presentation
                 throw new InvalidOperationException("Tile spacing must be a positive finite value.");
             }
 
+            // Remove the previous grid before creating its replacement.
             ClearViews();
+            // If no root is assigned, parent tiles to this GameObject instead.
             Transform root = tileRoot != null ? tileRoot : transform;
 
+            // Visit every cell one row at a time.
             for (int y = 0; y < board.Height; y++)
             {
                 for (int x = 0; x < board.Width; x++)
                 {
+                    // This is a logical cell address, not a Unity world position.
                     var position = new GridPosition(x, y);
                     var tileType = board.GetTile(position);
+                    // Clone under the root; false selects local-space parenting.
                     var view = Instantiate(tilePrefab, root, false);
+                    // Remember the clone so the next render can remove it.
                     tileViews.Add(view);
 
+                    // Give the view the cell address and type it should display.
                     view.Initialize(position, tileType);
+                    // Turn grid indices into an offset relative to the root.
                     var localPosition = new Vector3(x * tileSpacing, y * tileSpacing, 0f);
+                    // Apply the root's position, rotation, and scale to get a world position.
                     view.SetWorldPosition(root.TransformPoint(localPosition));
+                    // Activate inactive-template clones; TileView hides Empty through its renderer.
                     view.gameObject.SetActive(true);
                 }
             }
@@ -52,6 +68,7 @@ namespace Match3.Presentation
 
         private void OnDestroy()
         {
+            // Clean up owned tiles when Unity invokes this component's destruction callback.
             ClearViews();
         }
 
@@ -59,12 +76,13 @@ namespace Match3.Presentation
         {
             foreach (var view in tileViews)
             {
+                // Unity treats an already-destroyed tile object as null.
                 if (view == null)
                 {
                     continue;
                 }
 
-                // Hide old views immediately because runtime destruction waits until the end of the frame.
+                // Runtime destruction is deferred, so hide old tiles before showing the replacement grid.
                 view.gameObject.SetActive(false);
                 if (Application.isPlaying)
                 {
@@ -72,10 +90,12 @@ namespace Match3.Presentation
                 }
                 else
                 {
+                    // Outside Play Mode, remove the object immediately for Editor validation.
                     DestroyImmediate(view.gameObject);
                 }
             }
 
+            // Forget removed views; clearing a list alone does not destroy GameObjects.
             tileViews.Clear();
         }
     }
