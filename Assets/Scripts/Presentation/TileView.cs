@@ -4,20 +4,25 @@ using UnityEngine;
 
 namespace Match3.Presentation
 {
+    // The visual for one board cell. Shows a TileType as a coloured sprite; holds no game rules.
+    // RequireComponent makes Unity add a SpriteRenderer automatically, so GetComponent below cannot miss.
     [RequireComponent(typeof(SpriteRenderer))]
     public sealed class TileView : MonoBehaviour
     {
+        // Cached to avoid repeated GetComponent calls.
         private SpriteRenderer spriteRenderer;
 
         // These describe what the view represents; the Board remains authoritative.
         public GridPosition Position { get; private set; }
         public TileType Type { get; private set; }
 
+        // Unity lifecycle callback; makes a fresh instance render its default (Empty = hidden) state.
         private void Awake()
         {
             SetTileType(Type);
         }
 
+        // Called by BoardView right after Instantiate to say which cell this view shows.
         public void Initialize(GridPosition position, TileType tileType)
         {
             SetTileType(tileType);
@@ -26,7 +31,9 @@ namespace Match3.Presentation
 
         public void SetTileType(TileType tileType)
         {
+            // Look up the colour first so an invalid type throws before any state changes.
             Color color = GetColor(tileType);
+            // Lazy cache: Initialize can run before Awake when the prefab is inactive.
             if (spriteRenderer == null)
             {
                 spriteRenderer = GetComponent<SpriteRenderer>();
@@ -34,14 +41,17 @@ namespace Match3.Presentation
 
             Type = tileType;
             spriteRenderer.color = color;
+            // Empty cells keep their GameObject but draw nothing.
             spriteRenderer.enabled = tileType != TileType.Empty;
         }
 
+        // BoardView decides where tiles go; the tile just applies it.
         public void SetWorldPosition(Vector3 worldPosition)
         {
             transform.position = worldPosition;
         }
 
+        // TileType -> colour mapping lives here, not in Core, because colour is a presentation detail.
         private static Color GetColor(TileType tileType)
         {
             switch (tileType)
