@@ -51,6 +51,12 @@ namespace Match3.Presentation
             transform.position = worldPosition;
         }
 
+        // Movement has finished; update the represented cell without changing the tile's appearance.
+        public void SetGridPosition(GridPosition position)
+        {
+            Position = position;
+        }
+
         // TileType -> colour mapping lives here, not in Core, because colour is a presentation detail.
         private static Color GetColor(TileType tileType)
         {

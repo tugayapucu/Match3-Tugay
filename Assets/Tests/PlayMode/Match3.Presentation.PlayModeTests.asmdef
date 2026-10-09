@@ -1,0 +1,12 @@
+{
+    "name": "Match3.Presentation.PlayModeTests",
+    "rootNamespace": "Match3.Presentation.Tests",
+    "references": [
+        "Match3.Core",
+        "Match3.Presentation"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "autoReferenced": false
+}
