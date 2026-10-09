@@ -2,7 +2,8 @@
     "name": "Match3.Presentation",
     "rootNamespace": "Match3.Presentation",
     "references": [
-        "Match3.Core"
+        "Match3.Core",
+        "Unity.InputSystem"
     ],
     "noEngineReferences": false
 }

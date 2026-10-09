@@ -3,7 +3,8 @@
     "rootNamespace": "Match3.Presentation.Tests",
     "references": [
         "Match3.Core",
-        "Match3.Presentation"
+        "Match3.Presentation",
+        "Unity.InputSystem"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

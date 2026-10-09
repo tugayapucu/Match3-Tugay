@@ -1,0 +1,360 @@
+using System;
+using System.Collections;
+using System.Reflection;
+using Match3.Core;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
+
+namespace Match3.Presentation.Tests
+{
+    public class BoardInputControllerTests
+    {
+        private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic;
+        private GameObject boardObject;
+        private GameObject tileTemplate;
+        private GameObject cameraObject;
+        private GameObject foreignObject;
+        private Board board;
+        private BoardView boardView;
+        private BoardInputController controller;
+        private Camera inputCamera;
+        private Mouse testMouse;
+
+        [SetUp]
+        public void SetUp()
+        {
+            tileTemplate = new GameObject("InputTestTileTemplate");
+            tileTemplate.SetActive(false);
+            var template = tileTemplate.AddComponent<TileView>();
+            // Sprite-free test tiles need an explicit size; Unity otherwise autosizes this collider to zero.
+            tileTemplate.AddComponent<BoxCollider2D>().size = Vector2.one;
+
+            // Keep test colliders away from any objects in the project's scene.
+            boardObject = new GameObject("InputTestBoard");
+            boardObject.transform.position = new Vector3(100f, 100f, 0f);
+            boardView = boardObject.AddComponent<BoardView>();
+            typeof(BoardView).GetField("tilePrefab", Fields).SetValue(boardView, template);
+            typeof(BoardView).GetField("tileSpacing", Fields).SetValue(boardView, 1.5f);
+
+            cameraObject = new GameObject("InputTestCamera");
+            cameraObject.transform.position = new Vector3(101f, 101f, -10f);
+            inputCamera = cameraObject.AddComponent<Camera>();
+            inputCamera.orthographic = true;
+            inputCamera.orthographicSize = 4f;
+
+            board = new Board(3, 3);
+            var types = new[]
+            {
+                TileType.Red, TileType.Green, TileType.Blue,
+                TileType.Yellow, TileType.Purple, TileType.Orange
+            };
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    board.SetTile(new GridPosition(x, y), types[(x + y * board.Width) % types.Length]);
+                }
+            }
+
+            boardView.Render(board);
+            controller = boardObject.AddComponent<BoardInputController>();
+            controller.Initialize(board, boardView, inputCamera);
+            Physics2D.SyncTransforms();
+        }
+
+        [UnityTearDown]
+        public IEnumerator TearDown()
+        {
+            if (testMouse != null)
+            {
+                InputSystem.RemoveDevice(testMouse);
+            }
+
+            Object.Destroy(boardObject);
+            Object.Destroy(tileTemplate);
+            Object.Destroy(cameraObject);
+            if (foreignObject != null)
+            {
+                Object.Destroy(foreignObject);
+            }
+
+            yield return null;
+        }
+
+        [Test]
+        public void HandlePointerDown_FirstClick_PicksTransformedTileWithoutChangingBoard()
+        {
+            boardObject.transform.rotation = Quaternion.Euler(0f, 0f, 15f);
+            boardObject.transform.localScale = new Vector3(1.2f, 0.8f, 1f);
+            var position = new GridPosition(1, 1);
+            var before = ReadTiles();
+
+            Click(position);
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(position));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+        }
+
+        [TestCase(0, 0)]
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        [TestCase(0, 2)]
+        public void HandlePointerDown_InvalidSecondSelection_KeepsFirstSelectionAndBoard(int x, int y)
+        {
+            var first = new GridPosition(0, 0);
+            var before = ReadTiles();
+            Click(first);
+
+            Click(new GridPosition(x, y));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            AssertViewsMatchBoard();
+        }
+
+        [Test]
+        public void HandlePointerDown_OutsideBoard_LeavesSelectionIntact()
+        {
+            var first = new GridPosition(0, 0);
+            Click(first);
+
+            controller.HandlePointerDown(inputCamera.WorldToScreenPoint(new Vector3(110f, 110f, 0f)));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+        }
+
+        [Test]
+        public void HandlePointerDown_EmptyCell_IsIgnored()
+        {
+            var empty = new GridPosition(1, 0);
+            board.SetTile(empty, TileType.Empty);
+            boardView.GetTileView(empty).SetTileType(TileType.Empty);
+
+            Click(empty);
+            Assert.That(controller.SelectedPosition, Is.Null);
+
+            var first = new GridPosition(0, 0);
+            Click(first);
+            Click(empty);
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(board.GetTile(empty), Is.EqualTo(TileType.Empty));
+        }
+
+        [Test]
+        public void HandlePointerDown_ForeignTileWithValidAddress_IsIgnored()
+        {
+            foreignObject = new GameObject("ForeignTile");
+            foreignObject.transform.position = new Vector3(98f, 100f, 0f);
+            var foreignView = foreignObject.AddComponent<TileView>();
+            foreignView.Initialize(new GridPosition(0, 0), TileType.Red);
+            foreignObject.AddComponent<BoxCollider2D>().size = Vector2.one;
+            Physics2D.SyncTransforms();
+
+            controller.HandlePointerDown(inputCamera.WorldToScreenPoint(foreignObject.transform.position));
+
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(controller.IsInputLocked, Is.False);
+        }
+
+        [Test]
+        public void HandlePointerDown_DisabledOrUninitializedController_IgnoresInput()
+        {
+            var first = new GridPosition(0, 0);
+            var before = ReadTiles();
+            Click(first);
+            controller.enabled = false;
+
+            Click(new GridPosition(1, 0));
+            var uninitialized = boardObject.AddComponent<BoardInputController>();
+            uninitialized.HandlePointerDown(ScreenPosition(first));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(uninitialized.SelectedPosition, Is.Null);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void Initialize_NullDependency_ThrowsWithoutLosingExistingSelection()
+        {
+            var first = new GridPosition(0, 0);
+            Click(first);
+
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(null, boardView, inputCamera));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, null, inputCamera));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, null));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+        }
+
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void HandlePointerDown_InvalidDuration_ThrowsBeforeChangingBoard(float duration)
+        {
+            var first = new GridPosition(0, 0);
+            var before = ReadTiles();
+            Click(first);
+            typeof(BoardInputController).GetField("swapDuration", Fields).SetValue(controller, duration);
+
+            Assert.Throws<InvalidOperationException>(() => Click(new GridPosition(1, 0)));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+        }
+
+        [UnityTest]
+        public IEnumerator HandlePointerDown_HorizontalNeighbor_SwapsOnceAndLocksUntilAnimationFinishes()
+        {
+            yield return VerifySuccessfulSwap(new GridPosition(1, 0));
+        }
+
+        [UnityTest]
+        public IEnumerator HandlePointerDown_VerticalNeighbor_SwapsOnceAndLocksUntilAnimationFinishes()
+        {
+            yield return VerifySuccessfulSwap(new GridPosition(0, 1));
+        }
+
+        [UnityTest]
+        public IEnumerator Update_MousePress_UsesPointerHandlingAndDoesNotSwapOnHeldButton()
+        {
+            testMouse = InputSystem.AddDevice<Mouse>();
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var before = ReadTiles();
+
+            SendMouseState(ScreenPosition(first), 1);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+
+            SendMouseState(ScreenPosition(second), 1);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+
+            SendMouseState(ScreenPosition(second), 0);
+            SendMouseState(ScreenPosition(second), 1);
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(board.GetTile(first), Is.EqualTo(before[second.X, second.Y]));
+            Assert.That(board.GetTile(second), Is.EqualTo(before[first.X, first.Y]));
+
+            yield return WaitForSwap();
+
+            Assert.That(controller.SelectedPosition, Is.Null);
+            AssertViewsMatchBoard();
+        }
+
+        private IEnumerator VerifySuccessfulSwap(GridPosition second)
+        {
+            var first = new GridPosition(0, 0);
+            var expected = ReadTiles();
+            TileType originalFirst = expected[first.X, first.Y];
+            expected[first.X, first.Y] = expected[second.X, second.Y];
+            expected[second.X, second.Y] = originalFirst;
+            var firstView = boardView.GetTileView(first);
+            var secondView = boardView.GetTileView(second);
+            Vector3 firstStart = firstView.transform.position;
+            Vector3 secondStart = secondView.transform.position;
+            Vector2 rapidClick = ScreenPosition(new GridPosition(2, 2));
+            Click(first);
+
+            Click(second);
+
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+            Assert.Throws<InvalidOperationException>(() => controller.Initialize(board, boardView, inputCamera));
+
+            // Additional pointer calls are rejected both immediately and on later animation frames.
+            for (int i = 0; i < 10; i++)
+            {
+                controller.HandlePointerDown(rapidClick);
+            }
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Swap did not finish.");
+                controller.HandlePointerDown(rapidClick);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                Assert.That(ReadTiles(), Is.EqualTo(expected));
+                yield return null;
+            }
+
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+            Assert.That(boardView.GetTileView(first), Is.SameAs(secondView));
+            Assert.That(boardView.GetTileView(second), Is.SameAs(firstView));
+            Assert.That(firstView.transform.position, Is.EqualTo(secondStart));
+            Assert.That(secondView.transform.position, Is.EqualTo(firstStart));
+            AssertViewsMatchBoard();
+
+            // A new click after completion starts a fresh selection, rather than another swap.
+            Click(first);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+        }
+
+        private IEnumerator WaitForSwap()
+        {
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Swap did not finish.");
+                yield return null;
+            }
+        }
+
+        private void Click(GridPosition position)
+        {
+            Physics2D.SyncTransforms();
+            controller.HandlePointerDown(ScreenPosition(position));
+        }
+
+        private Vector2 ScreenPosition(GridPosition position)
+        {
+            return inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position);
+        }
+
+        private void SendMouseState(Vector2 position, ushort buttons)
+        {
+            InputSystem.QueueStateEvent(testMouse, new MouseState { position = position, buttons = buttons });
+            InputSystem.Update();
+            // Exercise the actual mouse poll deterministically after processing the simulated event.
+            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+        }
+
+        private TileType[,] ReadTiles()
+        {
+            var tiles = new TileType[board.Width, board.Height];
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    tiles[x, y] = board.GetTile(new GridPosition(x, y));
+                }
+            }
+
+            return tiles;
+        }
+
+        private void AssertViewsMatchBoard()
+        {
+            foreach (var view in boardObject.GetComponentsInChildren<TileView>(true))
+            {
+                Assert.That(boardView.GetTileView(view.Position), Is.SameAs(view));
+                Assert.That(view.Type, Is.EqualTo(board.GetTile(view.Position)));
+            }
+        }
+    }
+}
