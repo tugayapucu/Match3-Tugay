@@ -48,6 +48,26 @@ namespace Match3.Core
             tiles[position.X, position.Y] = tileType;
         }
 
+        public bool TrySwapAdjacent(GridPosition first, GridPosition second)
+        {
+            // Validate both addresses before changing either cell, just like GetTile/SetTile.
+            ValidatePosition(first);
+            ValidatePosition(second);
+
+            // One horizontal or vertical step has Manhattan distance 1; diagonals have distance 2.
+            int distance = Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
+            if (distance != 1)
+            {
+                return false;
+            }
+
+            // Keep the first value so neither tile is lost when the cells exchange contents.
+            TileType firstTile = tiles[first.X, first.Y];
+            tiles[first.X, first.Y] = tiles[second.X, second.Y];
+            tiles[second.X, second.Y] = firstTile;
+            return true;
+        }
+
         // Fail loudly on bad coordinates instead of silently ignoring them.
         private void ValidatePosition(GridPosition position)
         {
