@@ -42,7 +42,7 @@ namespace Match3.Core.Tests
 
             var matches = MatchFinder.FindMatches(board);
 
-            Assert.That(matches, Is.EquivalentTo(Concat(Run(0, 0, 3), Run(0, 4, 4))));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(0, 0, 3), Run(0, 4, 4))));
         }
 
         [Test]
@@ -55,7 +55,106 @@ namespace Match3.Core.Tests
 
             var matches = MatchFinder.FindMatches(board);
 
-            Assert.That(matches, Is.EquivalentTo(Concat(Run(2, 0, 3), Run(0, 5, 3))));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(2, 0, 3), Run(0, 5, 3))));
+        }
+
+        [TestCase(0, 3)]
+        [TestCase(2, 3)]
+        [TestCase(5, 3)]
+        [TestCase(0, 4)]
+        [TestCase(0, 5)]
+        [TestCase(0, 8)]
+        public void FindMatches_SingleVerticalRun_ReturnsExactlyThatRun(int start, int length)
+        {
+            // Column 0 alternates Green/Blue (never 3 in a row), then a Red run is written over it.
+            var board = new Board(2, 8);
+            for (int y = 0; y < board.Height; y++)
+            {
+                board.SetTile(new GridPosition(0, y), y % 2 == 0 ? TileType.Green : TileType.Blue);
+            }
+
+            for (int y = start; y < start + length; y++)
+            {
+                board.SetTile(new GridPosition(0, y), TileType.Red);
+            }
+
+            var matches = MatchFinder.FindMatches(board);
+
+            Assert.That(matches, Is.EquivalentTo(Column(0, start, length)));
+        }
+
+        [Test]
+        public void FindMatches_LShape_ReturnsTheSharedCornerOnce()
+        {
+            var board = CreateBoard(
+                "RRR.....",
+                "..R.....",
+                "..R.....");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            // 3 horizontal + 3 vertical cells, sharing (2, 2): 5 distinct cells.
+            Assert.That(matches.Count, Is.EqualTo(5));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(2, 0, 3), Column(2, 0, 3))));
+        }
+
+        [Test]
+        public void FindMatches_CrossShape_ReturnsTheIntersectionOnce()
+        {
+            var board = CreateBoard(
+                "..R.....",
+                "RRRR....",
+                "..R.....");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            // 4 horizontal + 3 vertical cells, sharing (2, 1): 6 distinct cells.
+            Assert.That(matches.Count, Is.EqualTo(6));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(1, 0, 4), Column(2, 0, 3))));
+        }
+
+        [Test]
+        public void FindMatches_HShape_ReturnsBothIntersectionsOnce()
+        {
+            var board = CreateBoard(
+                "R.R.....",
+                "RRR.....",
+                "R.R.....");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            // Two columns of 3 plus a row of 3 that crosses both: 7 distinct cells.
+            Assert.That(matches.Count, Is.EqualTo(7));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(1, 0, 3), Column(0, 0, 3), Column(2, 0, 3))));
+        }
+
+        [Test]
+        public void FindMatches_SeparateHorizontalAndVerticalRuns_ReturnsBoth()
+        {
+            var board = CreateBoard(
+                "GGG....B",
+                ".......B",
+                ".......B");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(2, 0, 3), Column(7, 0, 3))));
+        }
+
+        [Test]
+        public void FindMatches_RunsInAllFourCorners_ReturnsEveryRun()
+        {
+            var board = CreateBoard(
+                "RRR.G",
+                "....G",
+                "B...G",
+                "B....",
+                "B.YYY");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            Assert.That(matches, Is.EquivalentTo(Cells(
+                Run(4, 0, 3), Column(4, 2, 3), Column(0, 0, 3), Run(0, 2, 3))));
         }
 
         [Test]
@@ -128,11 +227,28 @@ namespace Match3.Core.Tests
             return positions;
         }
 
-        private static List<GridPosition> Concat(List<GridPosition> first, List<GridPosition> second)
+        // The positions (x, start..start+length-1).
+        private static List<GridPosition> Column(int x, int start, int length)
         {
-            var all = new List<GridPosition>(first);
-            all.AddRange(second);
-            return all;
+            var positions = new List<GridPosition>();
+            for (int y = start; y < start + length; y++)
+            {
+                positions.Add(new GridPosition(x, y));
+            }
+
+            return positions;
+        }
+
+        // Every cell from the given runs, each listed once, even where runs overlap.
+        private static List<GridPosition> Cells(params List<GridPosition>[] runs)
+        {
+            var distinct = new HashSet<GridPosition>();
+            foreach (var run in runs)
+            {
+                distinct.UnionWith(run);
+            }
+
+            return new List<GridPosition>(distinct);
         }
 
         private static TileType[,] Snapshot(Board board)
