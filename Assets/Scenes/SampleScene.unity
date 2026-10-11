@@ -168,6 +168,8 @@ MonoBehaviour:
   seed: 42
   palette: 010000000200000003000000040000000500000006000000
   boardView: {fileID: 1255034524}
+  inputController: {fileID: 1255034526}
+  inputCamera: {fileID: 519420031}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -416,6 +418,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1255034525}
   - component: {fileID: 1255034524}
+  - component: {fileID: 1255034526}
   m_Layer: 0
   m_Name: BoardRoot
   m_TagString: Untagged
@@ -453,6 +456,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1438188191}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1255034526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1255034523}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2c233870ee6e3e4d9e6d3b3cadf90c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.BoardInputController
+  swapDuration: 0.2
 --- !u!1 &1438188190
 GameObject:
   m_ObjectHideFlags: 0

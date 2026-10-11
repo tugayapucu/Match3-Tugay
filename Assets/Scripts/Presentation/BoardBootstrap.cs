@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Match3.Presentation
 {
-    // Composition root: the one place that wires the logical board to its view at startup.
+    // Composition root: the one place that wires the logical board to its view and input at startup.
     // BoardGenerator and BoardView never reference each other; this class connects them.
     public sealed class BoardBootstrap : MonoBehaviour
     {
@@ -21,6 +21,9 @@ namespace Match3.Presentation
 
         // The view that will display the generated board; assign it in the Inspector.
         [SerializeField] private BoardView boardView;
+        // Explicit scene references keep startup wiring here instead of using global lookups.
+        [SerializeField] private BoardInputController inputController;
+        [SerializeField] private Camera inputCamera;
 
         // Kept so later gameplay systems can work on this same authoritative instance.
         private Board board;
@@ -33,8 +36,20 @@ namespace Match3.Presentation
                 throw new InvalidOperationException("Assign a BoardView before starting.");
             }
 
+            if (inputController == null)
+            {
+                throw new InvalidOperationException("Assign a BoardInputController before starting.");
+            }
+
+            if (inputCamera == null)
+            {
+                throw new InvalidOperationException("Assign an input Camera before starting.");
+            }
+
             board = BoardGenerator.Generate(width, height, palette, seed);
             boardView.Render(board);
+            // Pass the same authoritative instance after its tile visuals have been created.
+            inputController.Initialize(board, boardView, inputCamera);
         }
     }
 }
