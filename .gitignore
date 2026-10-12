@@ -89,3 +89,6 @@ Builds/
 *.slnx
 # Local embedded package copy
 Packages/com.coplaydev.unity-mcp/
+
+# VS Code workspace settings (editor-local)
+.vscode/
