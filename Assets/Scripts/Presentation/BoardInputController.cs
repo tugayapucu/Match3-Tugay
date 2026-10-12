@@ -110,13 +110,26 @@ namespace Match3.Presentation
                 return;
             }
 
-            StartCoroutine(FinishSwap(first, position));
+            // The Board now holds the attempted result; Core decides whether it is a real Match-3 move.
+            bool isValidMove = SwapValidator.IsValidResult(board, first, position);
+            StartCoroutine(FinishSwap(first, position, isValidMove));
         }
 
-        private IEnumerator FinishSwap(GridPosition first, GridPosition second)
+        private IEnumerator FinishSwap(GridPosition first, GridPosition second, bool isValidMove)
         {
-            // Keep input locked until movement and the view lookup updates are both complete.
+            // Both outcomes animate forward, so the player sees the attempted move.
             yield return boardView.AnimateSwap(first, second, swapDuration);
+
+            if (!isValidMove)
+            {
+                // Restore the logical state first; the visuals catch up below.
+                // Cannot fail: these same adjacent cells were just swapped.
+                board.TrySwapAdjacent(first, second);
+                // The same call sends both visuals home, because the lookup was updated by the forward swap.
+                yield return boardView.AnimateSwap(first, second, swapDuration);
+            }
+
+            // Input stays locked until every animation for this move has finished.
             selectedPosition = null;
             isInputLocked = false;
         }

@@ -216,13 +216,75 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator HandlePointerDown_HorizontalNeighbor_SwapsOnceAndLocksUntilAnimationFinishes()
         {
+            UseBoardWithValidSwapsAtOrigin();
             yield return VerifySuccessfulSwap(new GridPosition(1, 0));
         }
 
         [UnityTest]
         public IEnumerator HandlePointerDown_VerticalNeighbor_SwapsOnceAndLocksUntilAnimationFinishes()
         {
+            UseBoardWithValidSwapsAtOrigin();
             yield return VerifySuccessfulSwap(new GridPosition(0, 1));
+        }
+
+        [UnityTest]
+        public IEnumerator HandlePointerDown_SwapWithoutMatch_AnimatesForwardThenRollsBack()
+        {
+            // The default board has no match after swapping (0,0) and (1,0), so this move is invalid.
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var original = ReadTiles();
+            var swapped = ReadTiles();
+            swapped[first.X, first.Y] = original[second.X, second.Y];
+            swapped[second.X, second.Y] = original[first.X, first.Y];
+            var firstView = boardView.GetTileView(first);
+            var secondView = boardView.GetTileView(second);
+            Vector3 firstStart = firstView.transform.position;
+            Vector3 secondStart = secondView.transform.position;
+            Vector2 rapidClick = ScreenPosition(new GridPosition(2, 2));
+            Click(first);
+
+            Click(second);
+
+            // The Board changes first, before any movement.
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(ReadTiles(), Is.EqualTo(swapped));
+
+            bool sawRollbackPhase = false;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Rollback did not finish.");
+
+                // Clicks during either animation must not select, swap, or unlock anything.
+                controller.HandlePointerDown(rapidClick);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+
+                var tiles = ReadTiles();
+                bool isSwapped = AreEqual(tiles, swapped);
+                Assert.That(isSwapped || AreEqual(tiles, original), Is.True, "Board must be either swapped or restored.");
+
+                if (!isSwapped)
+                {
+                    // Restored Board while still locked: the forward animation has finished
+                    // (its lookup update happened), and the backward animation is still running.
+                    sawRollbackPhase = true;
+                    Assert.That(boardView.GetTileView(first), Is.SameAs(secondView));
+                }
+
+                yield return null;
+            }
+
+            Assert.That(sawRollbackPhase, Is.True, "Input unlocked before the rollback animation ran.");
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(ReadTiles(), Is.EqualTo(original));
+            Assert.That(boardView.GetTileView(first), Is.SameAs(firstView));
+            Assert.That(boardView.GetTileView(second), Is.SameAs(secondView));
+            Assert.That(firstView.Position, Is.EqualTo(first));
+            Assert.That(secondView.Position, Is.EqualTo(second));
+            Assert.That(firstView.transform.position, Is.EqualTo(firstStart));
+            Assert.That(secondView.transform.position, Is.EqualTo(secondStart));
+            AssertViewsMatchBoard();
         }
 
         [UnityTest]
@@ -332,6 +394,48 @@ namespace Match3.Presentation.Tests
             InputSystem.Update();
             // Exercise the actual mouse poll deterministically after processing the simulated event.
             typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+        }
+
+        // Rewrites the 3x3 board so that swapping (0,0) with (1,0) or with (0,1) creates a match:
+        //   G B Y
+        //   G P O
+        //   R G G
+        // Horizontal swap completes the left column (G G G); vertical swap completes the bottom row.
+        private void UseBoardWithValidSwapsAtOrigin()
+        {
+            var rows = new[]
+            {
+                new[] { TileType.Green, TileType.Blue, TileType.Yellow },
+                new[] { TileType.Green, TileType.Purple, TileType.Orange },
+                new[] { TileType.Red, TileType.Green, TileType.Green }
+            };
+            for (int row = 0; row < rows.Length; row++)
+            {
+                int y = board.Height - 1 - row;
+                for (int x = 0; x < board.Width; x++)
+                {
+                    board.SetTile(new GridPosition(x, y), rows[row][x]);
+                }
+            }
+
+            boardView.Render(board);
+            Physics2D.SyncTransforms();
+        }
+
+        private static bool AreEqual(TileType[,] first, TileType[,] second)
+        {
+            for (int y = 0; y < first.GetLength(1); y++)
+            {
+                for (int x = 0; x < first.GetLength(0); x++)
+                {
+                    if (first[x, y] != second[x, y])
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private TileType[,] ReadTiles()
