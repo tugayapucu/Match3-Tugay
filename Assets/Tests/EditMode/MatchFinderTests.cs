@@ -15,7 +15,7 @@ namespace Match3.Core.Tests
         [TestCase("GRRRBGBG", 1, 3)]
         public void FindMatches_SingleHorizontalRun_ReturnsExactlyThatRun(string row, int start, int length)
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "........",
                 row);
 
@@ -29,7 +29,7 @@ namespace Match3.Core.Tests
         [TestCase("RRBRRBRR")]
         public void FindMatches_NoRunOfThree_ReturnsNoMatches(string row)
         {
-            var board = CreateBoard(row);
+            var board = TestBoards.Create(row);
 
             Assert.That(MatchFinder.FindMatches(board), Is.Empty);
         }
@@ -38,7 +38,7 @@ namespace Match3.Core.Tests
         public void FindMatches_TwoRunsInOneRow_ReturnsBoth()
         {
             // The runs touch: the type change alone must end the first run.
-            var board = CreateBoard("RRRGBBBB");
+            var board = TestBoards.Create("RRRGBBBB");
 
             var matches = MatchFinder.FindMatches(board);
 
@@ -48,7 +48,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_RunsOnSeveralRows_ReturnsEveryRun()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "GGG.....",
                 "........",
                 ".....BBB");
@@ -86,7 +86,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_LShape_ReturnsTheSharedCornerOnce()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "RRR.....",
                 "..R.....",
                 "..R.....");
@@ -101,7 +101,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_CrossShape_ReturnsTheIntersectionOnce()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "..R.....",
                 "RRRR....",
                 "..R.....");
@@ -116,7 +116,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_HShape_ReturnsBothIntersectionsOnce()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "R.R.....",
                 "RRR.....",
                 "R.R.....");
@@ -131,7 +131,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_SeparateHorizontalAndVerticalRuns_ReturnsBoth()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "GGG....B",
                 ".......B",
                 ".......B");
@@ -144,7 +144,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_RunsInAllFourCorners_ReturnsEveryRun()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "RRR.G",
                 "....G",
                 "B...G",
@@ -160,7 +160,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_TShape_ReturnsTheSharedCellOnce()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "RRR",
                 ".R.",
                 ".R.");
@@ -176,7 +176,7 @@ namespace Match3.Core.Tests
         public void FindMatches_SolidBlock_ReturnsEveryCellOnce()
         {
             // Every cell is in one row run and one column run: 6 overlapping runs, 9 distinct cells.
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "RRR",
                 "RRR",
                 "RRR");
@@ -197,7 +197,7 @@ namespace Match3.Core.Tests
         public void FindMatches_EmptyRunBetweenRealRuns_IsIgnored()
         {
             // Three Empty cells sit between two real runs; only the real runs match.
-            var board = CreateBoard("RRR...GGG");
+            var board = TestBoards.Create("RRR...GGG");
 
             var matches = MatchFinder.FindMatches(board);
 
@@ -227,7 +227,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_CalledTwice_ReturnsEquivalentResults()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "..R.....",
                 "RRRR..GG",
                 "..R...GB");
@@ -286,7 +286,7 @@ namespace Match3.Core.Tests
         [Test]
         public void FindMatches_DoesNotChangeTheBoard()
         {
-            var board = CreateBoard(
+            var board = TestBoards.Create(
                 "RRRGBBBB",
                 "GBRGBYPO");
             var before = Snapshot(board);
@@ -339,39 +339,6 @@ namespace Match3.Core.Tests
             }
 
             return false;
-        }
-
-        // Rows are written top-down as they appear on screen: rows[0] is the highest y.
-        // Letters are tile colours; '.' is Empty.
-        private static Board CreateBoard(params string[] rows)
-        {
-            var board = new Board(rows[0].Length, rows.Length);
-            for (int row = 0; row < rows.Length; row++)
-            {
-                Assert.That(rows[row].Length, Is.EqualTo(board.Width), "All rows must have the same length.");
-                int y = board.Height - 1 - row;
-                for (int x = 0; x < board.Width; x++)
-                {
-                    board.SetTile(new GridPosition(x, y), ToTileType(rows[row][x]));
-                }
-            }
-
-            return board;
-        }
-
-        private static TileType ToTileType(char symbol)
-        {
-            switch (symbol)
-            {
-                case '.': return TileType.Empty;
-                case 'R': return TileType.Red;
-                case 'G': return TileType.Green;
-                case 'B': return TileType.Blue;
-                case 'Y': return TileType.Yellow;
-                case 'P': return TileType.Purple;
-                case 'O': return TileType.Orange;
-                default: throw new ArgumentException($"Unknown tile symbol '{symbol}'.", nameof(symbol));
-            }
         }
 
         // The positions (start..start+length-1, y).
