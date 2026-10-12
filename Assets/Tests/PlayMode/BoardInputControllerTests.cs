@@ -315,6 +315,111 @@ namespace Match3.Presentation.Tests
             AssertViewsMatchBoard();
         }
 
+        [UnityTest]
+        public IEnumerator Swap_RepeatedInvalidAttempt_BehavesExactlyLikeTheFirst()
+        {
+            // Default board: swapping (0,0) and (1,0) creates no match.
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var originalTiles = ReadTiles();
+            var originalViews = SnapshotViews();
+
+            yield return Swap(first, second);
+            AssertSettled();
+            Assert.That(ReadTiles(), Is.EqualTo(originalTiles));
+            Assert.That(SnapshotViews(), Is.EqualTo(originalViews));
+
+            yield return Swap(first, second);
+            AssertSettled();
+            Assert.That(ReadTiles(), Is.EqualTo(originalTiles));
+            Assert.That(SnapshotViews(), Is.EqualTo(originalViews));
+        }
+
+        [UnityTest]
+        public IEnumerator Swap_InvalidThenValid_KeepsOnlyTheValidSwap()
+        {
+            SetBoard(
+                "GBY",
+                "GPO",
+                "RGG");
+            var expected = ReadTiles();
+            var views = SnapshotViews();
+
+            // Y and O exchange without forming a match: rolled back.
+            yield return Swap(new GridPosition(2, 2), new GridPosition(2, 1));
+            AssertSettled();
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+            Assert.That(SnapshotViews(), Is.EqualTo(views));
+
+            // R and G exchange and complete the left column: kept, using the restored lookup.
+            yield return Swap(new GridPosition(0, 0), new GridPosition(1, 0));
+            AssertSettled();
+            Exchange(expected, new GridPosition(0, 0), new GridPosition(1, 0));
+            Exchange(views, new GridPosition(0, 0), new GridPosition(1, 0));
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+            Assert.That(SnapshotViews(), Is.EqualTo(views));
+        }
+
+        [UnityTest]
+        public IEnumerator Swap_ValidThenInvalid_RollsBackToTheNewBoardState()
+        {
+            SetBoard(
+                "GBY",
+                "GPO",
+                "RGG");
+
+            yield return Swap(new GridPosition(0, 0), new GridPosition(1, 0));
+            AssertSettled();
+            // The kept swap is the new baseline; its G G G column stays because nothing clears yet.
+            var afterValid = ReadTiles();
+            var viewsAfterValid = SnapshotViews();
+
+            // That leftover column is an unrelated match, so this swap must still roll back.
+            yield return Swap(new GridPosition(2, 2), new GridPosition(2, 1));
+            AssertSettled();
+            Assert.That(ReadTiles(), Is.EqualTo(afterValid));
+            Assert.That(SnapshotViews(), Is.EqualTo(viewsAfterValid));
+        }
+
+        [UnityTest]
+        public IEnumerator Swap_OnlyAnUnrelatedMatchOnTheBoard_RollsBack()
+        {
+            SetBoard(
+                "RRR",
+                "GBY",
+                "PGO");
+            var original = ReadTiles();
+            var views = SnapshotViews();
+
+            // The top row already matches, but swapping G and O matches nothing involving them.
+            yield return Swap(new GridPosition(1, 0), new GridPosition(2, 0));
+
+            AssertSettled();
+            Assert.That(ReadTiles(), Is.EqualTo(original));
+            Assert.That(SnapshotViews(), Is.EqualTo(views));
+        }
+
+        [UnityTest]
+        public IEnumerator Swap_CreatingAnIntersectionAtASwappedCell_IsKept()
+        {
+            // Moving the top R down to (1,2) completes both row y=2 and column x=1 (a T shape).
+            SetBoard(
+                "GRB",
+                "RYR",
+                "BRG",
+                "PRO");
+            var expected = ReadTiles();
+            var views = SnapshotViews();
+
+            yield return Swap(new GridPosition(1, 3), new GridPosition(1, 2));
+
+            AssertSettled();
+            Exchange(expected, new GridPosition(1, 3), new GridPosition(1, 2));
+            Exchange(views, new GridPosition(1, 3), new GridPosition(1, 2));
+            Assert.That(ReadTiles(), Is.EqualTo(expected));
+            Assert.That(SnapshotViews(), Is.EqualTo(views));
+        }
+
         private IEnumerator VerifySuccessfulSwap(GridPosition second)
         {
             var first = new GridPosition(0, 0);
@@ -403,23 +508,91 @@ namespace Match3.Presentation.Tests
         // Horizontal swap completes the left column (G G G); vertical swap completes the bottom row.
         private void UseBoardWithValidSwapsAtOrigin()
         {
-            var rows = new[]
-            {
-                new[] { TileType.Green, TileType.Blue, TileType.Yellow },
-                new[] { TileType.Green, TileType.Purple, TileType.Orange },
-                new[] { TileType.Red, TileType.Green, TileType.Green }
-            };
+            SetBoard(
+                "GBY",
+                "GPO",
+                "RGG");
+        }
+
+        // Replaces the board with one built from text (rows[0] is the top row) and re-wires the controller.
+        private void SetBoard(params string[] rows)
+        {
+            board = new Board(rows[0].Length, rows.Length);
             for (int row = 0; row < rows.Length; row++)
             {
                 int y = board.Height - 1 - row;
                 for (int x = 0; x < board.Width; x++)
                 {
-                    board.SetTile(new GridPosition(x, y), rows[row][x]);
+                    board.SetTile(new GridPosition(x, y), ToTileType(rows[row][x]));
                 }
             }
 
             boardView.Render(board);
+            controller.Initialize(board, boardView, inputCamera);
             Physics2D.SyncTransforms();
+        }
+
+        private static TileType ToTileType(char symbol)
+        {
+            switch (symbol)
+            {
+                case 'R': return TileType.Red;
+                case 'G': return TileType.Green;
+                case 'B': return TileType.Blue;
+                case 'Y': return TileType.Yellow;
+                case 'P': return TileType.Purple;
+                case 'O': return TileType.Orange;
+                default: throw new ArgumentException($"Unknown tile symbol '{symbol}'.", nameof(symbol));
+            }
+        }
+
+        // One complete player move: select, select, then wait until input unlocks.
+        private IEnumerator Swap(GridPosition first, GridPosition second)
+        {
+            Click(first);
+            Click(second);
+            Assert.That(controller.IsInputLocked, Is.True, "An adjacent second click should start a move.");
+            yield return WaitForSwap();
+        }
+
+        // After a move: unlocked, nothing selected, and every view agrees with the Board,
+        // including its lookup entry, represented cell, and on-screen position.
+        private void AssertSettled()
+        {
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            AssertViewsMatchBoard();
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var view = boardView.GetTileView(new GridPosition(x, y));
+                    Vector3 expected = boardObject.transform.TransformPoint(new Vector3(x * 1.5f, y * 1.5f, 0f));
+                    Assert.That(Vector3.Distance(view.transform.position, expected), Is.LessThan(1e-4f));
+                }
+            }
+        }
+
+        // Which view object sits at each cell, so tests can check that the same objects end up in the same places.
+        private TileView[,] SnapshotViews()
+        {
+            var views = new TileView[board.Width, board.Height];
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    views[x, y] = boardView.GetTileView(new GridPosition(x, y));
+                }
+            }
+
+            return views;
+        }
+
+        private static void Exchange<T>(T[,] cells, GridPosition first, GridPosition second)
+        {
+            T temporary = cells[first.X, first.Y];
+            cells[first.X, first.Y] = cells[second.X, second.Y];
+            cells[second.X, second.Y] = temporary;
         }
 
         private static bool AreEqual(TileType[,] first, TileType[,] second)
