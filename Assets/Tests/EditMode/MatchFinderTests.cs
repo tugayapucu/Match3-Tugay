@@ -158,9 +158,129 @@ namespace Match3.Core.Tests
         }
 
         [Test]
+        public void FindMatches_TShape_ReturnsTheSharedCellOnce()
+        {
+            var board = CreateBoard(
+                "RRR",
+                ".R.",
+                ".R.");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            // 3 horizontal + 3 vertical cells, sharing the top middle (1, 2): 5 distinct cells.
+            Assert.That(matches.Count, Is.EqualTo(5));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(2, 0, 3), Column(1, 0, 3))));
+        }
+
+        [Test]
+        public void FindMatches_SolidBlock_ReturnsEveryCellOnce()
+        {
+            // Every cell is in one row run and one column run: 6 overlapping runs, 9 distinct cells.
+            var board = CreateBoard(
+                "RRR",
+                "RRR",
+                "RRR");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            Assert.That(matches.Count, Is.EqualTo(9));
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(0, 0, 3), Run(1, 0, 3), Run(2, 0, 3))));
+        }
+
+        [Test]
         public void FindMatches_EmptyCells_NeverMatch()
         {
             Assert.That(MatchFinder.FindMatches(new Board(8, 8)), Is.Empty);
+        }
+
+        [Test]
+        public void FindMatches_EmptyRunBetweenRealRuns_IsIgnored()
+        {
+            // Three Empty cells sit between two real runs; only the real runs match.
+            var board = CreateBoard("RRR...GGG");
+
+            var matches = MatchFinder.FindMatches(board);
+
+            Assert.That(matches, Is.EquivalentTo(Cells(Run(0, 0, 3), Run(0, 6, 3))));
+        }
+
+        [TestCase(3)]
+        [TestCase(6)]
+        public void FindMatches_GeneratedBoards_HaveNoMatches(int paletteSize)
+        {
+            // BoardGenerator promises no starting runs of 3; MatchFinder must agree on every seed.
+            var allTypes = new[]
+            {
+                TileType.Red, TileType.Green, TileType.Blue,
+                TileType.Yellow, TileType.Purple, TileType.Orange
+            };
+            var palette = new TileType[paletteSize];
+            Array.Copy(allTypes, palette, paletteSize);
+
+            for (int seed = -25; seed < 25; seed++)
+            {
+                var board = BoardGenerator.Generate(8, 8, palette, seed);
+                Assert.That(MatchFinder.FindMatches(board), Is.Empty, $"Seed {seed}.");
+            }
+        }
+
+        [Test]
+        public void FindMatches_CalledTwice_ReturnsEquivalentResults()
+        {
+            var board = CreateBoard(
+                "..R.....",
+                "RRRR..GG",
+                "..R...GB");
+
+            var first = MatchFinder.FindMatches(board);
+            var second = MatchFinder.FindMatches(board);
+
+            Assert.That(second, Is.EquivalentTo(first));
+        }
+
+        [Test]
+        public void FindMatches_RandomBoards_AgreeWithANaiveCellByCellCheck()
+        {
+            // Few types plus Empty make runs common, so these boards exercise many match shapes.
+            var types = new[] { TileType.Empty, TileType.Red, TileType.Green, TileType.Blue };
+            var random = new Random(12345);
+
+            for (int boardIndex = 0; boardIndex < 200; boardIndex++)
+            {
+                var board = new Board(random.Next(1, 9), random.Next(1, 9));
+                for (int y = 0; y < board.Height; y++)
+                {
+                    for (int x = 0; x < board.Width; x++)
+                    {
+                        board.SetTile(new GridPosition(x, y), types[random.Next(types.Length)]);
+                    }
+                }
+
+                var matches = MatchFinder.FindMatches(board);
+
+                // No duplicates: the result has as many entries as distinct positions.
+                Assert.That(matches.Count, Is.EqualTo(new HashSet<GridPosition>(matches).Count), $"Board {boardIndex}.");
+                foreach (var position in matches)
+                {
+                    Assert.That(board.IsInBounds(position), Is.True, $"Board {boardIndex}: {position.X},{position.Y}.");
+                }
+
+                // Same cells as the naive rule: nothing missing, nothing extra.
+                var expected = new List<GridPosition>();
+                for (int y = 0; y < board.Height; y++)
+                {
+                    for (int x = 0; x < board.Width; x++)
+                    {
+                        var position = new GridPosition(x, y);
+                        if (IsMatchedNaive(board, position))
+                        {
+                            expected.Add(position);
+                        }
+                    }
+                }
+
+                Assert.That(matches, Is.EquivalentTo(expected), $"Board {boardIndex}.");
+            }
         }
 
         [Test]
@@ -180,6 +300,45 @@ namespace Match3.Core.Tests
         public void FindMatches_NullBoard_Throws()
         {
             Assert.Throws<ArgumentNullException>(() => MatchFinder.FindMatches(null));
+        }
+
+        // Deliberately simple, slow reference rule: a cell is matched if some 3 consecutive cells
+        // that include it, in its row or column, are the same non-empty type.
+        private static bool IsMatchedNaive(Board board, GridPosition position)
+        {
+            TileType type = board.GetTile(position);
+            if (type == TileType.Empty)
+            {
+                return false;
+            }
+
+            var directions = new[] { new[] { 1, 0 }, new[] { 0, 1 } };
+            foreach (var direction in directions)
+            {
+                // The window of 3 can start 2, 1, or 0 steps before this cell.
+                for (int offset = -2; offset <= 0; offset++)
+                {
+                    bool allSame = true;
+                    for (int step = 0; step < 3; step++)
+                    {
+                        var cell = new GridPosition(
+                            position.X + (offset + step) * direction[0],
+                            position.Y + (offset + step) * direction[1]);
+                        if (!board.IsInBounds(cell) || board.GetTile(cell) != type)
+                        {
+                            allSame = false;
+                            break;
+                        }
+                    }
+
+                    if (allSame)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         // Rows are written top-down as they appear on screen: rows[0] is the highest y.
