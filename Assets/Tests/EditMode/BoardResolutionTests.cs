@@ -420,6 +420,224 @@ namespace Match3.Core.Tests
             Assert.Throws<ArgumentNullException>(() => BoardResolution.ApplyGravity(null));
         }
 
+        [Test]
+        public void Refill_FullBoard_ReturnsNoSpawnsAndChangesNothing()
+        {
+            var board = TestBoards.Create(
+                "RG",
+                "BY");
+
+            var spawns = BoardResolution.Refill(board, RGB, new ScriptedRandom());
+
+            Assert.That(spawns, Is.Empty);
+            AssertBoard(board,
+                "RG",
+                "BY");
+        }
+
+        [Test]
+        public void Refill_AllEmptyBoard_FillsEveryCellColumnByColumnBottomToTop()
+        {
+            var board = new Board(3, 2);
+            // Palette indices 0,1,2 = R,G,B, consumed in fill order.
+            var random = new ScriptedRandom(0, 1, 2, 0, 1, 2);
+
+            var spawns = BoardResolution.Refill(board, RGB, random);
+
+            Assert.That(spawns, Is.EqualTo(new[]
+            {
+                Spawn(TileType.Red, 0, 0), Spawn(TileType.Green, 0, 1),
+                Spawn(TileType.Blue, 1, 0), Spawn(TileType.Red, 1, 1),
+                Spawn(TileType.Green, 2, 0), Spawn(TileType.Blue, 2, 1)
+            }));
+            AssertBoard(board,
+                "GRB",
+                "RBG");
+        }
+
+        [Test]
+        public void Refill_PartiallyEmptyBoard_FillsOnlyTheEmptyCells()
+        {
+            var board = TestBoards.Create(
+                "..P",
+                "G.Y",
+                "RBO");
+            var random = new ScriptedRandom(1, 2, 0);
+
+            var spawns = BoardResolution.Refill(board, RGB, random);
+
+            // Existing tiles (including P, Y, O outside the palette) are untouched.
+            Assert.That(spawns, Is.EqualTo(new[]
+            {
+                Spawn(TileType.Green, 0, 2),
+                Spawn(TileType.Blue, 1, 1),
+                Spawn(TileType.Red, 1, 2)
+            }));
+            AssertBoard(board,
+                "GRP",
+                "GBY",
+                "RBO");
+        }
+
+        [Test]
+        public void Refill_CanCreateAMatch()
+        {
+            // Refill must not avoid matches: here it is forced to complete R R _.
+            var board = TestBoards.Create("RR.");
+
+            BoardResolution.Refill(board, RGB, new ScriptedRandom(0));
+
+            AssertBoard(board, "RRR");
+            Assert.That(MatchFinder.FindMatches(board), Does.Contain(new GridPosition(2, 0)));
+        }
+
+        [Test]
+        public void Refill_SameSeedTwice_ProducesTheSameSpawnsAndBoard()
+        {
+            var first = TestBoards.Create(
+                "....",
+                "R..G",
+                "BY.R");
+            var second = Copy(first);
+
+            var firstSpawns = BoardResolution.Refill(first, RGB, new Random(42));
+            var secondSpawns = BoardResolution.Refill(second, RGB, new Random(42));
+
+            Assert.That(secondSpawns, Is.EqualTo(firstSpawns));
+            Assert.That(Snapshot(second), Is.EqualTo(Snapshot(first)));
+        }
+
+        [Test]
+        public void Refill_RandomBoards_SpawnsExactlyMatchTheFilledCells()
+        {
+            var layoutTypes = new[] { TileType.Empty, TileType.Red, TileType.Yellow, TileType.Purple };
+            var layoutRandom = new Random(7);
+            var refillRandom = new Random(99);
+
+            for (int boardIndex = 0; boardIndex < 50; boardIndex++)
+            {
+                var board = new Board(layoutRandom.Next(1, 9), layoutRandom.Next(1, 9));
+                for (int y = 0; y < board.Height; y++)
+                {
+                    for (int x = 0; x < board.Width; x++)
+                    {
+                        board.SetTile(new GridPosition(x, y), layoutTypes[layoutRandom.Next(layoutTypes.Length)]);
+                    }
+                }
+
+                var before = Copy(board);
+                var spawns = BoardResolution.Refill(board, RGB, refillRandom);
+
+                // Expected spawn cells: every originally Empty cell, in fill order.
+                var expectedPositions = new List<GridPosition>();
+                for (int x = 0; x < board.Width; x++)
+                {
+                    for (int y = 0; y < board.Height; y++)
+                    {
+                        var position = new GridPosition(x, y);
+                        if (before.GetTile(position) == TileType.Empty)
+                        {
+                            expectedPositions.Add(position);
+                        }
+                        else
+                        {
+                            Assert.That(board.GetTile(position), Is.EqualTo(before.GetTile(position)),
+                                $"Board {boardIndex}: existing tile at ({x},{y}) changed.");
+                        }
+
+                        Assert.That(board.GetTile(position), Is.Not.EqualTo(TileType.Empty),
+                            $"Board {boardIndex}: ({x},{y}) still Empty.");
+                    }
+                }
+
+                var spawnPositions = new List<GridPosition>();
+                foreach (var spawn in spawns)
+                {
+                    spawnPositions.Add(spawn.Position);
+                    Assert.That(RGB, Does.Contain(spawn.Type), $"Board {boardIndex}: {spawn} not from the palette.");
+                    Assert.That(board.GetTile(spawn.Position), Is.EqualTo(spawn.Type), $"Board {boardIndex}: {spawn} disagrees with the Board.");
+                }
+
+                Assert.That(spawnPositions, Is.EqualTo(expectedPositions), $"Board {boardIndex}.");
+            }
+        }
+
+        [Test]
+        public void Refill_InvalidPalette_ThrowsLikeBoardGeneratorAndChangesNothing()
+        {
+            AssertRefillRejects<ArgumentNullException>(null);
+            AssertRefillRejects<ArgumentException>(new[] { TileType.Red, TileType.Green });
+            AssertRefillRejects<ArgumentException>(new[] { TileType.Red, TileType.Green, TileType.Empty });
+            AssertRefillRejects<ArgumentException>(new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Red });
+            AssertRefillRejects<ArgumentException>(new[] { TileType.Red, TileType.Green, (TileType)99 });
+        }
+
+        [Test]
+        public void Refill_NullBoardOrRandom_Throws()
+        {
+            var board = TestBoards.Create("R.");
+
+            Assert.Throws<ArgumentNullException>(() => BoardResolution.Refill(null, RGB, new Random(1)));
+            Assert.Throws<ArgumentNullException>(() => BoardResolution.Refill(board, RGB, null));
+            AssertBoard(board, "R.");
+        }
+
+        private static readonly TileType[] RGB = { TileType.Red, TileType.Green, TileType.Blue };
+
+        // Both the exception type and "nothing changed" must match BoardGenerator's palette behaviour.
+        private static void AssertRefillRejects<TException>(TileType[] palette) where TException : Exception
+        {
+            var board = TestBoards.Create(
+                "R.",
+                ".G");
+
+            Assert.Throws<TException>(() => BoardResolution.Refill(board, palette, new Random(1)));
+            Assert.Throws<TException>(() => BoardGenerator.Generate(2, 2, palette, 1));
+            AssertBoard(board,
+                "R.",
+                ".G");
+        }
+
+        private static TileSpawn Spawn(TileType type, int x, int y)
+        {
+            return new TileSpawn(new GridPosition(x, y), type);
+        }
+
+        // A Random whose results are scripted, so tests can force exact refill choices.
+        // Overrides every integer overload, so the test does not depend on which one Refill calls.
+        private sealed class ScriptedRandom : Random
+        {
+            private readonly Queue<int> values;
+
+            public ScriptedRandom(params int[] values)
+            {
+                this.values = new Queue<int>(values);
+            }
+
+            public override int Next()
+            {
+                return NextScripted(int.MaxValue);
+            }
+
+            public override int Next(int maxValue)
+            {
+                return NextScripted(maxValue);
+            }
+
+            public override int Next(int minValue, int maxValue)
+            {
+                return minValue + NextScripted(maxValue - minValue);
+            }
+
+            private int NextScripted(int range)
+            {
+                Assert.That(values.Count, Is.GreaterThan(0), "ScriptedRandom ran out of scripted values.");
+                int value = values.Dequeue();
+                Assert.That(value, Is.InRange(0, range - 1), "Scripted value outside the requested range.");
+                return value;
+            }
+        }
+
         private static TileMove Move(TileType type, int fromX, int fromY, int toX, int toY)
         {
             return new TileMove(new GridPosition(fromX, fromY), new GridPosition(toX, toY), type);

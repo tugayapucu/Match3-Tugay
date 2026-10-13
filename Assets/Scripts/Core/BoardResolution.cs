@@ -74,5 +74,42 @@ namespace Match3.Core
 
             return moves;
         }
+
+        // Fills every Empty cell with a random palette type and returns one spawn per filled cell.
+        // Order: columns left to right, cells bottom to top. Matches are NOT prevented: they cause cascades.
+        // The caller owns `random`, so repeated refills continue one reproducible sequence.
+        public static IReadOnlyList<TileSpawn> Refill(Board board, IReadOnlyList<TileType> palette, Random random)
+        {
+            // Check every input before touching the Board, so invalid input changes nothing.
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+
+            PaletteValidation.Validate(palette);
+            if (random == null)
+            {
+                throw new ArgumentNullException(nameof(random));
+            }
+
+            var spawns = new List<TileSpawn>();
+            for (int x = 0; x < board.Width; x++)
+            {
+                for (int y = 0; y < board.Height; y++)
+                {
+                    var position = new GridPosition(x, y);
+                    if (board.GetTile(position) != TileType.Empty)
+                    {
+                        continue;
+                    }
+
+                    TileType type = palette[random.Next(palette.Count)];
+                    board.SetTile(position, type);
+                    spawns.Add(new TileSpawn(position, type));
+                }
+            }
+
+            return spawns;
+        }
     }
 }
