@@ -35,5 +35,44 @@ namespace Match3.Core
                 board.SetTile(position, TileType.Empty);
             }
         }
+
+        // Drops every tile as far down its column as possible, keeping the tiles' order; Empty cells end up on top.
+        // Returns one move per tile that changed cell (column by column, bottom to top). Stationary tiles are not listed.
+        public static IReadOnlyList<TileMove> ApplyGravity(Board board)
+        {
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+
+            var moves = new List<TileMove>();
+            for (int x = 0; x < board.Width; x++)
+            {
+                // Write pointer: the lowest cell in this column that the next surviving tile should land on.
+                int writeY = 0;
+                for (int readY = 0; readY < board.Height; readY++)
+                {
+                    var from = new GridPosition(x, readY);
+                    TileType tile = board.GetTile(from);
+                    if (tile == TileType.Empty)
+                    {
+                        continue;
+                    }
+
+                    if (readY != writeY)
+                    {
+                        // There is a gap below: the tile falls to writeY and leaves a hole behind.
+                        var to = new GridPosition(x, writeY);
+                        board.SetTile(to, tile);
+                        board.SetTile(from, TileType.Empty);
+                        moves.Add(new TileMove(from, to, tile));
+                    }
+
+                    writeY++;
+                }
+            }
+
+            return moves;
+        }
     }
 }
