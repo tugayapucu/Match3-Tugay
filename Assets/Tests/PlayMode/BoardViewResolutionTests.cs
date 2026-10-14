@@ -206,6 +206,48 @@ namespace Match3.Presentation.Tests
                 "Exactly one view per cell: nothing leaked, nothing missing.");
         }
 
+        [UnityTest]
+        public IEnumerator Runner_DifferentGapDepths_RefillsEachColumnWithTheRightNewViews()
+        {
+            // Three staircase runs clear 1, 2, 3, 2, 1 cells in columns 0..4 within a single round.
+            var board = CreateBoard(
+                "POBBB",
+                "YGGGO",
+                "RRRYP");
+            boardView.Render(board);
+            var originalViews = new HashSet<TileView>(boardObject.GetComponentsInChildren<TileView>());
+            var fullPalette = new[]
+            {
+                TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange
+            };
+            // Refill order is column by column, bottom to top: (0,2) (1,1)(1,2) (2,0)(2,1)(2,2) (3,1)(3,2) (4,2).
+            var runner = new BoardResolutionRunner(
+                board, boardView, fullPalette, new ScriptedRandom(0, 2, 3, 1, 0, 5, 1, 4, 1), 0.05f, 0.05f);
+
+            yield return runner.ResolveUntilStable();
+            // Let deferred Destroy calls finish before inspecting objects.
+            yield return null;
+
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard(
+                "RYOPG",
+                "PBRGO",
+                "YOGYP"))));
+            AssertViewsMatchBoard(board);
+
+            var newViewsPerColumn = new int[board.Width];
+            foreach (var view in boardObject.GetComponentsInChildren<TileView>(true))
+            {
+                if (!originalViews.Contains(view))
+                {
+                    newViewsPerColumn[view.Position.X]++;
+                }
+            }
+
+            // Every cleared cell got exactly one new view in its own column; survivors kept their objects.
+            Assert.That(newViewsPerColumn, Is.EqualTo(new[] { 1, 2, 3, 2, 1 }));
+            Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(board.Width * board.Height));
+        }
+
         [Test]
         public void ZeroDuration_FallAndRefill_SettleInASingleStep()
         {

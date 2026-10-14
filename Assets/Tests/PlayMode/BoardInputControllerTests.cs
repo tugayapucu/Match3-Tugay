@@ -233,10 +233,16 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "RGG");
 
-            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1,
+            // The whole left column clears from the top, so no surviving tile falls.
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
                 "OBY",
                 "YPO",
                 "BRG");
+
+            // A new click after completion starts a fresh selection, rather than another swap.
+            Click(new GridPosition(0, 0));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(controller.IsInputLocked, Is.False);
         }
 
         [UnityTest]
@@ -248,7 +254,7 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "RGG");
 
-            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(0, 1), 1,
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(0, 1), 1, true,
                 "BYR",
                 "GBY",
                 "RPO");
@@ -263,7 +269,7 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "RGG");
 
-            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 2,
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 2, false,
                 "OBY",
                 "YPO",
                 "BRG");
@@ -278,7 +284,7 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "RGG");
 
-            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 3,
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 3, false,
                 "OBY",
                 "YPO",
                 "BRG");
@@ -470,18 +476,124 @@ namespace Match3.Presentation.Tests
                 "BRG",
                 "PRO");
 
-            yield return VerifyValidMove(new GridPosition(1, 3), new GridPosition(1, 2), 1,
+            yield return VerifyValidMove(new GridPosition(1, 3), new GridPosition(1, 2), 1, true,
                 "ROY",
                 "GPB",
                 "BRG",
                 "PYO");
         }
 
+        [UnityTest]
+        public IEnumerator Sequence_ValidMoveThenAnotherValidMove_BothResolveFromTheCurrentBoard()
+        {
+            // Move 1 completes G G G in column 0 (refilled Y, R, O).
+            // Move 2, on the resolved board, completes B B B in column 3 (refilled G, Y, P).
+            SetBoard(new ScriptedRandom(3, 0, 5, 1, 3, 4),
+                "GBYB",
+                "GPOB",
+                "RGBR");
+            var untouched = new[]
+            {
+                new GridPosition(1, 1), new GridPosition(1, 2), new GridPosition(2, 1), new GridPosition(2, 2)
+            };
+            var untouchedViews = ViewsAt(untouched);
+            var firstRed = boardView.GetTileView(new GridPosition(0, 0));
+            var secondRed = boardView.GetTileView(new GridPosition(3, 0));
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "OBYB",
+                "RPOB",
+                "YRBR");
+            yield return VerifyValidMove(new GridPosition(2, 0), new GridPosition(3, 0), 1, false,
+                "OBYP",
+                "RPOY",
+                "YRRG");
+
+            // Tiles no move cleared are still the same objects; each swapped red survived where it landed.
+            Assert.That(ViewsAt(untouched), Is.EqualTo(untouchedViews));
+            Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(firstRed));
+            Assert.That(boardView.GetTileView(new GridPosition(2, 0)), Is.SameAs(secondRed));
+        }
+
+        [UnityTest]
+        public IEnumerator Resolve_SameColourSurvivorsFallTogether_KeepTheirIdentity()
+        {
+            // Completing Y Y Y on the bottom row makes every column fall one cell, including two reds in column 0.
+            SetBoard(new ScriptedRandom(1, 3, 2),
+                "RBG",
+                "RGP",
+                "BYO",
+                "YPY");
+            var lowerRed = boardView.GetTileView(new GridPosition(0, 2));
+            var upperRed = boardView.GetTileView(new GridPosition(0, 3));
+            var blue = boardView.GetTileView(new GridPosition(0, 1));
+            var orange = boardView.GetTileView(new GridPosition(2, 1));
+
+            yield return VerifyValidMove(new GridPosition(1, 1), new GridPosition(1, 0), 1, true,
+                "GYB",
+                "RBG",
+                "RGP",
+                "BPO");
+
+            // Colour cannot tell the reds apart; the move records can. Three columns collapsed at once.
+            Assert.That(boardView.GetTileView(new GridPosition(0, 1)), Is.SameAs(lowerRed));
+            Assert.That(boardView.GetTileView(new GridPosition(0, 2)), Is.SameAs(upperRed));
+            Assert.That(boardView.GetTileView(new GridPosition(0, 0)), Is.SameAs(blue));
+            Assert.That(boardView.GetTileView(new GridPosition(2, 0)), Is.SameAs(orange));
+        }
+
+        [UnityTest]
+        public IEnumerator Resolve_CascadeRoundIsAnIntersection_ResolvesBothRunsThenStabilises()
+        {
+            // Round 1 clears column 0 and refills it with P P P. That column, plus the P P already in row 1,
+            // forms an L/T intersection at (0,1): round 2 clears 5 cells, two columns fall, then the board is stable.
+            SetBoard(new ScriptedRandom(4, 4, 4, 2, 1, 0, 5, 4),
+                "GBY",
+                "GPP",
+                "RGO");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 2, true,
+                "ROP",
+                "GBY",
+                "BRO");
+        }
+
+        [UnityTest]
+        public IEnumerator Resolve_SeveralRealMoves_LeaveNoStaleLookupState()
+        {
+            // A generated board and a real seeded refill: play every valid move found, several times in a row.
+            board = BoardGenerator.Generate(5, 4, new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow }, 7);
+            boardView.Render(board);
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(7)));
+            Physics2D.SyncTransforms();
+
+            int movesPlayed = 0;
+            for (int attempt = 0; attempt < 6; attempt++)
+            {
+                if (!TryFindValidMove(out var first, out var second))
+                {
+                    break;
+                }
+
+                yield return Swap(first, second);
+                AssertStable();
+                // One view per cell: nothing leaked from earlier rounds, nothing missing.
+                Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(board.Width * board.Height));
+                movesPlayed++;
+            }
+
+            Assert.That(movesPlayed, Is.GreaterThanOrEqualTo(3), "Expected several moves on this seeded board.");
+        }
+
         // Plays one valid move and follows it to the end. Checks that the Board changes first, that input stays
         // locked and clicks are ignored through every stage, that exactly `expectedRounds` resolution rounds
         // happen (each round empties cells, then refills them), and the exact final stable board.
+        // Intermediate stages are recognised by state, never by frame counts:
+        //   Empty cells present → the Board is already collapsed; while tiles fall their visuals lag behind.
+        //   after a round started, no Empty but still locked → refill: Board full, new visuals not yet registered.
+        // `expectFalls` is false when every cleared column was emptied from the top, so no surviving tile falls.
         private IEnumerator VerifyValidMove(
-            GridPosition first, GridPosition second, int expectedRounds, params string[] finalRows)
+            GridPosition first, GridPosition second, int expectedRounds, bool expectFalls, params string[] finalRows)
         {
             var swapped = ReadTiles();
             Exchange(swapped, first, second);
@@ -498,6 +610,8 @@ namespace Match3.Presentation.Tests
 
             int rounds = 0;
             bool hadEmpty = false;
+            bool sawFallCatchingUp = false;
+            bool sawRefillCatchingUp = false;
             float deadline = Time.realtimeSinceStartup + 10f;
             while (controller.IsInputLocked)
             {
@@ -515,18 +629,133 @@ namespace Match3.Presentation.Tests
                     rounds++;
                 }
 
+                if (hasEmpty)
+                {
+                    // Core cleared and collapsed in the same step, so no hole can sit below a tile.
+                    AssertBoardCollapsed();
+                    sawFallCatchingUp |= SomeTileVisualLagsBehind();
+                }
+                else if (rounds > 0)
+                {
+                    // Board already holds the refilled types; the new visuals are registered only on landing.
+                    sawRefillCatchingUp |= SomeTileVisualLagsBehind();
+                }
+
                 hadEmpty = hasEmpty;
                 yield return null;
             }
 
             Assert.That(rounds, Is.EqualTo(expectedRounds), "Resolution rounds before unlock.");
+            Assert.That(sawRefillCatchingUp, Is.True, "Refilled tiles should be seen catching up with the Board.");
+            if (expectFalls)
+            {
+                Assert.That(sawFallCatchingUp, Is.True, "Falling tiles should be seen catching up with the Board.");
+            }
+
             AssertStable();
             Assert.That(ReadTiles(), Is.EqualTo(Tiles(finalRows)));
+        }
 
-            // A new click after completion starts a fresh selection, rather than another swap.
-            Click(first);
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
-            Assert.That(controller.IsInputLocked, Is.False);
+        private TileView[] ViewsAt(GridPosition[] positions)
+        {
+            var views = new TileView[positions.Length];
+            for (int i = 0; i < positions.Length; i++)
+            {
+                views[i] = boardView.GetTileView(positions[i]);
+            }
+
+            return views;
+        }
+
+        // Finds the first adjacent swap that SwapValidator accepts, trying it on a copy so the real Board is untouched.
+        private bool TryFindValidMove(out GridPosition first, out GridPosition second)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var candidates = new[] { new GridPosition(x + 1, y), new GridPosition(x, y + 1) };
+                    foreach (var neighbour in candidates)
+                    {
+                        if (!board.IsInBounds(neighbour))
+                        {
+                            continue;
+                        }
+
+                        var copy = new Board(board.Width, board.Height);
+                        for (int cy = 0; cy < board.Height; cy++)
+                        {
+                            for (int cx = 0; cx < board.Width; cx++)
+                            {
+                                var cell = new GridPosition(cx, cy);
+                                copy.SetTile(cell, board.GetTile(cell));
+                            }
+                        }
+
+                        var origin = new GridPosition(x, y);
+                        copy.TrySwapAdjacent(origin, neighbour);
+                        if (SwapValidator.IsValidResult(copy, origin, neighbour))
+                        {
+                            first = origin;
+                            second = neighbour;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            first = default;
+            second = default;
+            return false;
+        }
+
+        // In every column, no Empty cell sits below a tile: gravity has been applied.
+        private void AssertBoardCollapsed()
+        {
+            for (int x = 0; x < board.Width; x++)
+            {
+                bool seenEmpty = false;
+                for (int y = 0; y < board.Height; y++)
+                {
+                    bool isEmpty = board.GetTile(new GridPosition(x, y)) == TileType.Empty;
+                    Assert.That(!isEmpty && seenEmpty, Is.False, $"Tile above a hole in column {x}: gravity not applied yet.");
+                    seenEmpty |= isEmpty;
+                }
+            }
+        }
+
+        // True when some non-empty Board cell has no registered view yet, or its view is not at that cell yet.
+        private bool SomeTileVisualLagsBehind()
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var position = new GridPosition(x, y);
+                    if (board.GetTile(position) == TileType.Empty)
+                    {
+                        continue;
+                    }
+
+                    TileView view;
+                    try
+                    {
+                        view = boardView.GetTileView(position);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        return true;
+                    }
+
+                    Vector3 expected = boardObject.transform.TransformPoint(new Vector3(x * 1.5f, y * 1.5f, 0f));
+                    if (view.Type != board.GetTile(position) || Vector3.Distance(view.transform.position, expected) > 1e-4f)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private IEnumerator WaitForSwap()
@@ -621,39 +850,6 @@ namespace Match3.Presentation.Tests
             Assert.That(BoardHasEmpty(), Is.False, "A stable board has no Empty cells.");
         }
 
-        // A Random whose results are scripted palette indices, so refills (and cascades) are chosen by the test.
-        private sealed class ScriptedRandom : System.Random
-        {
-            private readonly System.Collections.Generic.Queue<int> values;
-
-            public ScriptedRandom(params int[] values)
-            {
-                this.values = new System.Collections.Generic.Queue<int>(values);
-            }
-
-            public override int Next()
-            {
-                return NextScripted(int.MaxValue);
-            }
-
-            public override int Next(int maxValue)
-            {
-                return NextScripted(maxValue);
-            }
-
-            public override int Next(int minValue, int maxValue)
-            {
-                return minValue + NextScripted(maxValue - minValue);
-            }
-
-            private int NextScripted(int range)
-            {
-                Assert.That(values.Count, Is.GreaterThan(0), "ScriptedRandom ran out of scripted values.");
-                int value = values.Dequeue();
-                Assert.That(value, Is.InRange(0, range - 1), "Scripted value outside the requested range.");
-                return value;
-            }
-        }
 
         private static TileType ToTileType(char symbol)
         {
