@@ -31,7 +31,6 @@ namespace Match3.Presentation.Tests
         private BoardView boardView;
         private BoardInputController controller;
         private Camera inputCamera;
-        private Mouse testMouse;
 
         [SetUp]
         public void SetUp()
@@ -78,11 +77,6 @@ namespace Match3.Presentation.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            if (testMouse != null)
-            {
-                InputSystem.RemoveDevice(testMouse);
-            }
-
             Object.Destroy(boardObject);
             Object.Destroy(tileTemplate);
             Object.Destroy(cameraObject);
@@ -353,29 +347,41 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Update_MousePress_UsesPointerHandlingAndDoesNotSwapOnHeldButton()
         {
-            testMouse = InputSystem.AddDevice<Mouse>();
-            var first = new GridPosition(0, 0);
-            var second = new GridPosition(1, 0);
-            var before = ReadTiles();
+            // Isolated Input System for this test only: no real devices, and input is delivered regardless of
+            // Editor/Game view focus. Without it, an unfocused Editor drops the simulated mouse events.
+            // TearDown restores the real Input System state, so project settings are never changed.
+            var input = new InputTestFixture();
+            input.Setup();
+            try
+            {
+                var mouse = InputSystem.AddDevice<Mouse>();
+                var first = new GridPosition(0, 0);
+                var second = new GridPosition(1, 0);
+                var before = ReadTiles();
 
-            SendMouseState(ScreenPosition(first), 1);
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                SendMouseState(mouse, ScreenPosition(first), 1);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
 
-            SendMouseState(ScreenPosition(second), 1);
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
-            Assert.That(controller.IsInputLocked, Is.False);
-            Assert.That(ReadTiles(), Is.EqualTo(before));
+                SendMouseState(mouse, ScreenPosition(second), 1);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                Assert.That(controller.IsInputLocked, Is.False);
+                Assert.That(ReadTiles(), Is.EqualTo(before));
 
-            SendMouseState(ScreenPosition(second), 0);
-            SendMouseState(ScreenPosition(second), 1);
-            Assert.That(controller.IsInputLocked, Is.True);
-            Assert.That(board.GetTile(first), Is.EqualTo(before[second.X, second.Y]));
-            Assert.That(board.GetTile(second), Is.EqualTo(before[first.X, first.Y]));
+                SendMouseState(mouse, ScreenPosition(second), 0);
+                SendMouseState(mouse, ScreenPosition(second), 1);
+                Assert.That(controller.IsInputLocked, Is.True);
+                Assert.That(board.GetTile(first), Is.EqualTo(before[second.X, second.Y]));
+                Assert.That(board.GetTile(second), Is.EqualTo(before[first.X, first.Y]));
 
-            yield return WaitForSwap();
+                yield return WaitForSwap();
 
-            Assert.That(controller.SelectedPosition, Is.Null);
-            AssertViewsMatchBoard();
+                Assert.That(controller.SelectedPosition, Is.Null);
+                AssertViewsMatchBoard();
+            }
+            finally
+            {
+                input.TearDown();
+            }
         }
 
         [UnityTest]
@@ -779,9 +785,9 @@ namespace Match3.Presentation.Tests
             return inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position);
         }
 
-        private void SendMouseState(Vector2 position, ushort buttons)
+        private void SendMouseState(Mouse mouse, Vector2 position, ushort buttons)
         {
-            InputSystem.QueueStateEvent(testMouse, new MouseState { position = position, buttons = buttons });
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = position, buttons = buttons });
             InputSystem.Update();
             // Exercise the actual mouse poll deterministically after processing the simulated event.
             typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);

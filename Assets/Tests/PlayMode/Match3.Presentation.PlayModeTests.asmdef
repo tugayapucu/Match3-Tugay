@@ -4,7 +4,8 @@
     "references": [
         "Match3.Core",
         "Match3.Presentation",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"
