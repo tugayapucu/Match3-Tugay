@@ -261,6 +261,19 @@ Goal = 25 / 25
 Status = Won
 ```
 
+## Level Status Timing
+
+`LevelProgress.ApplyValidMove` runs only after `ResolveUntilStable` has completely finished.
+
+Therefore:
+
+```text
+during swap/resolution/cascades → LevelStatus is still Playing
+after stable resolution result → apply progress → possibly Won/Lost
+```
+
+`LevelStatus` and `isInputLocked` are separate because they represent different concerns and lifecycles.
+
 ## Terminal Input
 
 When status becomes:
@@ -292,9 +305,9 @@ HUD
 
 Keep restart simple.
 
-Phase 9 does not need arbitrary restart during a running animation.
+Restart is allowed whenever the board is settled and no move/resolution is running, including while `LevelStatus == Playing`. This is the Phase 9 escape hatch for a dead board while legal-move detection remains out of scope.
 
-Prefer restart from a settled terminal state unless Step 1 finds a strong reason otherwise.
+Restart is not allowed during an active swap or resolution.
 
 ---
 
@@ -307,28 +320,27 @@ Match3.Presentation → Match3.Core
 Match3.Core         ✗ Match3.Presentation
 ```
 
-A preferred responsibility shape is:
+Approved Step 1 responsibility shape:
 
 ```text
 Core
 ├── Board / matching / resolution rules
-├── resolution result data, if that belongs naturally in Core
-└── LevelProgress / level rules
+├── ResolutionResult
+├── LevelProgress
+└── LevelStatus
 
 Presentation
 ├── BoardInputController
 │   └── input + swap/rollback sequencing
 ├── BoardResolutionRunner
-│   └── clear/fall/refill/cascade sequencing
-├── LevelController
-│   └── level orchestration
+│   └── clear/fall/refill/cascade sequencing + result aggregation
 ├── LevelHudView
 │   └── display + restart interaction
 └── BoardBootstrap
-    └── composition / wiring
+    └── composition root + current small level lifecycle/orchestration
 ```
 
-Exact names may differ after inspection.
+Do not add a separate `LevelController` yet. Revisit that extraction only if level logic grows enough to justify another owner.
 
 Do not create a new architectural layer unless it clearly makes the project simpler.
 
@@ -347,9 +359,9 @@ BoardResolutionRunner
         ↓
 BoardInputController / level integration
         ↓
-LevelProgress
+BoardBootstrap (current level orchestration)
         ↓
-LevelController
+LevelProgress
         ↓
 HUD
 ```
@@ -411,6 +423,8 @@ Do not add position data, combo metadata, special-tile metadata, or scoring rule
 The result reports facts.
 
 It must **not** calculate score or decide Win/Lose.
+
+Order of work: `ResolutionResult` is defined and tested in Step 2 (together with `LevelProgress`, which consumes it); Step 3 only produces it from resolution.
 
 ---
 
@@ -511,7 +525,14 @@ Questions:
 - Can the result stay independent from Presentation?
 - Do we need per-round results, or is one aggregate result per player move enough?
 
-For Phase 9, prefer **one aggregate result per valid player move** unless a current requirement genuinely needs live per-cascade score updates.
+Approved Step 1 decision:
+
+- `BoardResolution.ClearCells` returns the `TileType`s it actually changes from non-Empty to `Empty`.
+- Preserve validate-all-before-mutation behavior.
+- Duplicate positions or already-Empty cells contribute nothing.
+- Do **not** promise meaningful ordering of the returned types; callers use counts/multiset semantics.
+- `BoardResolutionRunner` aggregates all rounds into one `ResolutionResult` per valid player move.
+- No per-round scoring/update event in Phase 9.
 
 ## Question 3 — Communication
 
@@ -531,7 +552,19 @@ Explain:
 - why it reduces or increases coupling
 - whether more than one consumer exists today
 
-Explicitly reject a global event system unless evidence proves otherwise.
+Approved Step 1 decision:
+
+Use a small local completion callback. No `LastResult` property, no C# event, and no global event system.
+
+Preferred handoff shape in `BoardInputController`:
+
+```csharp
+ResolutionResult result = null;
+yield return resolution.ResolveUntilStable(r => result = r);
+onValidMoveResolved(result);
+```
+
+The callback is invoked after the board is fully stable and before the controller performs its final selection-clear/unlock cleanup.
 
 ## Question 4 — Terminal Input
 
@@ -551,7 +584,18 @@ explicit external input-enabled gate
 another simpler existing mechanism
 ```
 
-Do not silently convert `isInputLocked` into level status.
+Approved Step 1 decision:
+
+Use `inputController.enabled = false` when the level reaches Won/Lost.
+
+Keep `isInputLocked` exclusively about an active board operation. `LevelStatus` and `isInputLocked` are separate because they describe different concerns/lifecycles, not because Won/Lost overlaps an active cascade.
+
+Later integration tests must prove that disabling the component inside `FinishSwap` still allows the coroutine cleanup to complete:
+- `SelectedPosition == null`
+- `IsInputLocked == false`
+- board stable/consistent
+- component disabled
+- new clicks ignored.
 
 ## Question 5 — Restart
 
@@ -571,7 +615,22 @@ Evaluate:
 - whether restart can reuse existing BoardView cleanup/render behavior
 - whether it introduces circular references
 
-Prefer the simplest explicit design that does not create fragile hidden setup.
+Approved Step 1 decision:
+
+Use in-place restart through `BoardBootstrap` rather than scene reload.
+
+`Start()` should delegate to a reusable level-start method, and restart should rebuild the session using the configured seed:
+- regenerate the board
+- re-render views
+- create a fresh `BoardResolutionRunner`
+- create a fresh `System.Random(seed)` for refill
+- reinitialize the input controller/callback
+- create a fresh `LevelProgress`
+- re-enable the input controller
+
+Restart is allowed only when the board is settled/unlocked, including while Playing. Reject restart while a move/resolution is active.
+
+Do not change the existing refill seed policy (`RefillSeedReuse.md`) as part of this phase unless a separate concrete need appears.
 
 ## Required Output
 
@@ -613,9 +672,11 @@ STOP and wait for approval.
 
 ## Goal
 
-Implement the level rules independently from Unity and board visuals.
+Implement the level rules independently from Unity and board visuals, and define the result contract they consume.
 
 Do not integrate with input or UI yet.
+
+Do not change `BoardResolution` or `BoardResolutionRunner` yet; Step 3 produces the result defined here.
 
 ## Preferred Shape
 
@@ -623,8 +684,38 @@ After Step 1 approval, create the approved equivalent of:
 
 ```text
 LevelStatus
+ResolutionResult
 LevelProgress
 ```
+
+## ResolutionResult
+
+A small immutable, passive Core data type that represents only the cleared-tile facts of one valid player move.
+
+It may expose:
+
+```text
+ClearedTiles      (read-only collection of TileType)
+ClearedCount
+CountOf(TileType)
+```
+
+It must not know about:
+
+```text
+score / points
+goals
+LevelProgress
+BoardResolutionRunner
+Unity / presentation
+```
+
+Rules:
+
+- copy the supplied tiles, so later changes to the caller's collection cannot change the result
+- reject `null` and `Empty` / undefined entries consistently with existing Core validation
+- an empty result is valid (it simply cleared nothing)
+- no meaningful ordering contract; callers use counts / multiset semantics
 
 Likely status:
 
@@ -694,7 +785,14 @@ Do not create a validation framework.
 
 ## Required EditMode Tests
 
-At minimum:
+At minimum, for `ResolutionResult`:
+
+- `ClearedCount` and `CountOf(type)` are exact
+- it keeps its own copy (changing the source collection afterwards does not change it)
+- `null` and `Empty` / undefined entries are rejected
+- an empty result is valid
+
+At minimum, for `LevelProgress`:
 
 - initial values are correct
 - one valid move consumes exactly one move
@@ -706,8 +804,9 @@ At minimum:
 - last move completing goal produces Won, not Lost
 - last move missing goal produces Lost
 - progress remains Playing when moves and goal permit
-- applying another move after Won is rejected/no-op according to approved contract
-- applying another move after Lost is rejected/no-op according to approved contract
+- applying another move after Won throws `InvalidOperationException`
+- applying another move after Lost throws `InvalidOperationException`
+- GoalProgress is capped at GoalTarget while Score still counts every cleared tile
 - invalid constructor values handled consistently
 
 Do not test Unity here.
@@ -717,6 +816,7 @@ Do not test Unity here.
 I should be able to answer:
 
 - Why is LevelProgress pure C#?
+- Why define and test `ResolutionResult` before anything produces it?
 - Why does one valid move consume one move even if it creates several cascades?
 - Why is goal tracking based on cleared tiles rather than matched tiles that might later change?
 - Why does score belong to level rules rather than BoardView?
@@ -736,15 +836,25 @@ STOP after this commit.
 
 ## Goal
 
-Make one completed valid resolution report the tile types it actually cleared.
+Make one completed valid resolution **produce** the `ResolutionResult` already defined and tested in Step 2.
+
+Do not change the `ResolutionResult` shape here unless producing it reveals a concrete problem; if so, explain before editing.
 
 Do not add scoring or UI here.
 
 ## Result Contract
 
-Implement the approved Step 1 result shape.
+Producing the result means:
 
-It must be:
+- `BoardResolution.ClearCells` returns the `TileType`s it actually cleared
+- `BoardResolutionRunner` aggregates them across every cascade round into one `ResolutionResult`
+- `ResolveUntilStable` hands that aggregate back through the approved scoped callback, exactly once, after the board is stable
+
+```csharp
+public IEnumerator ResolveUntilStable(Action<ResolutionResult> onResolved)
+```
+
+The produced result must be:
 
 ```text
 deterministic
@@ -753,12 +863,14 @@ independent from UI
 independent from scoring rules
 ```
 
-At minimum it must allow the caller to answer:
+`BoardResolution.ClearCells` must preserve its existing atomic validation contract: validate every supplied position before mutating any cell.
 
-```text
-How many tiles were cleared?
-How many cleared tiles were Red?
-```
+Its returned cleared types:
+- include only real non-Empty → Empty changes
+- exclude duplicates/already-Empty cells
+- have no meaningful ordering contract
+
+Tests should compare cleared types as a multiset/equivalent collection rather than pinning loop order.
 
 No combo multiplier.
 
@@ -773,9 +885,7 @@ For every resolution round:
 ```text
 FindMatches
     ↓
-capture TileType for each matched position
-    ↓
-ClearCells
+ClearCells (captures each TileType as it becomes Empty, returns them)
     ↓
 visual clear
     ↓
@@ -801,6 +911,7 @@ At minimum:
 - three cascade rounds aggregate all rounds
 - refill-created match contributes to the same player-move result
 - result contains no Empty values
+- the completion callback runs exactly once, after the board is stable
 - final board behavior is unchanged
 - same deterministic input gives same result
 
@@ -847,6 +958,12 @@ No restart yet.
 Inspect the approved Step 1 communication design and the Step 3 result contract.
 
 Explain the exact sequence before changing files.
+
+## Configuration Boundary
+
+Before starting or restarting a level, `BoardBootstrap` validates that the configured `GoalTileType` exists in the playable palette.
+
+`LevelProgress` validates only its own local arguments: positive starting moves/goal target, defined non-Empty goal type, and non-negative points. Palette membership is a cross-configuration rule because only the composition root sees both settings.
 
 ## Required Valid-Move Flow
 
@@ -916,21 +1033,17 @@ Then Win must take priority.
 
 ## Communication
 
-Use only the approved local mechanism.
+Use the approved local callback mechanism.
 
-If a local event is chosen:
+Keep valid-move completion visibly owned by `BoardInputController`:
 
-```text
-producer → subscriber
+```csharp
+ResolutionResult result = null;
+yield return resolution.ResolveUntilStable(r => result = r);
+onValidMoveResolved(result);
 ```
 
-must be explicit.
-
-Subscribe/unsubscribe safely.
-
-Do not add a global event manager.
-
-If a direct callback is chosen, keep the dependency one-way and explicit.
+No `LastResult` property, no event subscription lifecycle, and no global event manager.
 
 ## Terminal Input
 
@@ -981,6 +1094,9 @@ goal includes goal tiles from every cascade
 goal reached
 Status == Won
 board settled
+SelectedPosition == null
+IsInputLocked == false
+BoardInputController disabled
 no new player move accepted
 ```
 
@@ -991,6 +1107,9 @@ last move used
 goal not reached
 Status == Lost
 board settled
+SelectedPosition == null
+IsInputLocked == false
+BoardInputController disabled
 no new player move accepted
 ```
 
@@ -1038,7 +1157,7 @@ STOP after this commit.
 
 ## Goal
 
-Restart a finished level cleanly.
+Restart a settled level cleanly, including during normal `Playing` state.
 
 No HUD work yet unless the approved restart mechanism requires only minimal wiring.
 
@@ -1063,24 +1182,19 @@ No old level-event subscriptions may duplicate.
 
 ## Scope
 
-Prefer restart from:
+Restart is available when the board is settled/unlocked in any level status:
 
 ```text
+Playing
 Won
 Lost
 ```
 
-Do not add arbitrary restart-during-animation behavior in Phase 9.
+This gives the player a manual escape from a dead board while dead-board detection remains deferred.
 
-If restart is called while a move is actively resolving, follow the approved Step 1 contract:
+Restart during an active swap/resolution is rejected and should be unavailable in the HUD.
 
-```text
-reject it
-or
-make it unavailable
-```
-
-Do not add coroutine cancellation infrastructure unless required.
+Do not add coroutine cancellation infrastructure.
 
 ## Determinism
 
@@ -1100,6 +1214,7 @@ Do not silently invent random restart behavior.
 
 At minimum:
 
+- restart while Playing resets board and all level progress
 - restart after Won resets all level progress
 - restart after Lost resets all level progress
 - status returns to Playing
@@ -1145,8 +1260,10 @@ Moves
 Score
 Goal progress
 Win/Lose status
-Restart button at terminal state
+Restart button whenever restart is allowed
 ```
+
+Restart is available while Playing when the board is settled, and after Won/Lost. It is disabled/unavailable during an active move/resolution.
 
 Keep it intentionally simple.
 
@@ -1156,11 +1273,11 @@ No animations required.
 
 ## Preferred Separation
 
-A likely shape:
+Approved shape (Step 1: no separate `LevelController` yet):
 
 ```text
-LevelController
-└── owns/orchestrates level progress
+BoardBootstrap
+└── owns/orchestrates the current level (LevelProgress, restart)
 
 LevelHudView
 └── displays supplied values
@@ -1193,7 +1310,33 @@ or:
 Out of Moves
 ```
 
-Restart button becomes available according to the approved design.
+Restart button is usable whenever the board is settled/unlocked, including while Playing. It must not trigger restart during an active move/resolution.
+
+## Restart Availability — Busy Notification
+
+Decided before Step 2; implemented here, when the HUD becomes a real consumer.
+
+The HUD must not poll `IsInputLocked` every frame (no `LevelHudView.Update` for this).
+
+Add the smallest local busy-state notification from `BoardInputController` to the HUD/wiring, as a callback (no event bus, no generic observer system):
+
+```text
+accepted adjacent move starts         → notify busy = true
+after the complete move cleanup       → notify busy = false
+invalid geometry / non-adjacent click → no busy transition
+```
+
+"After the complete move cleanup" means after `FinishSwap` has cleared the selection and released `isInputLocked`, for both valid and invalid moves.
+
+The restart button uses that notification for its interactable state:
+
+```text
+settled / unlocked             → interactable
+active swap / resolution       → not interactable
+Won / Lost after cleanup       → interactable
+```
+
+`BoardBootstrap.RestartLevel()` still rejects (throws) when called while busy, as a defensive programming contract. The HUD keeps normal player clicks from ever reaching that invalid call.
 
 ## Unity Editor / MCP Work
 
@@ -1236,7 +1379,12 @@ At minimum, verify through the smallest practical test level:
 - Won display appears on win
 - Lost display appears on lose
 - restart resets HUD
-- restart button triggers exactly one restart
+- restart button works while Playing when settled
+- restart button is unavailable while a move/resolution is active
+- restart button works after Won/Lost
+- one click triggers exactly one restart
+- busy notification: true when an accepted move starts, false only after the complete cleanup
+- no busy notification for invalid geometry / non-adjacent clicks
 
 Do not create screenshot/pixel-perfect tests.
 
@@ -1247,7 +1395,8 @@ I should be able to answer:
 - Why is the HUD a view rather than the source of truth?
 - Why should UI receive already-calculated values?
 - Why is local restart interaction enough without an event bus?
-- What belongs in LevelController vs LevelHudView?
+- What belongs in BoardBootstrap (level orchestration) vs LevelHudView?
+- Why use a busy-state callback instead of polling `IsInputLocked` every frame?
 - Why avoid pixel-perfect tests here?
 
 ## Commit
@@ -1370,7 +1519,7 @@ Runtime observation is optional if forcing it would require awkward temporary se
 
 ### Restart
 
-From Win or Lose:
+Verify restart from a settled Playing state and from at least one terminal state:
 
 ```text
 board reset
@@ -1380,8 +1529,10 @@ Goal reset
 Playing
 HUD reset
 input works
-no stale visuals/listeners
+no stale visuals/callbacks
 ```
+
+Also verify restart is unavailable/rejected while a move is active.
 
 Repeat restart once more if practical.
 
@@ -1396,16 +1547,15 @@ Expected shape:
 ```text
 Core:
 Board rules
-resolution facts
+resolution facts (ResolutionResult)
 LevelProgress / LevelStatus
 
 Presentation:
 BoardInputController
 BoardResolutionRunner
-LevelController
 LevelHudView
 BoardView
-BoardBootstrap
+BoardBootstrap (composition root + current level orchestration)
 ```
 
 Use actual names.
@@ -1531,7 +1681,18 @@ last-move goal completion → Won
 ```text
 Won/Lost → no new board move
 board remains settled
+selection null
+interaction lock false
+controller disabled
 restart available
+```
+
+### Restart availability
+
+```text
+Playing + settled → restart available
+move/resolution active → restart unavailable/rejected
+Won/Lost + settled → restart available
 ```
 
 ### Restart
