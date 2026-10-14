@@ -13,6 +13,7 @@ namespace Match3.Presentation
         private Board board;
         private BoardView boardView;
         private Camera inputCamera;
+        private BoardResolutionRunner resolution;
         // Null means no selection; the controller remembers at most one logical cell.
         private GridPosition? selectedPosition;
         private bool isInputLocked;
@@ -20,8 +21,9 @@ namespace Match3.Presentation
         public GridPosition? SelectedPosition => selectedPosition;
         public bool IsInputLocked => isInputLocked;
 
-        // Startup wiring supplies the existing model, its rendered view, and the picking camera.
-        public void Initialize(Board board, BoardView boardView, Camera camera)
+        // Startup wiring supplies the existing model, its rendered view, the picking camera,
+        // and the runner that resolves matches after a valid move.
+        public void Initialize(Board board, BoardView boardView, Camera camera, BoardResolutionRunner resolution)
         {
             if (board == null)
             {
@@ -38,6 +40,11 @@ namespace Match3.Presentation
                 throw new ArgumentNullException(nameof(camera));
             }
 
+            if (resolution == null)
+            {
+                throw new ArgumentNullException(nameof(resolution));
+            }
+
             if (isInputLocked)
             {
                 throw new InvalidOperationException("Wait for the current swap before reinitializing input.");
@@ -47,6 +54,7 @@ namespace Match3.Presentation
             this.board = board;
             this.boardView = boardView;
             inputCamera = camera;
+            this.resolution = resolution;
             selectedPosition = null;
         }
 
@@ -120,7 +128,12 @@ namespace Match3.Presentation
             // Both outcomes animate forward, so the player sees the attempted move.
             yield return boardView.AnimateSwap(first, second, swapDuration);
 
-            if (!isValidMove)
+            if (isValidMove)
+            {
+                // Clear, fall and refill until no matches remain, including every cascade.
+                yield return resolution.ResolveUntilStable();
+            }
+            else
             {
                 // Restore the logical state first; the visuals catch up below.
                 // Cannot fail: these same adjacent cells were just swapped.
@@ -129,7 +142,8 @@ namespace Match3.Presentation
                 yield return boardView.AnimateSwap(first, second, swapDuration);
             }
 
-            // Input stays locked until every animation for this move has finished.
+            // Input stays locked until every animation for this move has finished:
+            // the rollback for an invalid move, or the whole cascade chain for a valid one.
             selectedPosition = null;
             isInputLocked = false;
         }

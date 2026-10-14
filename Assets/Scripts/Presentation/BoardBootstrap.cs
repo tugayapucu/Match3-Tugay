@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Match3.Presentation
 {
-    // Composition root: the one place that wires the logical board to its view and input at startup.
+    // Composition root: the one place that wires the logical board to its view, input and resolution at startup.
     // BoardGenerator and BoardView never reference each other; this class connects them.
     public sealed class BoardBootstrap : MonoBehaviour
     {
@@ -18,6 +18,10 @@ namespace Match3.Presentation
             TileType.Red, TileType.Green, TileType.Blue,
             TileType.Yellow, TileType.Purple, TileType.Orange
         };
+
+        // Seconds for the gravity and refill animations during match resolution.
+        [SerializeField] private float fallDuration = 0.15f;
+        [SerializeField] private float refillDuration = 0.15f;
 
         // The view that will display the generated board; assign it in the Inspector.
         [SerializeField] private BoardView boardView;
@@ -48,8 +52,11 @@ namespace Match3.Presentation
 
             board = BoardGenerator.Generate(width, height, palette, seed);
             boardView.Render(board);
+            // Refills use their own seeded System.Random, so a whole game is reproducible from `seed`.
+            var resolution = new BoardResolutionRunner(
+                board, boardView, palette, new System.Random(seed), fallDuration, refillDuration);
             // Pass the same authoritative instance after its tile visuals have been created.
-            inputController.Initialize(board, boardView, inputCamera);
+            inputController.Initialize(board, boardView, inputCamera, resolution);
         }
     }
 }
