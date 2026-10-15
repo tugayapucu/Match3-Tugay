@@ -8,11 +8,11 @@ namespace Match3.Core
     {
         private readonly int pointsPerClearedTile;
 
-        public LevelProgress(int startingMoves, TileType goalTileType, int goalTarget, int pointsPerClearedTile)
+        public LevelProgress(int startingMoveCount, TileType goalTileType, int goalTarget, int pointsPerClearedTile)
         {
-            if (startingMoves <= 0)
+            if (startingMoveCount <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(startingMoves), startingMoves, "Starting moves must be positive.");
+                throw new ArgumentOutOfRangeException(nameof(startingMoveCount), startingMoveCount, "Starting move count must be positive.");
             }
 
             // Only "defined and not Empty" here; whether the palette contains it is the composition root's check.
@@ -32,7 +32,7 @@ namespace Match3.Core
                     nameof(pointsPerClearedTile), pointsPerClearedTile, "Points per cleared tile cannot be negative.");
             }
 
-            MovesRemaining = startingMoves;
+            MovesRemaining = startingMoveCount;
             GoalTileType = goalTileType;
             GoalTarget = goalTarget;
             this.pointsPerClearedTile = pointsPerClearedTile;

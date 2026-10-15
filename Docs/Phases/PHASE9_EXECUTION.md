@@ -728,7 +728,7 @@ Lost
 A likely constructor/configuration needs:
 
 ```text
-startingMoves
+startingMoveCount
 goalTileType
 goalTarget
 pointsPerClearedTile
@@ -775,7 +775,7 @@ Use existing Core validation style.
 At minimum consider:
 
 ```text
-startingMoves > 0
+startingMoveCount > 0
 goalTarget > 0
 goal tile is a playable non-Empty TileType
 pointsPerClearedTile >= 0

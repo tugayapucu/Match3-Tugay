@@ -187,10 +187,10 @@ namespace Match3.Core.Tests
 
         [TestCase(0)]
         [TestCase(-1)]
-        public void Constructor_NonPositiveStartingMoves_Throws(int startingMoves)
+        public void Constructor_NonPositiveStartingMoveCount_Throws(int startingMoveCount)
         {
-            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new LevelProgress(startingMoves, TileType.Red, 25, 100));
-            Assert.That(exception.ParamName, Is.EqualTo("startingMoves"));
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new LevelProgress(startingMoveCount, TileType.Red, 25, 100));
+            Assert.That(exception.ParamName, Is.EqualTo("startingMoveCount"));
         }
 
         [TestCase(0)]
