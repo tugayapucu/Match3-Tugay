@@ -224,7 +224,8 @@ namespace Match3.Presentation.Tests
             var runner = new BoardResolutionRunner(
                 board, boardView, fullPalette, new ScriptedRandom(0, 2, 3, 1, 0, 5, 1, 4, 1), 0.05f, 0.05f);
 
-            yield return runner.ResolveUntilStable();
+            ResolutionResult result = null;
+            yield return runner.ResolveUntilStable(r => result = r);
             // Let deferred Destroy calls finish before inspecting objects.
             yield return null;
 
@@ -233,6 +234,13 @@ namespace Match3.Presentation.Tests
                 "PBRGO",
                 "YOGYP"))));
             AssertViewsMatchBoard(board);
+            // The three staircase runs: 3 Red, 3 Green, 3 Blue.
+            Assert.That(result.ClearedTiles, Is.EquivalentTo(new[]
+            {
+                TileType.Red, TileType.Red, TileType.Red,
+                TileType.Green, TileType.Green, TileType.Green,
+                TileType.Blue, TileType.Blue, TileType.Blue
+            }));
 
             var newViewsPerColumn = new int[board.Width];
             foreach (var view in boardObject.GetComponentsInChildren<TileView>(true))
@@ -247,6 +255,139 @@ namespace Match3.Presentation.Tests
             Assert.That(newViewsPerColumn, Is.EqualTo(new[] { 1, 2, 3, 2, 1 }));
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(board.Width * board.Height));
         }
+
+        [UnityTest]
+        public IEnumerator Runner_OneRound_ReportsExactlyTheClearedTypes()
+        {
+            // Column 0 already holds G G G; the refill (B, Y, O) creates no new match.
+            var board = CreateBoard(
+                "GBY",
+                "GPO",
+                "GRG");
+
+            yield return RunAndCheckResult(board, new ScriptedRandom(2, 3, 5),
+                new[] { TileType.Green, TileType.Green, TileType.Green },
+                "OBY",
+                "YPO",
+                "BRG");
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_TwoCascadeRounds_AggregateIntoOneResult()
+        {
+            // Round 1 clears G G G and refills B B B (a new match); round 2 clears it and refills B, Y, O.
+            var board = CreateBoard(
+                "GBY",
+                "GPO",
+                "GRG");
+
+            yield return RunAndCheckResult(board, new ScriptedRandom(2, 2, 2, 2, 3, 5),
+                new[]
+                {
+                    TileType.Green, TileType.Green, TileType.Green,
+                    TileType.Blue, TileType.Blue, TileType.Blue
+                },
+                "OBY",
+                "YPO",
+                "BRG");
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_ThreeCascadeRounds_AggregateIntoOneResult()
+        {
+            // G G G, then refill-made B B B, then refill-made Y Y Y, then a stable refill.
+            var board = CreateBoard(
+                "GBY",
+                "GPO",
+                "GRG");
+
+            yield return RunAndCheckResult(board, new ScriptedRandom(2, 2, 2, 3, 3, 3, 2, 3, 5),
+                new[]
+                {
+                    TileType.Green, TileType.Green, TileType.Green,
+                    TileType.Blue, TileType.Blue, TileType.Blue,
+                    TileType.Yellow, TileType.Yellow, TileType.Yellow
+                },
+                "OBY",
+                "YPO",
+                "BRG");
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_Intersection_CountsTheSharedCellOnce()
+        {
+            // A cross of Reds: row y=1 and column x=1 share (1,1), so 5 cells clear, not 6.
+            var board = CreateBoard(
+                "GRB",
+                "RRR",
+                "BRG");
+
+            yield return RunAndCheckResult(board, new ScriptedRandom(0, 3, 4, 5, 3),
+                new[] { TileType.Red, TileType.Red, TileType.Red, TileType.Red, TileType.Red },
+                "ROY",
+                "GPB",
+                "BYG");
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_SameSeedTwice_ProducesTheSameResult()
+        {
+            var firstResult = new List<TileType>();
+            var board = CreateBoard(
+                "GBY",
+                "GPO",
+                "GRG");
+            boardView.Render(board);
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f)
+                .ResolveUntilStable(r => firstResult.AddRange(r.ClearedTiles));
+            var firstBoard = ReadTiles(board);
+
+            var secondResult = new List<TileType>();
+            board = CreateBoard(
+                "GBY",
+                "GPO",
+                "GRG");
+            boardView.Render(board);
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f)
+                .ResolveUntilStable(r => secondResult.AddRange(r.ClearedTiles));
+
+            Assert.That(firstResult, Is.Not.Empty);
+            Assert.That(secondResult, Is.EquivalentTo(firstResult));
+            Assert.That(ReadTiles(board), Is.EqualTo(firstBoard));
+        }
+
+        // Runs the resolution and checks the result contract: the callback runs exactly once, only after the board
+        // is stable (no matches, no Empty), the cleared types are exactly as expected (as a multiset, no Empty),
+        // and the final board and views are the expected stable state.
+        private IEnumerator RunAndCheckResult(
+            Board board, System.Random refillRandom, TileType[] expectedCleared, params string[] finalRows)
+        {
+            boardView.Render(board);
+            var runner = new BoardResolutionRunner(board, boardView, FullPalette, refillRandom, 0.05f, 0.05f);
+            int callbacks = 0;
+            ResolutionResult result = null;
+
+            yield return runner.ResolveUntilStable(r =>
+            {
+                callbacks++;
+                result = r;
+                Assert.That(MatchFinder.FindMatches(board), Is.Empty, "Callback ran before the board was stable.");
+                Assert.That(ReadTiles(board), Has.No.Member(TileType.Empty), "Callback ran before refill finished.");
+            });
+            // Let deferred Destroy calls finish before inspecting objects.
+            yield return null;
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(result.ClearedTiles, Is.EquivalentTo(expectedCleared));
+            Assert.That(result.ClearedTiles, Has.No.Member(TileType.Empty));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard(finalRows))));
+            AssertViewsMatchBoard(board);
+        }
+
+        private static readonly TileType[] FullPalette =
+        {
+            TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange
+        };
 
         [Test]
         public void ZeroDuration_FallAndRefill_SettleInASingleStep()

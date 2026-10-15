@@ -131,7 +131,8 @@ namespace Match3.Presentation
             if (isValidMove)
             {
                 // Clear, fall and refill until no matches remain, including every cascade.
-                yield return resolution.ResolveUntilStable();
+                // Nothing consumes the cleared-tile result yet.
+                yield return resolution.ResolveUntilStable(result => { });
             }
             else
             {

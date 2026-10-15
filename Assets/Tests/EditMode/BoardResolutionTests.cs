@@ -152,6 +152,71 @@ namespace Match3.Core.Tests
         }
 
         [Test]
+        public void ClearCells_ReturnsTheTypesItCleared()
+        {
+            var board = TestBoards.Create("RRRB");
+
+            var cleared = BoardResolution.ClearCells(board, MatchFinder.FindMatches(board));
+
+            // Order is not part of the contract: compare as a multiset.
+            Assert.That(cleared, Is.EquivalentTo(new[] { TileType.Red, TileType.Red, TileType.Red }));
+        }
+
+        [Test]
+        public void ClearCells_SeveralSeparateMatches_ReturnsEveryClearedCell()
+        {
+            var board = TestBoards.Create(
+                "GGGP",
+                "BYOB",
+                "PYRB",
+                "OYRB");
+
+            var cleared = BoardResolution.ClearCells(board, MatchFinder.FindMatches(board));
+
+            Assert.That(cleared, Is.EquivalentTo(new[]
+            {
+                TileType.Green, TileType.Green, TileType.Green,
+                TileType.Yellow, TileType.Yellow, TileType.Yellow,
+                TileType.Blue, TileType.Blue, TileType.Blue
+            }));
+        }
+
+        [Test]
+        public void ClearCells_Intersection_ReportsTheSharedCellOnce()
+        {
+            // Row of 3 + column of 3 crossing at one cell: 5 distinct cells, so 5 Reds, not 6.
+            var board = TestBoards.Create(
+                "G.R.",
+                ".RRR",
+                "B.R.");
+
+            var cleared = BoardResolution.ClearCells(board, MatchFinder.FindMatches(board));
+
+            Assert.That(cleared, Is.EquivalentTo(new[] { TileType.Red, TileType.Red, TileType.Red, TileType.Red, TileType.Red }));
+        }
+
+        [Test]
+        public void ClearCells_RepeatedOrAlreadyEmptyPositions_AreNotReported()
+        {
+            var board = TestBoards.Create("R.GB");
+            var positions = new[] { new GridPosition(0, 0), new GridPosition(0, 0), new GridPosition(1, 0) };
+
+            var cleared = BoardResolution.ClearCells(board, positions);
+
+            // Only (0,0) really changed from a tile to Empty.
+            Assert.That(cleared, Is.EquivalentTo(new[] { TileType.Red }));
+            Assert.That(cleared, Has.No.Member(TileType.Empty));
+        }
+
+        [Test]
+        public void ClearCells_EmptyInput_ReturnsNothing()
+        {
+            var board = TestBoards.Create("RRRB");
+
+            Assert.That(BoardResolution.ClearCells(board, new GridPosition[0]), Is.Empty);
+        }
+
+        [Test]
         public void ApplyGravity_NoEmptyCells_ReturnsNoMovesAndChangesNothing()
         {
             var board = TestBoards.Create(

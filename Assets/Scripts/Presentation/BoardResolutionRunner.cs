@@ -61,13 +61,27 @@ namespace Match3.Presentation
         }
 
         // Runs until MatchFinder finds nothing. The caller keeps input locked for the whole time.
-        public IEnumerator ResolveUntilStable()
+        // When the board is stable, `onResolved` receives every tile type cleared by this whole resolution
+        // (all cascade rounds together), exactly once. The callback is checked now; the work runs when iterated.
+        public IEnumerator ResolveUntilStable(Action<ResolutionResult> onResolved)
         {
+            if (onResolved == null)
+            {
+                throw new ArgumentNullException(nameof(onResolved));
+            }
+
+            return ResolveUntilStableRoutine(onResolved);
+        }
+
+        private IEnumerator ResolveUntilStableRoutine(Action<ResolutionResult> onResolved)
+        {
+            // Collected across every round, so one player move produces one result.
+            var cleared = new List<TileType>();
             var matches = MatchFinder.FindMatches(board);
             while (matches.Count > 0)
             {
                 // Each pair: Core changes the Board first, then BoardView catches up.
-                BoardResolution.ClearCells(board, matches);
+                cleared.AddRange(BoardResolution.ClearCells(board, matches));
                 boardView.RemoveViews(matches);
 
                 var moves = BoardResolution.ApplyGravity(board);
@@ -79,6 +93,9 @@ namespace Match3.Presentation
                 // Refill may have created new matches: if so, the loop runs again (a cascade).
                 matches = MatchFinder.FindMatches(board);
             }
+
+            // Stable: hand over the facts. Scoring and goals are decided by whoever receives them.
+            onResolved(new ResolutionResult(cleared));
         }
 
         private static void ValidateDuration(float duration, string parameterName)

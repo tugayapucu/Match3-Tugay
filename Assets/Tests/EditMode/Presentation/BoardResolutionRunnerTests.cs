@@ -63,12 +63,26 @@ namespace Match3.Presentation.Tests
             board.SetTile(new GridPosition(1, 0), TileType.Green);
             board.SetTile(new GridPosition(2, 0), TileType.Blue);
             var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+            int callbacks = 0;
+            ResolutionResult result = null;
 
-            // Nothing to resolve: the very first step already reports "finished".
-            Assert.That(runner.ResolveUntilStable().MoveNext(), Is.False);
+            // Nothing to resolve: the very first step already reports "finished", with an empty result.
+            Assert.That(runner.ResolveUntilStable(r => { callbacks++; result = r; }).MoveNext(), Is.False);
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(result.ClearedCount, Is.Zero);
             Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Red));
             Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.Green));
             Assert.That(board.GetTile(new GridPosition(2, 0)), Is.EqualTo(TileType.Blue));
+        }
+
+        [Test]
+        public void ResolveUntilStable_NullCallback_ThrowsBeforeAnyWork()
+        {
+            var board = new Board(3, 3);
+            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+
+            // Thrown on the call itself, not later when the coroutine is first stepped.
+            Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(null));
         }
     }
 }

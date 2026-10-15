@@ -8,7 +8,9 @@ namespace Match3.Core
     {
         // Sets every supplied cell to Empty (typically the cells MatchFinder found).
         // All positions are checked first, so invalid input leaves the Board unchanged.
-        public static void ClearCells(Board board, IReadOnlyCollection<GridPosition> positions)
+        // Returns the TileType of every cell it actually changed from a tile to Empty: a repeated position or an
+        // already-Empty cell adds nothing. The order of the returned types has no meaning.
+        public static IReadOnlyList<TileType> ClearCells(Board board, IReadOnlyCollection<GridPosition> positions)
         {
             if (board == null)
             {
@@ -30,10 +32,21 @@ namespace Match3.Core
             }
 
             // Empty marks a hole that gravity and refill will deal with in later steps.
+            var cleared = new List<TileType>();
             foreach (GridPosition position in positions)
             {
+                // Read the type before it is overwritten: once the cell is Empty, "it was Red" is gone.
+                TileType tile = board.GetTile(position);
+                if (tile == TileType.Empty)
+                {
+                    continue;
+                }
+
+                cleared.Add(tile);
                 board.SetTile(position, TileType.Empty);
             }
+
+            return cleared;
         }
 
         // Drops every tile as far down its column as possible, keeping the tiles' order; Empty cells end up on top.
