@@ -14,6 +14,8 @@ namespace Match3.Presentation
         private BoardView boardView;
         private Camera inputCamera;
         private BoardResolutionRunner resolution;
+        // Receives the facts of each finished valid move; the receiver decides what they mean (moves, score, goal).
+        private Action<ResolutionResult> onValidMoveResolved;
         // Null means no selection; the controller remembers at most one logical cell.
         private GridPosition? selectedPosition;
         private bool isInputLocked;
@@ -22,8 +24,10 @@ namespace Match3.Presentation
         public bool IsInputLocked => isInputLocked;
 
         // Startup wiring supplies the existing model, its rendered view, the picking camera,
-        // and the runner that resolves matches after a valid move.
-        public void Initialize(Board board, BoardView boardView, Camera camera, BoardResolutionRunner resolution)
+        // the runner that resolves matches after a valid move, and who to tell when such a move has finished.
+        public void Initialize(
+            Board board, BoardView boardView, Camera camera, BoardResolutionRunner resolution,
+            Action<ResolutionResult> onValidMoveResolved)
         {
             if (board == null)
             {
@@ -45,6 +49,11 @@ namespace Match3.Presentation
                 throw new ArgumentNullException(nameof(resolution));
             }
 
+            if (onValidMoveResolved == null)
+            {
+                throw new ArgumentNullException(nameof(onValidMoveResolved));
+            }
+
             if (isInputLocked)
             {
                 throw new InvalidOperationException("Wait for the current swap before reinitializing input.");
@@ -55,6 +64,7 @@ namespace Match3.Presentation
             this.boardView = boardView;
             inputCamera = camera;
             this.resolution = resolution;
+            this.onValidMoveResolved = onValidMoveResolved;
             selectedPosition = null;
         }
 
@@ -131,8 +141,12 @@ namespace Match3.Presentation
             if (isValidMove)
             {
                 // Clear, fall and refill until no matches remain, including every cascade.
-                // Nothing consumes the cleared-tile result yet.
-                yield return resolution.ResolveUntilStable(result => { });
+                ResolutionResult result = null;
+                yield return resolution.ResolveUntilStable(r => result = r);
+                // The board is stable now: report the whole move exactly once, before the cleanup below.
+                // The receiver may disable this component (level over); the cleanup still runs, because
+                // a disabled MonoBehaviour's running coroutines continue.
+                onValidMoveResolved(result);
             }
             else
             {

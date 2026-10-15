@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using Match3.Core;
 using NUnit.Framework;
@@ -31,6 +32,11 @@ namespace Match3.Presentation.Tests
         private BoardView boardView;
         private BoardInputController controller;
         private Camera inputCamera;
+        // Every result the controller reported, in order: one per finished valid move.
+        private List<ResolutionResult> reportedResults;
+        // What the controller calls after a valid move; level tests switch it to ApplyToLevel via UseLevel.
+        private Action<ResolutionResult> onValidMoveResolved;
+        private LevelProgress level;
 
         [SetUp]
         public void SetUp()
@@ -69,8 +75,11 @@ namespace Match3.Presentation.Tests
             }
 
             boardView.Render(board);
+            reportedResults = new List<ResolutionResult>();
+            onValidMoveResolved = reportedResults.Add;
+            level = null;
             controller = boardObject.AddComponent<BoardInputController>();
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)));
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved);
             Physics2D.SyncTransforms();
         }
 
@@ -192,10 +201,12 @@ namespace Match3.Presentation.Tests
             Click(first);
 
             var runner = CreateRunner(new System.Random(1));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(null, boardView, inputCamera, runner));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, null, inputCamera, runner));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, null, runner));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, null));
+            Action<ResolutionResult> report = reportedResults.Add;
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(null, boardView, inputCamera, runner, report));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, null, inputCamera, runner, report));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, null, runner, report));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, null, report));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, runner, null));
 
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
         }
@@ -342,6 +353,7 @@ namespace Match3.Presentation.Tests
             Assert.That(firstView.transform.position, Is.EqualTo(firstStart));
             Assert.That(secondView.transform.position, Is.EqualTo(secondStart));
             AssertViewsMatchBoard();
+            Assert.That(reportedResults, Is.Empty, "An invalid move is never reported.");
         }
 
         [UnityTest]
@@ -470,6 +482,7 @@ namespace Match3.Presentation.Tests
             AssertSettled();
             Assert.That(ReadTiles(), Is.EqualTo(original));
             Assert.That(SnapshotViews(), Is.EqualTo(views));
+            Assert.That(reportedResults, Is.Empty, "An invalid move is never reported.");
         }
 
         [UnityTest]
@@ -570,7 +583,7 @@ namespace Match3.Presentation.Tests
             // A generated board and a real seeded refill: play every valid move found, several times in a row.
             board = BoardGenerator.Generate(5, 4, new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow }, 7);
             boardView.Render(board);
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(7)));
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(7)), onValidMoveResolved);
             Physics2D.SyncTransforms();
 
             int movesPlayed = 0;
@@ -589,6 +602,144 @@ namespace Match3.Presentation.Tests
             }
 
             Assert.That(movesPlayed, Is.GreaterThanOrEqualTo(3), "Expected several moves on this seeded board.");
+        }
+
+        [UnityTest]
+        public IEnumerator Level_InvalidSwap_CostsNothing()
+        {
+            UseLevel(5, TileType.Green, 10);
+            SetBoard(new ScriptedRandom(2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            // Y and O exchange without forming a match: rolled back, so the move is free.
+            yield return Swap(new GridPosition(2, 2), new GridPosition(2, 1));
+
+            AssertSettled();
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(controller.enabled, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Level_ValidOneRoundMove_CostsOneMoveAndScoresTheClearedTiles()
+        {
+            UseLevel(5, TileType.Green, 10);
+            SetBoard(new ScriptedRandom(2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            // Clears G G G; the refilled B, Y, O count for nothing.
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "OBY",
+                "YPO",
+                "BRG");
+
+            AssertLevel(4, 300, 3, LevelStatus.Playing);
+            Assert.That(controller.enabled, Is.True);
+            // Still Playing: the next click starts a fresh selection.
+            Click(new GridPosition(0, 0));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+        }
+
+        [UnityTest]
+        public IEnumerator Level_ValidCascadeMove_CostsOneMoveAndScoresEveryRound()
+        {
+            UseLevel(5, TileType.Blue, 10);
+            // Three rounds clear G G G, then B B B, then Y Y Y: 9 tiles, 3 of them Blue.
+            SetBoard(new ScriptedRandom(2, 2, 2, 3, 3, 3, 2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 3, false,
+                "OBY",
+                "YPO",
+                "BRG");
+
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(9));
+            AssertLevel(4, 900, 3, LevelStatus.Playing);
+        }
+
+        [UnityTest]
+        public IEnumerator Level_GoalReached_WinsAndStopsNewMoves()
+        {
+            UseLevel(5, TileType.Green, 3);
+            SetBoard(new ScriptedRandom(2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "OBY",
+                "YPO",
+                "BRG");
+
+            AssertLevel(4, 300, 3, LevelStatus.Won);
+            AssertLevelOver();
+        }
+
+        [UnityTest]
+        public IEnumerator Level_LastMoveWithoutGoal_LosesAndStopsNewMoves()
+        {
+            UseLevel(1, TileType.Blue, 10);
+            SetBoard(new ScriptedRandom(2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            // Clears only Green; the Blue that refill creates does not count.
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "OBY",
+                "YPO",
+                "BRG");
+
+            AssertLevel(0, 300, 0, LevelStatus.Lost);
+            AssertLevelOver();
+        }
+
+        [UnityTest]
+        public IEnumerator Level_LastMoveReachesTheGoal_WinsInsteadOfLosing()
+        {
+            UseLevel(1, TileType.Green, 3);
+            SetBoard(new ScriptedRandom(2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+
+            yield return Swap(new GridPosition(0, 0), new GridPosition(1, 0));
+
+            // Moves reached 0 in the same move that completed the goal: Won has priority.
+            AssertLevel(0, 300, 3, LevelStatus.Won);
+            AssertLevelOver();
+        }
+
+        [UnityTest]
+        public IEnumerator Level_LastMoveReachesTheGoalOnlyInACascade_StaysPlayingUntilStableThenWins()
+        {
+            // Yellow is cleared only in the third round, by a cascade.
+            UseLevel(1, TileType.Yellow, 3);
+            SetBoard(new ScriptedRandom(2, 2, 2, 3, 3, 3, 2, 3, 5),
+                "GBY",
+                "GPO",
+                "RGG");
+            Click(new GridPosition(0, 0));
+            Click(new GridPosition(1, 0));
+
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Resolution did not finish.");
+                // Progress is applied once, after the last cascade: never a premature Lost in between.
+                AssertLevel(1, 0, 0, LevelStatus.Playing);
+                yield return null;
+            }
+
+            AssertLevel(0, 900, 3, LevelStatus.Won);
+            AssertLevelOver();
         }
 
         // Plays one valid move and follows it to the end. Checks that the Board changes first, that input stays
@@ -612,7 +763,8 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             Assert.That(ReadTiles(), Is.EqualTo(swapped), "The Board swaps before anything animates.");
             Assert.Throws<InvalidOperationException>(
-                () => controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1))));
+                () => controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved));
+            int reportsBefore = reportedResults.Count;
 
             int rounds = 0;
             bool hadEmpty = false;
@@ -627,6 +779,7 @@ namespace Match3.Presentation.Tests
                 controller.HandlePointerDown(rapidClick);
                 Assert.That(controller.SelectedPosition, Is.EqualTo(first));
                 Assert.That(controller.IsInputLocked, Is.True);
+                Assert.That(reportedResults.Count, Is.EqualTo(reportsBefore), "Nothing is reported before the board is stable.");
 
                 // A round starts when cleared (Empty) cells appear and ends when refill fills them again.
                 bool hasEmpty = BoardHasEmpty();
@@ -660,6 +813,7 @@ namespace Match3.Presentation.Tests
 
             AssertStable();
             Assert.That(ReadTiles(), Is.EqualTo(Tiles(finalRows)));
+            Assert.That(reportedResults.Count, Is.EqualTo(reportsBefore + 1), "One report per valid move, after every round.");
         }
 
         private TileView[] ViewsAt(GridPosition[] positions)
@@ -808,8 +962,50 @@ namespace Match3.Presentation.Tests
             }
 
             boardView.Render(board);
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(refillRandom));
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(refillRandom), onValidMoveResolved);
             Physics2D.SyncTransforms();
+        }
+
+        // Makes the next SetBoard wire the controller to a fresh level (100 points per cleared tile).
+        private void UseLevel(int startingMoveCount, TileType goalTileType, int goalTarget)
+        {
+            level = new LevelProgress(startingMoveCount, goalTileType, goalTarget, 100);
+            onValidMoveResolved = ApplyToLevel;
+        }
+
+        // The same rule BoardBootstrap applies; here it lets level tests use exact, scripted boards.
+        private void ApplyToLevel(ResolutionResult result)
+        {
+            reportedResults.Add(result);
+            level.ApplyValidMove(result);
+            if (level.Status != LevelStatus.Playing)
+            {
+                controller.enabled = false;
+            }
+        }
+
+        private void AssertLevel(int movesRemaining, int score, int goalProgress, LevelStatus status)
+        {
+            Assert.That(level.MovesRemaining, Is.EqualTo(movesRemaining), "Moves remaining");
+            Assert.That(level.Score, Is.EqualTo(score), "Score");
+            Assert.That(level.GoalProgress, Is.EqualTo(goalProgress), "Goal progress");
+            Assert.That(level.Status, Is.EqualTo(status), "Status");
+        }
+
+        // Won or Lost: the last move still finished cleanly, but no new move can start.
+        private void AssertLevelOver()
+        {
+            AssertStable();
+            Assert.That(controller.enabled, Is.False);
+            var tiles = ReadTiles();
+
+            Click(new GridPosition(0, 0));
+            Click(new GridPosition(1, 0));
+
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(tiles));
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
         }
 
         private BoardResolutionRunner CreateRunner(System.Random refillRandom)
