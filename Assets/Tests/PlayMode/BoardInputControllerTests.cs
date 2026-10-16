@@ -37,6 +37,8 @@ namespace Match3.Presentation.Tests
         // What the controller calls after a valid move; level tests switch it to ApplyToLevel via UseLevel.
         private Action<ResolutionResult> onValidMoveResolved;
         private LevelProgress level;
+        // Every busy notification in order: "busy", "free", or "free-early" if the controller was not yet settled.
+        private List<string> busyChanges;
 
         [SetUp]
         public void SetUp()
@@ -76,10 +78,11 @@ namespace Match3.Presentation.Tests
 
             boardView.Render(board);
             reportedResults = new List<ResolutionResult>();
+            busyChanges = new List<string>();
             onValidMoveResolved = reportedResults.Add;
             level = null;
             controller = boardObject.AddComponent<BoardInputController>();
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved);
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved, RecordBusy);
             Physics2D.SyncTransforms();
         }
 
@@ -128,6 +131,7 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(ReadTiles(), Is.EqualTo(before));
             AssertViewsMatchBoard();
+            Assert.That(busyChanges, Is.Empty, "A rejected click is not a move.");
         }
 
         [Test]
@@ -202,11 +206,13 @@ namespace Match3.Presentation.Tests
 
             var runner = CreateRunner(new System.Random(1));
             Action<ResolutionResult> report = reportedResults.Add;
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(null, boardView, inputCamera, runner, report));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, null, inputCamera, runner, report));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, null, runner, report));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, null, report));
-            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, runner, null));
+            Action<bool> busy = RecordBusy;
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(null, boardView, inputCamera, runner, report, busy));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, null, inputCamera, runner, report, busy));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, null, runner, report, busy));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, null, report, busy));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, runner, null, busy));
+            Assert.Throws<ArgumentNullException>(() => controller.Initialize(board, boardView, inputCamera, runner, report, null));
 
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
         }
@@ -354,6 +360,7 @@ namespace Match3.Presentation.Tests
             Assert.That(secondView.transform.position, Is.EqualTo(secondStart));
             AssertViewsMatchBoard();
             Assert.That(reportedResults, Is.Empty, "An invalid move is never reported.");
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }), "An invalid move is still busy until rolled back.");
         }
 
         [UnityTest]
@@ -583,7 +590,7 @@ namespace Match3.Presentation.Tests
             // A generated board and a real seeded refill: play every valid move found, several times in a row.
             board = BoardGenerator.Generate(5, 4, new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow }, 7);
             boardView.Render(board);
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(7)), onValidMoveResolved);
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(7)), onValidMoveResolved, RecordBusy);
             Physics2D.SyncTransforms();
 
             int movesPlayed = 0;
@@ -763,8 +770,10 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             Assert.That(ReadTiles(), Is.EqualTo(swapped), "The Board swaps before anything animates.");
             Assert.Throws<InvalidOperationException>(
-                () => controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved));
+                () => controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)), onValidMoveResolved, RecordBusy));
             int reportsBefore = reportedResults.Count;
+            int busyBefore = busyChanges.Count;
+            Assert.That(busyChanges[busyBefore - 1], Is.EqualTo("busy"), "Busy as soon as the move is accepted.");
 
             int rounds = 0;
             bool hadEmpty = false;
@@ -780,6 +789,7 @@ namespace Match3.Presentation.Tests
                 Assert.That(controller.SelectedPosition, Is.EqualTo(first));
                 Assert.That(controller.IsInputLocked, Is.True);
                 Assert.That(reportedResults.Count, Is.EqualTo(reportsBefore), "Nothing is reported before the board is stable.");
+                Assert.That(busyChanges.Count, Is.EqualTo(busyBefore), "Still busy through every stage.");
 
                 // A round starts when cleared (Empty) cells appear and ends when refill fills them again.
                 bool hasEmpty = BoardHasEmpty();
@@ -814,6 +824,8 @@ namespace Match3.Presentation.Tests
             AssertStable();
             Assert.That(ReadTiles(), Is.EqualTo(Tiles(finalRows)));
             Assert.That(reportedResults.Count, Is.EqualTo(reportsBefore + 1), "One report per valid move, after every round.");
+            Assert.That(busyChanges.Count, Is.EqualTo(busyBefore + 1));
+            Assert.That(busyChanges[busyBefore], Is.EqualTo("free"), "Free only after the complete cleanup.");
         }
 
         private TileView[] ViewsAt(GridPosition[] positions)
@@ -962,8 +974,14 @@ namespace Match3.Presentation.Tests
             }
 
             boardView.Render(board);
-            controller.Initialize(board, boardView, inputCamera, CreateRunner(refillRandom), onValidMoveResolved);
+            controller.Initialize(board, boardView, inputCamera, CreateRunner(refillRandom), onValidMoveResolved, RecordBusy);
             Physics2D.SyncTransforms();
+        }
+
+        private void RecordBusy(bool isBusy)
+        {
+            bool isSettled = !controller.IsInputLocked && !controller.SelectedPosition.HasValue;
+            busyChanges.Add(isBusy ? "busy" : isSettled ? "free" : "free-early");
         }
 
         // Makes the next SetBoard wire the controller to a fresh level (100 points per cleared tile).
@@ -1006,6 +1024,7 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }), "A finished level still reports its last move as done.");
         }
 
         private BoardResolutionRunner CreateRunner(System.Random refillRandom)

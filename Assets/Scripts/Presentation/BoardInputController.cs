@@ -16,6 +16,8 @@ namespace Match3.Presentation
         private BoardResolutionRunner resolution;
         // Receives the facts of each finished valid move; the receiver decides what they mean (moves, score, goal).
         private Action<ResolutionResult> onValidMoveResolved;
+        // Told true when an accepted move starts and false once it has completely finished (e.g. for a restart button).
+        private Action<bool> onBusyChanged;
         // Null means no selection; the controller remembers at most one logical cell.
         private GridPosition? selectedPosition;
         private bool isInputLocked;
@@ -24,10 +26,11 @@ namespace Match3.Presentation
         public bool IsInputLocked => isInputLocked;
 
         // Startup wiring supplies the existing model, its rendered view, the picking camera,
-        // the runner that resolves matches after a valid move, and who to tell when such a move has finished.
+        // the runner that resolves matches after a valid move, who to tell when such a move has finished,
+        // and who to tell when a move starts and ends.
         public void Initialize(
             Board board, BoardView boardView, Camera camera, BoardResolutionRunner resolution,
-            Action<ResolutionResult> onValidMoveResolved)
+            Action<ResolutionResult> onValidMoveResolved, Action<bool> onBusyChanged)
         {
             if (board == null)
             {
@@ -54,6 +57,11 @@ namespace Match3.Presentation
                 throw new ArgumentNullException(nameof(onValidMoveResolved));
             }
 
+            if (onBusyChanged == null)
+            {
+                throw new ArgumentNullException(nameof(onBusyChanged));
+            }
+
             if (isInputLocked)
             {
                 throw new InvalidOperationException("Wait for the current swap before reinitializing input.");
@@ -65,6 +73,7 @@ namespace Match3.Presentation
             inputCamera = camera;
             this.resolution = resolution;
             this.onValidMoveResolved = onValidMoveResolved;
+            this.onBusyChanged = onBusyChanged;
             selectedPosition = null;
         }
 
@@ -130,6 +139,8 @@ namespace Match3.Presentation
 
             // The Board now holds the attempted result; Core decides whether it is a real Match-3 move.
             bool isValidMove = SwapValidator.IsValidResult(board, first, position);
+            // Only an accepted adjacent swap is a move; rejected clicks above never reach this point.
+            onBusyChanged(true);
             StartCoroutine(FinishSwap(first, position, isValidMove));
         }
 
@@ -161,6 +172,8 @@ namespace Match3.Presentation
             // the rollback for an invalid move, or the whole cascade chain for a valid one.
             selectedPosition = null;
             isInputLocked = false;
+            // Last, so whoever is told "not busy" sees a fully settled controller.
+            onBusyChanged(false);
         }
 
         private void ValidateSwapDuration()

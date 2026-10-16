@@ -34,6 +34,8 @@ namespace Match3.Presentation
         // Explicit scene references keep startup wiring here instead of using global lookups.
         [SerializeField] private BoardInputController inputController;
         [SerializeField] private Camera inputCamera;
+        // Shows moves, score, goal and outcome, and offers Restart.
+        [SerializeField] private LevelHudView levelHud;
 
         // Kept so later gameplay systems can work on this same authoritative instance.
         private Board board;
@@ -74,6 +76,11 @@ namespace Match3.Presentation
                 throw new InvalidOperationException("Assign an input Camera before starting.");
             }
 
+            if (levelHud == null)
+            {
+                throw new InvalidOperationException("Assign a LevelHudView before starting.");
+            }
+
             // A running move still owns the board and its views; there is no safe way to swap them mid-animation.
             if (inputController.IsInputLocked)
             {
@@ -85,6 +92,9 @@ namespace Match3.Presentation
             {
                 throw new InvalidOperationException($"The goal tile type {goalTileType} is not in the palette.");
             }
+
+            // Restart clicks come back here. Assigned (not added), so restarting never stacks handlers.
+            levelHud.Initialize(RestartLevel);
 
             // Build and validate the new session first, so a bad setting fails before the current level is touched.
             var newProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
@@ -100,15 +110,19 @@ namespace Match3.Presentation
             boardView.Render(board);
             // Pass the same authoritative instance after its tile visuals have been created.
             // Initialize replaces the callback (it is never added twice) and clears any selection.
-            inputController.Initialize(board, boardView, inputCamera, resolution, HandleValidMoveResolved);
+            inputController.Initialize(
+                board, boardView, inputCamera, resolution, HandleValidMoveResolved, HandleBusyChanged);
             // A finished level disabled input; the new level is playable again.
             inputController.enabled = true;
+            levelHud.Show(levelProgress);
+            levelHud.SetRestartAvailable(true);
         }
 
         // Called by the input controller once per valid move, after the board is stable again.
         private void HandleValidMoveResolved(ResolutionResult result)
         {
             levelProgress.ApplyValidMove(result);
+            levelHud.Show(levelProgress);
 
             // Won or Lost: no new move may start. This is the level's outcome, not the controller's
             // per-move lock; the controller still finishes its own cleanup after this returns.
@@ -116,6 +130,13 @@ namespace Match3.Presentation
             {
                 inputController.enabled = false;
             }
+        }
+
+        // Restart is offered only while no move is running: the button mirrors the controller's busy state,
+        // pushed to us at the start and end of each move instead of polled every frame.
+        private void HandleBusyChanged(bool isBusy)
+        {
+            levelHud.SetRestartAvailable(!isBusy);
         }
     }
 }

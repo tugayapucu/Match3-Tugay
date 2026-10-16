@@ -26,6 +26,7 @@ namespace Match3.Presentation.Tests
         private BoardInputController controller;
         private BoardBootstrap bootstrap;
         private Camera inputCamera;
+        private TestHud hud;
 
         [SetUp]
         public void SetUp()
@@ -49,6 +50,8 @@ namespace Match3.Presentation.Tests
             inputCamera.orthographic = true;
             inputCamera.orthographicSize = 4f;
 
+            hud = TestHud.Create();
+
             // Inactive until configured, so Start runs only after every field below is set.
             bootstrapObject = new GameObject("BootstrapTest");
             bootstrapObject.SetActive(false);
@@ -56,6 +59,7 @@ namespace Match3.Presentation.Tests
             Set("boardView", boardView);
             Set("inputController", controller);
             Set("inputCamera", inputCamera);
+            Set("levelHud", hud.View);
             Set("width", Size);
             Set("height", Size);
             Set("palette", new[] { TileType.Red, TileType.Green, TileType.Blue });
@@ -71,6 +75,7 @@ namespace Match3.Presentation.Tests
             Object.Destroy(boardObject);
             Object.Destroy(cameraObject);
             Object.Destroy(tileTemplate);
+            Object.Destroy(hud.Root);
             yield return null;
         }
 
@@ -90,6 +95,61 @@ namespace Match3.Presentation.Tests
             Assert.That(level.GoalProgress, Is.Zero);
             Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(controller.enabled, Is.True);
+            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 7"));
+            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
+            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 0 / 12"));
+            Assert.That(hud.Status.text, Is.Empty);
+            Assert.That(hud.Restart.interactable, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ValidMove_HudUpdatesWhenTheMoveFinishes_AndRestartIsUnavailableUntilThen()
+        {
+            Set("startingMoveCount", 5);
+            Set("goalTarget", 50);
+            yield return StartBootstrap();
+            Assert.That(TryFindMove(CurrentBoard(), true, out var first, out var second), Is.True, "Expected a valid move.");
+
+            Click(first);
+            Click(second);
+
+            Assert.That(controller.IsInputLocked, Is.True);
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The move did not finish.");
+                // Busy: no restart offered, and the HUD still shows the values from before the move.
+                Assert.That(hud.Restart.interactable, Is.False);
+                Assert.That(hud.Moves.text, Is.EqualTo("Moves: 5"));
+                yield return null;
+            }
+
+            var level = bootstrap.LevelProgress;
+            Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 4"));
+            Assert.That(level.Score, Is.GreaterThan(0));
+            Assert.That(hud.Score.text, Is.EqualTo($"Score: {level.Score}"));
+            Assert.That(hud.Goal.text, Is.EqualTo($"Goal: Red {level.GoalProgress} / 50"));
+        }
+
+        [UnityTest]
+        public IEnumerator InvalidMove_LeavesTheHudUnchanged()
+        {
+            Set("startingMoveCount", 5);
+            Set("goalTarget", 50);
+            yield return StartBootstrap();
+            Assert.That(TryFindMove(CurrentBoard(), false, out var first, out var second), Is.True, "Expected an invalid swap.");
+
+            Click(first);
+            Click(second);
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(hud.Restart.interactable, Is.False, "Busy during the rollback too.");
+            yield return WaitUntilUnlocked();
+
+            Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 5"));
+            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
+            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 0 / 50"));
         }
 
         [UnityTest]
@@ -129,6 +189,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
             Assert.That(controller.enabled, Is.False);
+            Assert.That(hud.Status.text, Is.EqualTo("You Win!"));
+            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 3 / 3"));
         }
 
         [UnityTest]
@@ -142,6 +204,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
             Assert.That(controller.enabled, Is.False);
+            Assert.That(hud.Status.text, Is.EqualTo("Out of Moves"));
+            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 0"));
         }
 
         [UnityTest]
@@ -157,8 +221,9 @@ namespace Match3.Presentation.Tests
             Assert.That(firstLevel.MovesRemaining, Is.EqualTo(4));
             Click(new GridPosition(0, 0));
             Assert.That(controller.SelectedPosition, Is.Not.Null);
+            Assert.That(hud.Restart.interactable, Is.True, "Settled while Playing: restart is offered.");
 
-            bootstrap.RestartLevel();
+            hud.Restart.onClick.Invoke();
             yield return null;
 
             Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(firstLevel));
@@ -174,8 +239,9 @@ namespace Match3.Presentation.Tests
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
+            Assert.That(hud.Restart.interactable, Is.True);
 
-            bootstrap.RestartLevel();
+            hud.Restart.onClick.Invoke();
             yield return null;
 
             AssertFreshLevel(startingTiles, 2);
@@ -190,8 +256,9 @@ namespace Match3.Presentation.Tests
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Green, TileType.Green, TileType.Green);
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
+            Assert.That(hud.Restart.interactable, Is.True);
 
-            bootstrap.RestartLevel();
+            hud.Restart.onClick.Invoke();
             yield return null;
 
             AssertFreshLevel(startingTiles, 1);
@@ -224,10 +291,12 @@ namespace Match3.Presentation.Tests
             yield return StartBootstrap();
             var level = bootstrap.LevelProgress;
             var board = CurrentBoard();
-            Assert.That(TryFindValidMove(board, out var first, out var second), Is.True, "Expected a valid move.");
+            Assert.That(TryFindMove(board, true, out var first, out var second), Is.True, "Expected a valid move.");
             Click(first);
             Click(second);
             Assert.That(controller.IsInputLocked, Is.True);
+            // The HUD never offers it; calling it anyway is a programming error and throws.
+            Assert.That(hud.Restart.interactable, Is.False);
 
             Assert.Throws<InvalidOperationException>(() => bootstrap.RestartLevel());
 
@@ -238,6 +307,7 @@ namespace Match3.Presentation.Tests
 
             yield return WaitUntilUnlocked();
             Assert.That(level.MovesRemaining, Is.EqualTo(4));
+            Assert.That(hud.Restart.interactable, Is.True);
             AssertViewsMatchBoard();
         }
 
@@ -284,6 +354,12 @@ namespace Match3.Presentation.Tests
             Assert.That(level.GoalProgress, Is.Zero);
             Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
 
+            Assert.That(hud.Moves.text, Is.EqualTo($"Moves: {startingMoveCount}"));
+            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
+            Assert.That(hud.Goal.text, Is.EqualTo($"Goal: Red 0 / {level.GoalTarget}"));
+            Assert.That(hud.Status.text, Is.Empty);
+            Assert.That(hud.Restart.interactable, Is.True);
+
             Assert.That(controller.enabled, Is.True);
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(controller.SelectedPosition, Is.Null);
@@ -312,7 +388,7 @@ namespace Match3.Presentation.Tests
         // Plays the first valid move on the current board and waits until it has fully resolved.
         private IEnumerator PlayValidMove()
         {
-            Assert.That(TryFindValidMove(CurrentBoard(), out var first, out var second), Is.True, "Expected a valid move.");
+            Assert.That(TryFindMove(CurrentBoard(), true, out var first, out var second), Is.True, "Expected a valid move.");
             Click(first);
             Click(second);
             Assert.That(controller.IsInputLocked, Is.True, "An adjacent valid second click should start a move.");
@@ -329,8 +405,9 @@ namespace Match3.Presentation.Tests
             }
         }
 
-        // Finds the first adjacent swap that SwapValidator accepts, trying it on a copy so the real Board is untouched.
-        private static bool TryFindValidMove(Board board, out GridPosition first, out GridPosition second)
+        // Finds the first adjacent swap that SwapValidator accepts (or, when `valid` is false, rejects),
+        // trying it on a copy so the real Board is untouched.
+        private static bool TryFindMove(Board board, bool valid, out GridPosition first, out GridPosition second)
         {
             for (int y = 0; y < board.Height; y++)
             {
@@ -355,7 +432,7 @@ namespace Match3.Presentation.Tests
                         }
 
                         copy.TrySwapAdjacent(origin, neighbour);
-                        if (SwapValidator.IsValidResult(copy, origin, neighbour))
+                        if (SwapValidator.IsValidResult(copy, origin, neighbour) == valid)
                         {
                             first = origin;
                             second = neighbour;
