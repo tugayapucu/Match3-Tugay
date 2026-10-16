@@ -3,7 +3,9 @@
     "rootNamespace": "Match3.Presentation",
     "references": [
         "Match3.Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "noEngineReferences": false
 }
