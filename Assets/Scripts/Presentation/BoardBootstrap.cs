@@ -39,11 +39,25 @@ namespace Match3.Presentation
         private Board board;
         private LevelProgress levelProgress;
 
-        // The rules state of the current level; null until Start has run.
+        // The rules state of the current level; null until Start has run, replaced on every restart.
         public LevelProgress LevelProgress => levelProgress;
 
         // Unity calls Start once, before the first frame, after every object's Awake.
         private void Start()
+        {
+            StartLevel();
+        }
+
+        // Starts the level again in place: a fresh board from the same seed (so the same starting board),
+        // fresh moves, score and goal, and input enabled again. Allowed whenever the board is settled,
+        // in any status (Playing, Won or Lost); rejected while a move is still animating.
+        public void RestartLevel()
+        {
+            StartLevel();
+        }
+
+        // Builds a complete level session. Used both at startup and on restart, so both follow the same path.
+        private void StartLevel()
         {
             if (boardView == null)
             {
@@ -60,21 +74,35 @@ namespace Match3.Presentation
                 throw new InvalidOperationException("Assign an input Camera before starting.");
             }
 
+            // A running move still owns the board and its views; there is no safe way to swap them mid-animation.
+            if (inputController.IsInputLocked)
+            {
+                throw new InvalidOperationException("Wait for the current move to finish before starting the level.");
+            }
+
             // A cross-setting rule only this class can check: a goal colour that never spawns could never be won.
             if (Array.IndexOf(palette, goalTileType) < 0)
             {
                 throw new InvalidOperationException($"The goal tile type {goalTileType} is not in the palette.");
             }
 
-            // LevelProgress validates its own arguments, before anything is generated or rendered.
-            levelProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
-            board = BoardGenerator.Generate(width, height, palette, seed);
-            boardView.Render(board);
+            // Build and validate the new session first, so a bad setting fails before the current level is touched.
+            var newProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
+            var newBoard = BoardGenerator.Generate(width, height, palette, seed);
             // Refills use their own seeded System.Random, so a whole game is reproducible from `seed`.
+            // A fresh one per level, so a restarted level also refills exactly like the first time.
             var resolution = new BoardResolutionRunner(
-                board, boardView, palette, new System.Random(seed), fallDuration, refillDuration);
+                newBoard, boardView, palette, new System.Random(seed), fallDuration, refillDuration);
+
+            levelProgress = newProgress;
+            board = newBoard;
+            // Render destroys the previous level's tile views and registers new ones.
+            boardView.Render(board);
             // Pass the same authoritative instance after its tile visuals have been created.
+            // Initialize replaces the callback (it is never added twice) and clears any selection.
             inputController.Initialize(board, boardView, inputCamera, resolution, HandleValidMoveResolved);
+            // A finished level disabled input; the new level is playable again.
+            inputController.enabled = true;
         }
 
         // Called by the input controller once per valid move, after the board is stable again.
