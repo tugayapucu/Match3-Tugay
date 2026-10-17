@@ -6,6 +6,20 @@ namespace Match3.Core.Tests
 {
     public class BoardResolutionTests
     {
+        [Test]
+        public void Refill_CanCreateASquareWithoutALineMatch()
+        {
+            var board = new Board(2, 2);
+
+            BoardResolution.Refill(board, RGB, new ScriptedRandom(0, 0, 0, 0));
+
+            AssertBoard(board, "RR", "RR");
+            var analysis = MatchFinder.Analyze(board);
+            Assert.That(analysis.MatchedPositions.Count, Is.EqualTo(4));
+            Assert.That(analysis.Groups[0].Patterns.Count, Is.EqualTo(1));
+            Assert.That(analysis.Groups[0].Patterns[0].Kind, Is.EqualTo(MatchPatternKind.Square));
+        }
+
         [TestCase(TileType.HorizontalRocket)]
         [TestCase(TileType.VerticalRocket)]
         [TestCase(TileType.Propeller)]

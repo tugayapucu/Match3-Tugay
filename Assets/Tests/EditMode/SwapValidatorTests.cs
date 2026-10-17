@@ -6,6 +6,30 @@ namespace Match3.Core.Tests
     // Every board here is the state AFTER the swap, matching SwapValidator's contract.
     public class SwapValidatorTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void IsValidResult_SwapCreatesOnlyASquare_ReturnsTrue(bool reverseSelection)
+        {
+            var board = TestBoards.Create("RRG", "RGR");
+            var first = new GridPosition(1, 0);
+            var second = new GridPosition(2, 0);
+            Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+            Assert.That(board.TrySwapAdjacent(first, second), Is.True);
+
+            Assert.That(SwapValidator.IsValidResult(board,
+                reverseSelection ? second : first, reverseSelection ? first : second), Is.True);
+            Assert.That(SpecialCreationRules.FindCreations(MatchFinder.Analyze(board))[0].Type,
+                Is.EqualTo(TileType.Propeller));
+        }
+
+        [Test]
+        public void IsValidResult_UnrelatedSquare_DoesNotValidateSwap()
+        {
+            var board = TestBoards.Create("RR..", "RRBG");
+
+            Assert.That(SwapValidator.IsValidResult(board, new GridPosition(2, 0), new GridPosition(3, 0)), Is.False);
+        }
+
         [Test]
         public void IsValidResult_FirstSwappedCellInMatch_ReturnsTrue()
         {

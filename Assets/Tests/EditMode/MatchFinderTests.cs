@@ -353,11 +353,12 @@ namespace Match3.Core.Tests
         }
 
         // Deliberately simple, slow reference rule: a cell is matched if some 3 consecutive cells
-        // that include it, in its row or column, are the same non-empty type.
+        // that include it, in its row or column, are the same normal color, or it belongs to a square.
         private static bool IsMatchedNaive(Board board, GridPosition position)
         {
             TileType type = board.GetTile(position);
-            if (type == TileType.Empty)
+            if (type != TileType.Red && type != TileType.Green && type != TileType.Blue
+                && type != TileType.Yellow && type != TileType.Purple && type != TileType.Orange)
             {
                 return false;
             }
@@ -381,6 +382,30 @@ namespace Match3.Core.Tests
                         }
                     }
 
+                    if (allSame)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // A cell can be any of a square's four corners; test each possible bottom-left corner.
+            for (int bottomY = position.Y - 1; bottomY <= position.Y; bottomY++)
+            {
+                for (int leftX = position.X - 1; leftX <= position.X; leftX++)
+                {
+                    bool allSame = true;
+                    for (int dy = 0; dy < 2; dy++)
+                    {
+                        for (int dx = 0; dx < 2; dx++)
+                        {
+                            var cell = new GridPosition(leftX + dx, bottomY + dy);
+                            if (!board.IsInBounds(cell) || board.GetTile(cell) != type)
+                            {
+                                allSame = false;
+                            }
+                        }
+                    }
                     if (allSame)
                     {
                         return true;

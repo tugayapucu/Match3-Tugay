@@ -5,6 +5,37 @@ namespace Match3.Core.Tests
 {
     public class BoardGeneratorTests
     {
+        [TestCase(1, 1)]
+        [TestCase(1, 8)]
+        [TestCase(8, 1)]
+        [TestCase(2, 2)]
+        [TestCase(2, 8)]
+        [TestCase(8, 2)]
+        [TestCase(3, 3)]
+        [TestCase(8, 8)]
+        [TestCase(13, 11)]
+        public void Generate_ThreeColorsAndManySeeds_HaveNoResolvablePatterns(int width, int height)
+        {
+            var palette = CreatePalette();
+            for (int seed = -50; seed <= 50; seed++)
+            {
+                var board = BoardGenerator.Generate(width, height, palette, seed);
+                Assert.That(MatchFinder.FindMatches(board), Is.Empty, $"Seed {seed}.");
+                // Independent square check guards against matching and generation sharing the same mistake.
+                for (int y = 0; y < height - 1; y++)
+                {
+                    for (int x = 0; x < width - 1; x++)
+                    {
+                        TileType color = board.GetTile(new GridPosition(x, y));
+                        bool square = board.GetTile(new GridPosition(x + 1, y)) == color
+                            && board.GetTile(new GridPosition(x, y + 1)) == color
+                            && board.GetTile(new GridPosition(x + 1, y + 1)) == color;
+                        Assert.That(square, Is.False, $"Square at ({x},{y}), seed {seed}.");
+                    }
+                }
+            }
+        }
+
         [TestCase(8, 8)]
         [TestCase(2, 7)]
         [TestCase(7, 2)]

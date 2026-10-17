@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Match3.Core
 {
-    // Builds a new, fully filled Board that starts with no 3-in-a-row matches.
+    // Builds a fully filled Board with no resolvable lines or same-color 2x2 squares.
     public static class BoardGenerator
     {
         // Same width/height/palette order/seed always produce the same board (reproducible for tests and bugs).
@@ -45,19 +45,31 @@ namespace Match3.Core
                         }
                     }
 
+                    // This cell is a square's top-right corner; its other three cells are already filled.
+                    TileType excludedSquare = TileType.Empty;
+                    if (x >= 1 && y >= 1)
+                    {
+                        var left = board.GetTile(new GridPosition(x - 1, y));
+                        if (left == board.GetTile(new GridPosition(x, y - 1))
+                            && left == board.GetTile(new GridPosition(x - 1, y - 1)))
+                        {
+                            excludedSquare = left;
+                        }
+                    }
+
                     // Collect every palette type that is not excluded.
                     int candidateCount = 0;
                     for (int i = 0; i < palette.Count; i++)
                     {
                         var tileType = palette[i];
-                        if (tileType != excludedHorizontal && tileType != excludedVertical)
+                        if (tileType != excludedHorizontal && tileType != excludedVertical && tileType != excludedSquare)
                         {
                             candidates[candidateCount] = tileType;
                             candidateCount++;
                         }
                     }
 
-                    // At most two types are excluded, so the validated palette always leaves a choice.
+                    // A square exclusion equals any line exclusion present here, so at most two colors are blocked.
                     var chosenType = candidates[random.Next(candidateCount)];
                     board.SetTile(new GridPosition(x, y), chosenType);
                 }

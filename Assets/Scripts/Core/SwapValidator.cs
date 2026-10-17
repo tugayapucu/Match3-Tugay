@@ -2,7 +2,7 @@ using System;
 
 namespace Match3.Core
 {
-    // The Match-3 move rule: a swap counts only if it creates a match that includes one of the two swapped cells.
+    // A normal swap counts when a line or square match includes one of the two swapped cells.
     public static class SwapValidator
     {
         // Contract: `board` already contains the result of swapping `first` and `second`.
