@@ -7,7 +7,7 @@ namespace Match3.Core.Tests
     internal static class TestBoards
     {
         // Rows are written top-down as they appear on screen: rows[0] is the highest y.
-        // Letters are tile colours; '.' is Empty.
+        // R/G/B/Y/P/O are colors, H/V/F/T/L are specials, '.' is Empty. P stays Purple.
         public static Board Create(params string[] rows)
         {
             var board = new Board(rows[0].Length, rows.Length);
@@ -35,6 +35,11 @@ namespace Match3.Core.Tests
                 case 'Y': return TileType.Yellow;
                 case 'P': return TileType.Purple;
                 case 'O': return TileType.Orange;
+                case 'H': return TileType.HorizontalRocket;
+                case 'V': return TileType.VerticalRocket;
+                case 'F': return TileType.Propeller;
+                case 'T': return TileType.TNT;
+                case 'L': return TileType.LightBall;
                 default: throw new ArgumentException($"Unknown tile symbol '{symbol}'.", nameof(symbol));
             }
         }

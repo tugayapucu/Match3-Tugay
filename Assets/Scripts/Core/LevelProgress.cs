@@ -15,10 +15,10 @@ namespace Match3.Core
                 throw new ArgumentOutOfRangeException(nameof(startingMoveCount), startingMoveCount, "Starting move count must be positive.");
             }
 
-            // Only "defined and not Empty" here; whether the palette contains it is the composition root's check.
-            if (goalTileType == TileType.Empty || !Enum.IsDefined(typeof(TileType), goalTileType))
+            // Only normal colors are collectible; palette membership is the composition root's check.
+            if (!TileRules.IsNormalMatchItem(goalTileType))
             {
-                throw new ArgumentException("The goal must be a defined, non-Empty tile type.", nameof(goalTileType));
+                throw new ArgumentException("The goal must be a normal collectible color.", nameof(goalTileType));
             }
 
             if (goalTarget <= 0)

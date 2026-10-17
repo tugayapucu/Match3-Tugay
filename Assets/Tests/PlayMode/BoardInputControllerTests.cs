@@ -1076,12 +1076,18 @@ namespace Match3.Presentation.Tests
         {
             switch (symbol)
             {
+                case '.': return TileType.Empty;
                 case 'R': return TileType.Red;
                 case 'G': return TileType.Green;
                 case 'B': return TileType.Blue;
                 case 'Y': return TileType.Yellow;
                 case 'P': return TileType.Purple;
                 case 'O': return TileType.Orange;
+                case 'H': return TileType.HorizontalRocket;
+                case 'V': return TileType.VerticalRocket;
+                case 'F': return TileType.Propeller;
+                case 'T': return TileType.TNT;
+                case 'L': return TileType.LightBall;
                 default: throw new ArgumentException($"Unknown tile symbol '{symbol}'.", nameof(symbol));
             }
         }

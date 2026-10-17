@@ -67,10 +67,16 @@ namespace Match3.Core.Tests
         }
 
         [TestCase(TileType.Empty)]
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
         [TestCase((TileType)99)]
-        public void EmptyOrUndefinedEntry_Throws(TileType invalid)
+        public void NonNormalEntry_Throws(TileType invalid)
         {
-            Assert.Throws<ArgumentException>(() => new ResolutionResult(new[] { TileType.Red, invalid }));
+            var exception = Assert.Throws<ArgumentException>(() => new ResolutionResult(new[] { TileType.Red, invalid }));
+            Assert.That(exception.ParamName, Is.EqualTo("clearedTiles"));
         }
     }
 }

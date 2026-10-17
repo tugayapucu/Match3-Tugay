@@ -451,7 +451,7 @@ namespace Match3.Presentation.Tests
             Assert.That(CountActiveViews(), Is.EqualTo(viewCount));
         }
 
-        // rows[0] is the top row; letters are colours, '.' is Empty.
+        // Top row first: R/G/B/Y/P/O are colors, H/V/F/T/L are specials, '.' is Empty.
         private static Board CreateBoard(params string[] rows)
         {
             var board = new Board(rows[0].Length, rows.Length);
@@ -478,6 +478,11 @@ namespace Match3.Presentation.Tests
                 case 'Y': return TileType.Yellow;
                 case 'P': return TileType.Purple;
                 case 'O': return TileType.Orange;
+                case 'H': return TileType.HorizontalRocket;
+                case 'V': return TileType.VerticalRocket;
+                case 'F': return TileType.Propeller;
+                case 'T': return TileType.TNT;
+                case 'L': return TileType.LightBall;
                 default: throw new ArgumentException($"Unknown tile symbol '{symbol}'.", nameof(symbol));
             }
         }

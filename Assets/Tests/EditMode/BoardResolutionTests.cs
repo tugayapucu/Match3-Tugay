@@ -6,6 +6,81 @@ namespace Match3.Core.Tests
 {
     public class BoardResolutionTests
     {
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
+        public void ClearCells_MixedContents_ReportsEveryRemovedTypeOnce(TileType special)
+        {
+            var board = TestBoards.Create("R..B");
+            board.SetTile(new GridPosition(1, 0), special);
+            var positions = new[]
+            {
+                new GridPosition(0, 0), new GridPosition(1, 0),
+                new GridPosition(1, 0), new GridPosition(2, 0)
+            };
+
+            var cleared = BoardResolution.ClearCells(board, positions);
+
+            Assert.That(cleared, Is.EquivalentTo(new[] { TileType.Red, special }));
+            AssertBoard(board, "...B");
+        }
+
+        [TestCase(TileType.HorizontalRocket, "H")]
+        [TestCase(TileType.VerticalRocket, "V")]
+        [TestCase(TileType.Propeller, "F")]
+        [TestCase(TileType.TNT, "T")]
+        [TestCase(TileType.LightBall, "L")]
+        public void ApplyGravity_Special_FallsAndPreservesColumnOrder(TileType special, string symbol)
+        {
+            var board = TestBoards.Create("B", ".", ".", ".", "R");
+            board.SetTile(new GridPosition(0, 2), special);
+
+            var moves = BoardResolution.ApplyGravity(board);
+
+            Assert.That(moves, Is.EqualTo(new[]
+            {
+                Move(special, 0, 2, 0, 1),
+                Move(TileType.Blue, 0, 4, 0, 2)
+            }));
+            Assert.That(board.GetTile(new GridPosition(0, 1)), Is.EqualTo(special));
+            AssertBoard(board, ".", ".", "B", symbol, "R");
+        }
+
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
+        public void Refill_ExistingSpecial_RemainsWhileHolesGetNormalColors(TileType special)
+        {
+            var board = new Board(3, 3);
+            var position = new GridPosition(1, 1);
+            board.SetTile(position, special);
+
+            var spawns = BoardResolution.Refill(board, RGB, new Random(42));
+
+            Assert.That(spawns.Count, Is.EqualTo(8));
+            Assert.That(board.GetTile(position), Is.EqualTo(special));
+            foreach (var spawn in spawns)
+            {
+                Assert.That(RGB, Does.Contain(spawn.Type));
+                Assert.That(spawn.Position, Is.Not.EqualTo(position));
+                Assert.That(board.GetTile(spawn.Position), Is.EqualTo(spawn.Type));
+            }
+        }
+
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
+        public void GenerationAndRefill_SpecialInPalette_RejectBeforeChangingBoard(TileType special)
+        {
+            AssertRefillRejects<ArgumentException>(new[] { TileType.Red, TileType.Green, TileType.Blue, special });
+        }
+
         [Test]
         public void ClearCells_SuppliedPositions_BecomeEmpty()
         {

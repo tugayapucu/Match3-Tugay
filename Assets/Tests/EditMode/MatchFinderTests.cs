@@ -6,6 +6,56 @@ namespace Match3.Core.Tests
 {
     public class MatchFinderTests
     {
+        [TestCase(TileType.HorizontalRocket, false)]
+        [TestCase(TileType.VerticalRocket, false)]
+        [TestCase(TileType.Propeller, false)]
+        [TestCase(TileType.TNT, false)]
+        [TestCase(TileType.LightBall, false)]
+        [TestCase((TileType)99, false)]
+        [TestCase(TileType.HorizontalRocket, true)]
+        [TestCase(TileType.VerticalRocket, true)]
+        [TestCase(TileType.Propeller, true)]
+        [TestCase(TileType.TNT, true)]
+        [TestCase(TileType.LightBall, true)]
+        [TestCase((TileType)99, true)]
+        public void FindMatches_NonNormalCells_BreakColorRunsAndNeverMatch(TileType type, bool vertical)
+        {
+            var board = new Board(7, 7);
+            var expected = new List<GridPosition>();
+            for (int i = 0; i < 7; i++)
+            {
+                // RR?RRRR must only match its last four colors; a whole line of '?' must not match.
+                var colorPosition = vertical ? new GridPosition(0, i) : new GridPosition(i, 0);
+                var specialPosition = vertical ? new GridPosition(2, i) : new GridPosition(i, 2);
+                board.SetTile(colorPosition, i == 2 ? type : TileType.Red);
+                board.SetTile(specialPosition, type);
+                if (i >= 3)
+                {
+                    expected.Add(colorPosition);
+                }
+            }
+
+            Assert.That(MatchFinder.FindMatches(board), Is.EquivalentTo(expected));
+        }
+
+        [Test]
+        public void TestBoardNotation_PreservesColorsAndDistinguishesSpecials()
+        {
+            var board = TestBoards.Create(".RGBYPOHVFTL");
+            var expected = new[]
+            {
+                TileType.Empty, TileType.Red, TileType.Green, TileType.Blue,
+                TileType.Yellow, TileType.Purple, TileType.Orange,
+                TileType.HorizontalRocket, TileType.VerticalRocket, TileType.Propeller,
+                TileType.TNT, TileType.LightBall
+            };
+
+            for (int x = 0; x < expected.Length; x++)
+            {
+                Assert.That(board.GetTile(new GridPosition(x, 0)), Is.EqualTo(expected[x]));
+            }
+        }
+
         [TestCase("RRR.....", 0, 3)]
         [TestCase(".RRR....", 1, 3)]
         [TestCase(".....RRR", 5, 3)]

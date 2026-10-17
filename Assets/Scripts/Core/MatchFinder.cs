@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Match3.Core
 {
-    // Finds every cell that belongs to a run of 3+ identical, non-empty tiles. Reads the Board; never changes it.
+    // Finds every cell in a run of 3+ identical normal colors. Reads the Board; never changes it.
     public static class MatchFinder
     {
         private const int MinimumRunLength = 3;
@@ -71,11 +71,11 @@ namespace Match3.Core
             }
         }
 
-        // The single place that defines a match: 3+ cells of a real tile type.
+        // An ordinary line match needs 3+ cells of the same normal color.
         private static bool IsMatchingRun(TileType runType, int runLength)
         {
-            // Empty cells are holes, not a colour, so a run of them is never a match.
-            return runType != TileType.Empty && runLength >= MinimumRunLength;
+            // Neither holes nor specials count as matching colors, even when repeated.
+            return TileRules.IsNormalMatchItem(runType) && runLength >= MinimumRunLength;
         }
 
         // The cell `index` steps along a line from its start.

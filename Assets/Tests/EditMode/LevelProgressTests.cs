@@ -5,6 +5,23 @@ namespace Match3.Core.Tests
 {
     public class LevelProgressTests
     {
+        [TestCase(TileType.Red)]
+        [TestCase(TileType.Green)]
+        [TestCase(TileType.Blue)]
+        [TestCase(TileType.Yellow)]
+        [TestCase(TileType.Purple)]
+        [TestCase(TileType.Orange)]
+        public void NormalColor_CanBeCollectedAsAGoal(TileType color)
+        {
+            var progress = new LevelProgress(1, color, 1, 100);
+
+            progress.ApplyValidMove(Result(color));
+
+            Assert.That(progress.GoalProgress, Is.EqualTo(1));
+            Assert.That(progress.Score, Is.EqualTo(100));
+            Assert.That(progress.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
         [Test]
         public void Constructor_SetsTheStartingValues()
         {
@@ -209,8 +226,13 @@ namespace Match3.Core.Tests
         }
 
         [TestCase(TileType.Empty)]
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
         [TestCase((TileType)99)]
-        public void Constructor_EmptyOrUndefinedGoalType_Throws(TileType goalTileType)
+        public void Constructor_NonNormalGoalType_Throws(TileType goalTileType)
         {
             var exception = Assert.Throws<ArgumentException>(() => new LevelProgress(20, goalTileType, 25, 100));
             Assert.That(exception.ParamName, Is.EqualTo("goalTileType"));

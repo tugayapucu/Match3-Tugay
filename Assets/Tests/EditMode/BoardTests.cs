@@ -5,6 +5,24 @@ namespace Match3.Core.Tests
 {
     public class BoardTests
     {
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.LightBall)]
+        public void SetTile_Special_CanBeReadAndOverwritten(TileType special)
+        {
+            var board = new Board(1, 1);
+            var position = new GridPosition(0, 0);
+
+            board.SetTile(position, special);
+            Assert.That(board.GetTile(position), Is.EqualTo(special));
+            board.SetTile(position, TileType.Red);
+            Assert.That(board.GetTile(position), Is.EqualTo(TileType.Red));
+            board.SetTile(position, TileType.Empty);
+            Assert.That(board.GetTile(position), Is.EqualTo(TileType.Empty));
+        }
+
         [TestCase(8, 8)]
         [TestCase(2, 5)]
         [TestCase(5, 2)]
@@ -230,6 +248,8 @@ namespace Match3.Core.Tests
         [TestCase(2, 1, TileType.Red, TileType.Empty)]
         [TestCase(2, 1, TileType.Empty, TileType.Red)]
         [TestCase(2, 1, TileType.Empty, TileType.Empty)]
+        [TestCase(2, 1, TileType.HorizontalRocket, TileType.Red)]
+        [TestCase(1, 2, TileType.TNT, TileType.LightBall)]
         public void TrySwapAdjacent_SmallBoard_AcceptsNeighborsRegardlessOfContents(
             int width, int height, TileType firstType, TileType secondType)
         {

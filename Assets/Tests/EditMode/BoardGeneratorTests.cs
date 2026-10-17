@@ -64,7 +64,7 @@ namespace Match3.Core.Tests
         }
 
         [Test]
-        public void Generate_AllPlayableTypes_AreAcceptedWithoutModifyingThePalette()
+        public void Generate_AllNormalColors_AreAcceptedWithoutModifyingThePalette()
         {
             var palette = new[]
             {
