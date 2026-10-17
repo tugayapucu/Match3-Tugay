@@ -6,7 +6,9 @@ This is a **design-first phase**.
 
 Do not begin by adding `Rocket`, `Bomb`, or `ColorBomb` values and branching everywhere.
 
-First define:
+Step 1's design is complete and recorded in this file. Implement the approved contract one authorized step at a time; do not reopen these decisions without a concrete new requirement and approval.
+
+The design defines:
 
 ```text
 what special tiles exist
@@ -234,9 +236,9 @@ generic state machine
 
 ---
 
-# Important Gameplay Questions That Must Be Settled Before Coding
+# Approved Gameplay Rules and Design Rationale
 
-These are not implementation details. They change the model.
+These gameplay decisions were settled by the Step 1 audit and review. They are implementation contracts, not open questions. The Step 1 section records the class/data responsibilities and API handoff.
 
 ## 1. What is a special tile in the Board?
 
@@ -246,7 +248,7 @@ Current `TileType` means:
 what occupies a board cell
 ```
 
-Possible designs:
+The audit compared:
 
 ```text
 A. extend TileType with:
@@ -262,11 +264,17 @@ B. introduce a richer Tile / CellContent value:
 C. store specials separately from Board
 ```
 
-Evaluate all three.
+Approved: extend `TileType`. Preserve Empty = 0 and the six existing normal colors = 1–6, then add:
 
-### Likely smallest candidate
+| Value | TileType |
+| --- | --- |
+| 7 | HorizontalRocket |
+| 8 | VerticalRocket |
+| 9 | Propeller |
+| 10 | TNT |
+| 11 | LightBall |
 
-Extending `TileType` may be sufficient **if specials are colorless/non-matchable after creation**.
+Specials are colorless and non-matchable after creation. Their source normal color is counted when consumed, then discarded. No extra persistent per-tile state is required.
 
 That avoids combinations such as:
 
@@ -278,20 +286,9 @@ GreenHorizontalRocket
 
 and avoids a parallel special-grid source of truth.
 
-But do not approve this merely because it requires fewer edits.
+A richer CellContent value would be justified by future colored specials, stacked contents, or additional persistent tile state. None is required now. A separate special grid is rejected because it would introduce a second source of truth.
 
-Ask:
-
-- Does any special need to retain its source color after creation?
-- Does Light Ball need a color? Usually no.
-- Should a Rocket itself participate in normal color matching? Probably not.
-- Would extending `TileType` make palette validation ambiguous?
-- Can `TileRules` or equivalent clearly distinguish:
-  - Empty
-  - normal match item
-  - special item?
-
-If a richer cell value is genuinely necessary, accept the larger refactor **before** special behavior is added.
+Use one Core `TileRules` class with `IsEmpty(TileType)`, `IsNormalMatchItem(TileType)`, and `IsSpecial(TileType)`. The normal set is exactly the six existing colors; the special set is exactly the five new values. Undefined values belong to neither set. Do not introduce a Tile inheritance hierarchy or additional classification helpers before a concrete caller needs them.
 
 ---
 
@@ -301,7 +298,7 @@ Current MatchFinder assumes every non-Empty `TileType` can match.
 
 That will no longer be true if special values enter `TileType`.
 
-The design needs one explicit rule such as:
+Approved matching rule:
 
 ```text
 only normal colored tiles participate in ordinary matches
@@ -317,7 +314,7 @@ type != Rocket && type != TNT && ...
 
 through several classes.
 
-Prefer one small source of truth for tile classification.
+Use TileRules as the shared source of truth for matching, palette validation, ResolutionResult validation, and LevelProgress goal validation.
 
 Do not build an inheritance hierarchy just for classification.
 
@@ -346,23 +343,24 @@ Where should that special appear?
 
 Phase 10 therefore needs shape information.
 
-Possible approach:
+Approved analysis shape:
 
 ```text
 straight runs
 +
 square detection
 ↓
-MatchAnalysis / MatchGroup
+MatchAnalysis with matched positions and same-color MatchGroups
 ↓
-matched positions + special-creation candidates
+each group contains its positions and MatchPatterns
+patterns are maximal horizontal/vertical runs or 2×2 squares
 ```
 
 Do not turn `MatchFinder` into a giant method containing all creation, activation, scoring, and visual logic.
 
 The matcher should describe patterns.
 
-Another system should decide what gameplay consequence a pattern creates.
+SpecialCreationRules interprets those pattern facts and produces special placements. MatchFinder.Analyze is the one matching implementation; FindMatches remains a wrapper returning its MatchedPositions.
 
 ---
 
@@ -408,16 +406,14 @@ a larger same-color block can contain more than one 2×2 square
 two unrelated groups can resolve simultaneously
 ```
 
-Step 1 must approve deterministic priority.
-
-A likely policy to evaluate:
+Approved deterministic priority, with at most one creation per group:
 
 ```text
 within one connected same-color match group:
 Light Ball > TNT > Rocket > Propeller > normal clear
 ```
 
-This is only a candidate.
+TNT qualifies when a horizontal run and a vertical run, each length 3+, share a cell. This includes T, L, and plus/cross shapes. A straight run of exactly four qualifies for its matching Rocket orientation; a run of five or more qualifies for Light Ball. All matched normal cells in the group are consumed, including lower-priority patterns.
 
 Important:
 
@@ -429,20 +425,20 @@ Do not let hash-set iteration order determine which special wins.
 
 ### Connected groups and concrete shape cases
 
-Step 1 must define exactly what connects a match group: which matched cells are included, whether side-by-side runs merge, and how overlapping runs/squares share a creation decision. A priority list alone does not define group membership or guarantee one creation per intended group.
+A group is an orthogonally connected set of matched cells of one normal color. Unmatched cells do not bridge groups. Touching parallel runs merge even when their patterns do not overlap; different colors never merge.
 
-Produce a small table of concrete board diagrams with expected matched cells, group membership, special kind/count, and anchor for at least:
+The approved examples below become Step 3 tests directly. `/` separates rows written top to bottom; coordinates start at the bottom-left. These show default anchors before gravity, without player preference.
 
-| Shape | Decision the Step 1 table must make explicit |
-| --- | --- |
-| Two parallel same-color lines touching side by side | One group or two, and how many specials result |
-| Plus/cross | Whether it qualifies as TNT and which anchor wins |
-| 2×3 same-color block | How overlapping squares and lines compete |
-| Square plus a tail / overlapping 3-line | Whether the result is Propeller, Rocket, TNT, or only a normal clear under the approved rules |
-| Six in a straight line | Which special is created and whether more than one is allowed |
-| Two T shapes sharing a cell | Grouping, priority, and creation count |
-
-The approved rows become Step 3 tests directly; do not invent these outcomes during implementation.
+| Layout / shape | Matched cells / groups | Creation before gravity |
+| --- | --- | --- |
+| `RRR` | 3 / 1 | None |
+| `RRRR/RRRR` — touching parallel lines | 8 / 1 | One HorizontalRocket at (1,0) |
+| `.R./RRR/.R.` — plus/cross | 5 / 1 | One TNT at (1,1) |
+| `RR/RR/RR` — 2×3 block | 6 / 1 | One Propeller at (0,0) |
+| `RR./RRR` — square plus tail | 5 / 1 | One Propeller at (0,0) |
+| `RRRRRR` — six straight | 6 / 1 | One LightBall at (2,0) |
+| `RRR./.R../.RRR/..R./..R.` — two Ts sharing a cell | 9 / 1 | One TNT at (1,2) |
+| `RRRR.GGGG` — separate groups | 8 / 2 | HorizontalRockets at (1,0) and (6,0) |
 
 ---
 
@@ -452,34 +448,34 @@ A special replaces one of the matched cells.
 
 The rule must be deterministic.
 
-For the first resolution created by a player swap, consider:
+For the first normal-pattern scan after a player swap:
 
 ```text
-prefer the destination / second selected cell if it belongs to the qualifying pattern
+prefer the destination / second selected cell if it belongs to a winning qualifying pattern
 otherwise prefer the other swapped cell
 otherwise deterministic shape anchor
 ```
 
 For cascades there is no player-selected cell.
 
-Potential deterministic anchors:
+The first cell is eligible only if it also belongs to a winning qualifying pattern. If neither selected cell qualifies, use these default anchors:
 
 ```text
-T / L       → intersection
-straight 5  → center-most cell
-straight 4  → center-most candidate
-2×2 square  → deterministic corner / shape-defined anchor
+T / L / plus → intersection
+straight run → center; for an even length, the central cell with the smaller coordinate
+               (X for horizontal runs, Y for vertical runs)
+2×2 square   → bottom-left corner
 ```
 
 Do not leave this to collection iteration order.
 
-The exact policy is a Step 1 decision and must be tested.
+For multiple equally ranked pattern/anchor candidates, order by Y, then X. Player preference overrides the default geometric anchor when eligible. Placement occurs before gravity, so a created special may then fall.
 
 ### A normal partner can create a match during special activation
 
-Swapping a special with a normal tile can move that normal tile into a qualifying line or square. Step 1 must explicitly decide when that pattern is analyzed relative to the special chain and gravity/refill, and whether it survives to be resolved in the same player move.
+After applying the existing special chain, scan surviving normal patterns before gravity. A pattern made by the normal partner resolves in the same move if it survives the effect. If the effect breaks it, do not award an additional match from an obsolete snapshot; normal tiles actually removed by the effect still count.
 
-Specify whether this is the first player-created normal round and receives swap-cell anchor preference. Define exactly when that preference expires; it must not leak into later cascades. Do not silently preserve or discard a pre-chain pattern merely because of the order an implementation happens to scan the Board.
+This is the first normal scan and receives the swap-cell anchor preference. Expire that preference immediately after this scan, even if it finds nothing. Later cascades always use default anchors. Use the same resolution loop for all move kinds.
 
 ---
 
@@ -542,23 +538,18 @@ External reference behavior supports tap **or** swap.
 
 The current project uses a two-click adjacent-swap interaction.
 
-Possible project policies:
+Approved Phase 10 policy:
 
 ```text
-A. Phase 10 supports special activation by adjacent swap only.
-   Single-tap activation waits for the mobile-input phase.
-
-B. selected special + same cell again activates it;
-   selected special + adjacent cell swaps/combines it.
-
-C. extend pointer handling now to distinguish tap vs drag/swipe.
+special activation by adjacent swap only
+first click selects; an adjacent second click swaps/activates
+same-cell, diagonal, and distant clicks keep the existing ignore/selection behavior
+no tap activation or drag/swipe redesign in Phase 10
 ```
-
-Evaluate cost and clarity.
 
 Do not accidentally turn Phase 10 into Phase 12 (mobile input).
 
-Whatever is chosen:
+Move accounting remains:
 
 ```text
 one player-triggered special activation = one move
@@ -590,29 +581,35 @@ any adjacent swap involving a special is a valid player action
 
 For special + normal, activate the special under the approved individual rules. For special + special, queue both for ordinary activation, with no combination bonus. Either accepted action costs one move after the full resolution completes.
 
-Step 1 still specifies the remaining activation details and deterministic queue order; it must not reopen the approved no-bonus combination scope.
+Use the approved activation details and deterministic queue order below; do not reopen the approved no-bonus combination scope.
 
 ### Activation position and resolution entry point
 
-Step 1 must explicitly settle whether a swapped special activates at its old cell or its new cell. Proposed baseline: apply the logical swap first, then activate each special at its post-swap position. For example, a Rocket moved vertically would clear its new row, not its old row. A tap, if supported, uses the special's current cell.
+Apply the logical swap first, then activate each special at its post-swap position. For example, a horizontal Rocket moved vertically clears its new row, not its old row; TNT's blast centers on its new cell.
 
-Write the exact minimal resolution entry-point contract before Step 4 needs player-selected anchors or Step 6 integrates special input. The current `ResolveUntilStable(onResolved)` receives neither swap positions nor initial activations.
+The approved API contracts are signatures only until their implementation steps:
 
-State how the approved API carries or derives:
+```csharp
+// Core: called after Board.TrySwapAdjacent succeeds.
+public static SwapAnalysis Analyze(Board board, GridPosition first, GridPosition second);
 
-```text
-the two player-selected cells, when a swap exists
-the classified action and initial special activations at the approved positions
-the normal partner color for Light Ball, when present
-the lifetime of first-player-round anchor preference
-the existing once-per-completed-move result callback
+// Presentation: one shared resolution routine, with player context.
+public IEnumerator ResolveUntilStable(SwapAnalysis move, Action<ResolutionResult> onResolved);
 ```
 
-Choose ordinary arguments or one small data value only if it simplifies those concrete needs. Do not add a command hierarchy, generic context framework, or an API that later steps must redesign independently.
+`SwapAnalysis` is immutable data, not an executable command. It carries:
 
-Consider whether `SwapValidator` should grow this responsibility or whether a small move-classification concept is now clearer.
+```text
+Kind: Invalid / NormalMatch / SpecialSwap
+First and Second: the two selected cells
+InitialActivations: read-only SpecialActivation requests at post-swap positions
+```
 
-Do not create an abstract command framework just to classify three move kinds.
+Each SpecialActivation contains Position and an optional normal TargetColor for a Light Ball swapped with a normal partner. Core derives these facts from the already-swapped Board; a Light Ball without a normal partner uses the approved fallback.
+
+Keep the existing `SwapValidator.IsValidResult` as a wrapper over Analyze. Keep the runner's callback-only overload for standalone resolution/tests, with no player anchor preference or initial activations. Both overloads use one shared routine; the player overload does not resolve an Invalid analysis.
+
+The first-scan anchor lifetime belongs to that shared routine. The completed-result and busy callbacks retain their Phase 9 ordering. Do not use the names SwapResolution or AnalyzeResult for this contract, and do not add a command hierarchy.
 
 ---
 
@@ -630,24 +627,24 @@ no obstacle model
 
 Do **not** make Core special activation depend directly on `LevelProgress`.
 
-Possible Phase 10 policy:
+Approved Phase 10 policy:
 
 ```text
 Propeller:
-1. clears approved neighboring cells
-2. selects one remote occupied target from Board
+1. clears its own cell and the four orthogonal neighbors, clipped to bounds
+2. selects one eligible remote occupied target from Board
 3. clears / activates that target
 ```
 
 Targeting must be deterministic under tests.
 
-If random selection is used, use an injected `System.Random`.
+Use the injected, separately owned System.Random targeting stream.
 
 ### Eligible remote targets
 
-Step 1 must define the exact candidate set before a random choice is made. Specify whether the target may be another special (and therefore chain), whether it must lie outside the takeoff footprint, and how to exclude the Propeller itself.
+An eligible target is a normal tile or another special. Exclude Empty cells, the Propeller itself, its local takeoff footprint, cells already scheduled for removal, and specials already queued or activated. A remote special enters the same chain queue.
 
-Also settle whether already-planned removals and specials already queued/activated remain eligible. A frozen Board still contains those cells physically; reading it alone does not prevent a wasted or duplicate target. Define the no-eligible-target fallback explicitly, and use a stable candidate order before selecting a random index.
+Order candidates by Y, then X before selecting a random index. When none remain, apply only the local effect and consume no random draw. These exclusions apply even though the Board contents remain frozen during chain planning.
 
 ### Important RNG separation
 
@@ -661,11 +658,14 @@ Propeller target choice
 → changes future refill sequence
 ```
 
-A separate deterministic RNG stream is likely cleaner.
+BoardBootstrap owns two separate instances and recreates both on every start/restart:
 
-Step 1 must decide the smallest implementation.
+```csharp
+var refillRandom = new System.Random(seed);
+var targetingRandom = new System.Random(unchecked(seed ^ 0x5EED1234));
+```
 
-The targeting stream is part of the level session: every start/restart must create a fresh deterministic Propeller stream, just as refill receives a fresh stream. Step 1 must specify its owner and seed derivation; do not reuse the refill stream or retain a targeting stream from the previous level.
+Do not share these instances or retain the previous session's targeting stream. The fixed targeting seed salt is deterministic; the existing generation/refill seed-reuse policy stays unchanged.
 
 Restarting with the same configuration and replaying the same moves must reproduce both target choices and refill behavior. Test stream isolation and restart reproducibility separately; no generic random-service framework is needed.
 
@@ -683,7 +683,7 @@ two-tile radius
 
 The project must translate that into a precise grid rule.
 
-A likely simple rule:
+Approved geometry:
 
 ```text
 5×5 square centered on TNT
@@ -698,7 +698,7 @@ Chebyshev distance <= 2
 
 Do not rely on an ambiguous word like "radius" in tests.
 
-Approve the exact geometry first.
+This is the exact geometry to implement and test.
 
 ---
 
@@ -706,7 +706,7 @@ Approve the exact geometry first.
 
 Creation must produce an explicit direction.
 
-Likely:
+Approved creation orientation:
 
 ```text
 horizontal 4-line → Horizontal Rocket
@@ -734,7 +734,7 @@ Approved targeting contract for a swap with a normal tile:
 target = the normal tile's color
 ```
 
-For a chain-triggered activation or any activation without a normal partner (including an ordinary special + special swap, or a tap if approved):
+For a chain-triggered activation or an ordinary special + special swap, where no normal partner exists:
 
 ```text
 choose the most common normal color on the Board
@@ -742,7 +742,9 @@ tie-break by the lowest normal TileType numeric value
 if no normal colors exist, produce no additional color clear
 ```
 
-Count only normal collectible tiles, excluding Empty and specials. Removing/activating the Light Ball itself gives no color score or goal credit. Do not use nondeterministic dictionary order.
+Count normal collectible tiles on the frozen chain Board, including tiles already scheduled for removal; exclude Empty and specials. The final removal set prevents duplicate credit. Two Light Balls may therefore select the same color; they do not produce a board-wide bonus.
+
+Removing/activating the Light Ball itself gives no color score or goal credit. Do not use nondeterministic dictionary order.
 
 ---
 
@@ -756,18 +758,19 @@ the hit special should activate
 
 This must not recursively mutate the board in an uncontrolled call stack.
 
-A likely algorithm:
+Approved algorithm:
 
 ```text
-queue specials to activate
-set/hash of already activated positions
+queue initial specials in Y-then-X order
+sets of queued/activated positions and planned removals
 
 while queue not empty:
     dequeue special
     compute affected cells
-    if affected cell contains unactivated special:
+    visit affected cells in Y-then-X order
+    if affected cell contains a special not already queued/activated:
         enqueue it
-    accumulate cells to remove
+    accumulate occupied cells to remove, without duplicates
 
 apply the logical changes deterministically
 ```
@@ -784,15 +787,17 @@ Do not over-generalize this into a reusable graph framework.
 
 ### Chain read state and pending effects
 
-Step 1 must make the chain's read-state contract explicit. Recommended approach: keep Board positions/content fixed while computing one activation chain, accumulate its affected positions, then apply the logical changes before gravity/refill. This does not require cloning the Board if ownership already prevents mutation.
+SpecialEffects plans a chain without mutating Board contents or positions; it accumulates effects, then BoardResolution applies the removals. Ownership and the existing input lock keep the read state stable; no Board clone is required for this contract.
 
-Define how pending removal/activation sets affect target eligibility and how Light Ball counts colors against that read state. Deduplicate physical removals and normal-color facts when multiple effects hit the same cell. Frozen contents alone do not define any of those policies.
+Propeller excludes pending removals/queued activations, while Light Ball counts all normal colors on the frozen Board. This asymmetry is deliberate and must be tested. The removal plan contains occupied positions only, so BoardView.RemoveViews does not receive Empty cells without views.
+
+Deduplicate removals and normal-color facts within each chain/round, not across the whole player move. A newly refilled tile at the same coordinate can count again in a later cascade. Reset the activation sets for each chain; a special created later is a new item, not an already-activated old position.
 
 ### Activation chain and creation ordering
 
-Resolve an existing special activation chain completely before creating specials from newly found normal matches. Finish the chain's effects before continuing gravity/refill and normal-match resolution.
+Resolve an existing activation chain completely before scanning surviving normal patterns, creating specials, and applying gravity/refill. The surviving normal scan occurs before gravity, in the same round loop used by normal moves.
 
-Newly created specials are not retroactively hit or activated by the already-resolved effect that caused that resolution. They may be activated by a later, separate effect. Step 1 must preserve this phase boundary when defining the resolution flow.
+Newly created specials are not retroactively hit or activated by the already-resolved effect that caused that resolution. They may be activated by a later player action/effect. Only the first round of a special move has initial activations; later cascade rounds in this phase have none.
 
 ---
 
@@ -926,7 +931,7 @@ TNT
 Light Ball
 ```
 
-a cohesive switch in one Core resolver may still be clearer.
+the approved design uses a cohesive switch with footprint helpers in the Core SpecialEffects planner.
 
 Use Strategy only if it removes growing, scattered behavior branches.
 
@@ -934,7 +939,7 @@ Do not create four classes whose only method is five lines long merely to claim 
 
 ## Factory
 
-Likely unnecessary if creating a special means constructing a small enum/value.
+Not used in the approved design: special creation produces enum/TileSpawn placement values without substantial setup dependencies.
 
 Consider Factory only if creation itself gains substantial dependencies or setup.
 
@@ -968,19 +973,19 @@ BombState
 
 # Step 1 — Architecture Audit and Exact Rule Specification
 
+Status: Complete. The audit proposal and its four review refinements are approved and recorded here. Step 2 implementation has not started.
+
 ## Goal
 
-Decide the remaining logical contract before changing code, preserving the approved generation, rendering timing, clear/result, goal classification, chain-edge, and Option A scope clarifications above.
+The audit settled the logical contract before implementation. Preserve the approved gameplay rules above and the architecture/API record below; do not repeat the design selection in later steps.
 
-No file changes.
-
-No Unity changes.
+The audit itself involved no file or Unity changes. Recording the approved decisions is a separately authorized documentation update; it does not authorize Step 2 implementation.
 
 This step is intentionally detailed because mistakes here would cause broad refactors later.
 
-## Inspect
+## Audit Coverage
 
-At minimum inspect the current versions of:
+The audit inspected:
 
 ```text
 TileType
@@ -1001,55 +1006,66 @@ relevant Core tests
 relevant PlayMode resolution/input tests
 ```
 
-## Required Decisions
+## Approved Architecture and Data
 
-Produce a concise table covering:
+| Type | Responsibility |
+| --- | --- |
+| Board / TileType | Keep the authoritative enum-based grid; add the five colorless special values without a parallel special grid or Tile hierarchy. |
+| TileRules | Shared Empty / normal / special classification; used by matching and validation. |
+| MatchFinder | Analyze maximal normal runs and squares, then group matched cells; FindMatches is a wrapper, not a second matcher. |
+| SpecialCreationRules | Interpret pattern facts, choose priority and anchor, and produce TileSpawn placement data. |
+| SwapValidator | Analyze the already-swapped Board and return SwapAnalysis, including initial activations; retain IsValidResult as a wrapper. |
+| SpecialEffects | Plan footprints/chains against a frozen Board, consuming only the targeting RNG; no Board mutation or score rules. |
+| BoardResolution | Apply planned removals/placements, gravity, and normal refill; ClearCells remains truthful. |
+| BoardResolutionRunner | One shared round routine; coordinate Core operations and visuals, expire player anchors, aggregate normal-color facts, and report completion once. |
+| BoardInputController | Select, swap/rollback, hold the interaction lock, pass SwapAnalysis, and retain completed-move/busy callback ordering. |
+| BoardBootstrap | Own the session, both random streams, LevelProgress, HUD updates, terminal input, and in-place restart. |
+| BoardView / TileView | Place/display supplied tiles and effects; own no creation, targeting, or activation rules. |
+
+Approved passive data shape:
 
 ```text
-1. board representation
-2. normal-vs-special classification
-3. match-analysis result shape
-4. 2×2 Propeller detection
-5. T/L detection
-6. pattern priority
-7. special creation anchor
-8. whether cascade matches create specials
-9. score/goal semantics
-10. activation input policy
-11. special-swap validity
-12. Propeller target policy
-13. RNG ownership
-14. TNT footprint
-15. Light Ball target policy
-16. chain-reaction algorithm
-17. confirm approved Option A (ordinary two-special activation, no combination bonuses)
-18. Strategy decision
-19. Factory decision
-20. initial generation prevents lines and squares; refill allows both
-21. truthful physical clear facts vs normal-only ResolutionResult and goal validation
-22. minimal special rendering by Step 4; distinctive visuals in Step 8
-23. existing activation chain completes before new special creation
-24. activation position after a swap, with an old-cell/new-cell example
-25. special + normal partner match timing and lifetime of swap-anchor preference
-26. exact resolution entry point carrying/deriving swap context and initial activations
-27. connected-group definition and concrete shape/outcome table
-28. Propeller RNG owner, seed derivation, and reset on every restart
-29. Propeller eligibility, pending-effect exclusions, and no-target fallback
-30. chain read state, target evaluation, and deduplicated clear facts
+MatchAnalysis
+├── MatchedPositions (deduplicated)
+└── Groups
+    ├── Color
+    ├── Positions
+    └── Patterns: maximal horizontal run / maximal vertical run / 2×2 square
+
+SwapAnalysis
+├── Kind: Invalid / NormalMatch / SpecialSwap
+├── First / Second
+└── InitialActivations: SpecialActivation(Position, optional TargetColor)
+
+SpecialEffectPlan
+├── RemovedPositions (deduplicated occupied cells)
+└── Effects: origin, special type, footprint, and remote target when applicable
 ```
 
-These are design outputs for Step 1, not authorization to implement them while reviewing this plan. Preserve the previously approved contracts; settle the remaining questions before later steps choose APIs or behavior.
+These are immutable data contracts/read-only collections, not an ability or command framework. They are introduced only in the steps that need them; Step 2 does not create the later match/swap/effect types.
 
-## Required Special Rule Table
+The approved player handoff is SwapValidator.Analyze(board, first, second) → SwapAnalysis → BoardResolutionRunner.ResolveUntilStable(move, onResolved), using the signatures in gameplay rule 10. Avoid the superseded names SwapResolution and AnalyzeResult.
 
-At minimum propose the project contract for:
+Core stays Unity-free, and Presentation depends on Core. No Strategy, Factory hierarchy, event bus, or state machine is introduced. Reconsider a richer CellContent or interchangeable effect objects only when a concrete new requirement justifies them.
+
+## Approved Special Rule Table
 
 | Special | Created by | Logical data needed | Activation footprint | Player activation |
 | --- | --- | --- | --- | --- |
-| Rocket | ? | orientation | ? | ? |
-| Propeller | ? | ? | ? | ? |
-| TNT | ? | ? | ? | ? |
-| Light Ball | ? | target color? | ? | ? |
+| Rocket | Straight run of exactly 4 | HorizontalRocket / VerticalRocket | Full matching row / column | Adjacent swap, post-swap cell |
+| Propeller | Same-color 2×2 square | Special kind | Own cell + 4 orthogonal neighbors, then one eligible remote occupied target | Adjacent swap, post-swap cell |
+| TNT | Intersecting horizontal/vertical runs, each 3+, including T/L/plus | Special kind | Centered 5×5 square clipped to bounds | Adjacent swap, post-swap cell |
+| Light Ball | Straight run of 5+ | Special kind; target color is activation context | All normal items of the selected color | Adjacent swap, post-swap cell |
+
+At most one special is created per qualifying connected same-color matched group, including cascade groups, under Light Ball > TNT > Rocket > Propeller priority. Ordinary three-tile groups create none. The eight concrete shape/outcome rows in gameplay rule 5 are the approved Step 3 test cases.
+
+For first-scan anchors, prefer Second, then First, only when the cell belongs to a winning qualifying pattern. Otherwise use the shape anchor; order equal candidates by Y, then X. Even-length straight runs choose the central cell with the smaller X (horizontal) or Y (vertical). Expire player preference after the first scan, including an empty scan.
+
+All consumed normal colors count, including the normal tile replaced by a special. ClearCells also reports removed specials, but aggregation filters them before constructing normal-only ResolutionResult. Removing a special adds no independent score/goal credit; LevelProgress's scoring/outcome rules stay unchanged while its goal validation becomes normal-only.
+
+Generation prevents lines and squares with the existing three-color minimum; refill allows patterns and creates normal items only. Basic special rendering arrives by Step 4; distinctive visuals remain Step 8. Test symbols are H/V/F/T/L, preserving P for Purple.
+
+Propeller and Light Ball use the explicit targeting/read-state rules above. Bootstrap recreates refill Random(seed) and targeting Random(unchecked(seed ^ 0x5EED1234)) on every start/restart. Preserve the existing generation/refill seed reuse policy.
 
 Do not implement.
 
@@ -1064,48 +1080,51 @@ special + special swap → ordinary activation of both, one player move
 
 Selected bonus combinations and the full matrix are deferred future work, not undecided Phase 10 tasks. Step 7 is skipped without implementation or commit.
 
-## Required Move Flow Diagrams
+## Approved Shared Resolution Loop
 
-Show:
+All move kinds use one round routine. Only the first round of a special move has queued activations; normal moves and later cascades have none.
+
+```text
+each round:
+    plan/apply queued activations and their complete chain, if any
+    scan surviving normal patterns before gravity
+    consume matches and place any created specials
+    expire player anchor preference after the first scan, even when empty
+    gravity → refill
+    repeat until settled, with no queued activations or resolvable patterns
+
+stable → one ResolutionResult → LevelProgress once → selection-clear/unlock/busy(false)
+```
+
+A special that removes itself but clears no normal colors still leaves a hole and must proceed through gravity/refill. An already-settled Board with no work reports completion without unnecessary animations. New specials appear after the completed chain and are never retroactively hit.
 
 ### Normal valid move
 
 ```text
 swap
-→ shape analysis
-→ decide special creations and first-round anchors
-→ consume original normal colors, then place specials
-→ fall / refill
-→ cascades
-→ stable
-→ LevelProgress
+→ Analyze returns NormalMatch
+→ shared loop with no initial activations
+→ stable → one result → LevelProgress → cleanup
 ```
 
 ### Single special activation
 
 ```text
-player action
-→ special effect
-→ chain reactions
-→ fall / refill
-→ normal matches / special creation
-→ repeat
-→ stable
-→ LevelProgress
+special + normal swap
+→ Analyze supplies the post-swap activation and any Light Ball partner color
+→ shared loop: chain, surviving normal patterns, creation, gravity/refill, cascades
+→ stable → one result → LevelProgress → cleanup
 ```
 
-For a special + normal swap, show both the special's activation position and the normal partner's possible match. State the approved analysis/anchor timing rather than assuming it is an ordinary cascade.
+The normal partner's pattern is resolved only if it survives the chain, and is scanned before gravity. It gets first-scan player anchor preference; a pattern broken by the effect receives no stale match award.
 
 ### Special + special ordinary activation
 
 ```text
 swap specials
-→ queue both for ordinary activation
-→ finish existing special chain, no combination bonus
-→ normal resolution
-→ create specials from newly found normal matches, without retroactive hits
-→ stable
-→ LevelProgress
+→ Analyze supplies both post-swap activations
+→ same shared loop, with ordinary effects and no combination bonus
+→ stable → one result → LevelProgress → cleanup
 ```
 
 ## Learning Questions
@@ -1135,36 +1154,51 @@ STOP and wait for approval.
 
 ## Goal
 
-Make the logical Board capable of storing the approved special-tile representation **without adding special creation or activation behavior yet**.
+Implement only the approved enum/classification/validation migration **without adding special creation or activation behavior yet**.
 
 This step should be a representation migration only.
 
 The old Match-3 behavior must remain identical.
 
-## Possible Work
+## Approved Work
 
-Depending on Step 1's approved design:
-
-```text
-extend TileType
-or
-introduce Tile / CellContent value
-```
-
-Also add the approved central classification helpers, for example:
+Preserve the current Board/GridPosition design and TileType values 0–6. Add exactly:
 
 ```text
-IsEmpty
-IsNormalMatchItem
-IsSpecial
-IsRocket
+HorizontalRocket = 7
+VerticalRocket   = 8
+Propeller        = 9
+TNT              = 10
+LightBall        = 11
 ```
 
-Exact API must come from Step 1.
+Add the static Core TileRules classification API:
+
+```text
+bool IsEmpty(TileType type)
+bool IsNormalMatchItem(TileType type)
+bool IsSpecial(TileType type)
+```
+
+IsEmpty recognizes only Empty. IsNormalMatchItem recognizes exactly the six existing colors. IsSpecial recognizes exactly the five new special values. Undefined values belong to neither the normal nor special set.
+
+Use this shared classification in PaletteValidation, the existing ordinary-line MatchFinder, ResolutionResult validation, and LevelProgress goal validation. Preserve exception conventions and the existing move/score/outcome behavior.
+
+Board get/set and gravity retain their current enum-based behavior. Generation/refill algorithms stay unchanged in this step except for normal-only palette validation. Do not add a Tile/CellContent value, a separate grid, extra classification helpers, or the later match/swap/effect DTOs.
 
 ## Test Board Notation
 
-Choose distinct test-fixture symbols for every special kind, including Rocket orientations. `P` already means Purple in `TestBoards` and the PlayMode helpers; preserve that meaning rather than reusing it for Propeller.
+Use the approved test-fixture symbols consistently in TestBoards and the PlayMode helpers:
+
+| Symbol | TileType |
+| --- | --- |
+| H | HorizontalRocket |
+| V | VerticalRocket |
+| F | Propeller |
+| T | TNT |
+| L | LightBall |
+
+Preserve the existing R/G/B/Y/P/O colors and '.' for Empty. In particular, P remains Purple.
 
 Update the relevant parsers/formatters consistently in their existing test assemblies. This is fixture notation, not a reason to add a shared test framework or runtime string-based tile model.
 
@@ -1190,10 +1224,14 @@ Do not implement:
 4-line creation
 square creation
 T/L creation
+shape-analysis APIs or square prevention in generation (Step 3)
 special activation
 chain reactions
+SwapAnalysis / new swap-analysis API or resolution entry-point integration
 special input
 combinations
+targeting RNG session wiring
+production TileView/BoardView rendering changes or scene/prefab changes
 ```
 
 ## Tests
@@ -1201,6 +1239,8 @@ combinations
 At minimum:
 
 - normal palette still validates
+- existing enum values remain unchanged and the five new values are exact
+- classification sets are disjoint and reject undefined values as normal/special items
 - any special in spawn palette is rejected
 - Board get/set supports specials
 - gravity moves specials correctly
@@ -1256,9 +1296,9 @@ intersections
 
 Do not infer power-up creation from presentation.
 
-## Recommended Responsibility Split
+## Approved Responsibility Split
 
-A likely clean split is:
+Use the approved split:
 
 ```text
 Match analysis
@@ -1283,15 +1323,13 @@ view effects
 
 ## Backward Compatibility
 
-If useful, preserve:
+Preserve:
 
 ```text
 MatchFinder.FindMatches(...)
 ```
 
-as a simple API for callers/tests that only need matched positions.
-
-It may internally use richer analysis.
+as a wrapper over MatchFinder.Analyze(...).MatchedPositions for callers/tests that only need matched positions.
 
 Do not duplicate two independent match algorithms.
 
@@ -1323,7 +1361,7 @@ Do not depend on HashSet iteration order.
 
 ## Valid-Move Semantics
 
-A 2×2 Propeller-forming swap must be recognized as a valid player move if that is the approved rule.
+A 2×2 Propeller-forming swap involving a selected cell is a valid normal player move under the approved rule.
 
 Update pure validation logic here or in the approved move-classification type.
 
@@ -1353,7 +1391,7 @@ At minimum:
 - 5-line beats 4-line
 - TNT pattern beats lower-priority sub-patterns
 - deterministic anchor
-- two disjoint qualifying groups produce two creations if approved
+- two disjoint qualifying groups produce two creations
 - intersection positions counted once
 - no false square from different colors
 - no false T/L through a special cell
@@ -1403,7 +1441,7 @@ No player-triggered activation yet.
 
 ## Logical Sequence
 
-A likely round:
+Use the shared round routine, with no initial activations in this step:
 
 ```text
 analyze matches
@@ -1417,7 +1455,7 @@ analyze matches
 → analyze next cascade
 ```
 
-Exact implementation must match Step 1/3 decisions.
+Implementation must match the approved Step 1 record and Step 3 analysis/creation rules.
 
 Use the resolution entry-point contract approved in Step 1 to receive the first player swap's context and anchor preference. Preserve its explicit lifetime; do not invent a separate temporary API here that Step 6 must replace for queued activations.
 
@@ -1433,7 +1471,7 @@ The special appears **after** those match-item facts are captured.
 
 ## Cascade Creation
 
-If approved:
+Approved cascade behavior:
 
 ```text
 refill/fall-created 4, square, T/L, or 5-line
@@ -1448,15 +1486,14 @@ Presentation must end each round with one correct view per occupied Board cell.
 
 Add minimal special rendering support by this step at the latest. TileView must be able to represent every approved special without throwing for an unknown type. Simple temporary appearance is sufficient here; Step 8 owns distinctive icons/orientation visuals and activation feedback.
 
-For a special creation anchor, either:
+For each creation anchor:
 
 ```text
-reuse the old TileView and retheme it
-or
-replace it with a new special TileView
+remove the consumed normal TileView along with the other consumed views
+BoardView.PlaceSpecialViews(creations) creates/registers a new special view at the anchor
 ```
 
-Both are acceptable if explicitly chosen and tested.
+Reuse TileSpawn as position/type placement data, but do not call AnimateRefill for creation. Created specials appear in place; only refill tiles enter from above. Unrelated survivor views retain their identities.
 
 Do not accidentally weaken survivor identity guarantees for unrelated tiles.
 
@@ -1472,7 +1509,7 @@ At minimum:
 - ResolutionResult contains no special values, and creating a special preserves credit for the original normal color
 - created special remains on board through gravity rules
 - refill does not overwrite the special
-- cascade can create special if approved
+- cascade matches create specials under the same rules
 - unrelated TileView identities remain stable
 - final Board/View/lookup agree
 - TileView can represent newly created specials without throwing before Step 8
@@ -1609,7 +1646,7 @@ local takeoff effect
 one remote target
 ```
 
-Use the exact Step 1 footprint, eligible-target set, pending-effect exclusions, stable candidate ordering, and no-eligible-target fallback. If a remote special is eligible, it enters the same once-per-chain queue.
+Use the approved Step 1 footprint, eligible-target set, pending-effect exclusions, stable candidate ordering, and no-eligible-target fallback. An eligible remote special enters the same once-per-chain queue.
 
 Use the separately owned deterministic targeting stream; never consume refill RNG values. Test the fresh-stream restart contract here. Production level-start/restart wiring is completed in Step 6 alongside special-move integration.
 
@@ -1641,7 +1678,7 @@ Preserve Step 5a's queue, deduplication, truthful physical removal facts, normal
 - no eligible target uses the explicit fallback
 - deterministic remote target and stable candidate ordering
 - same seed/state → same target
-- remote special target chains if approved
+- eligible remote special target enters the chain
 - RNG does not perturb refill RNG
 - recreating the targeting stream reproduces choices for a restarted session
 
@@ -1755,7 +1792,7 @@ Implement the exact Step 1 approved Phase 10 policy.
 
 Do not invent a second input model during implementation.
 
-If tap activation was deliberately deferred, write that clearly and test only the approved swap path.
+Tap activation is deferred. Implement and test only the approved two-click adjacent-swap path; same-cell clicks keep their current ignore behavior.
 
 ## Invalid Normal Swap
 
@@ -2036,7 +2073,7 @@ restart disabled while busy
 restart re-enabled after cleanup
 special chain
 normal cascade after special
-special creation during cascade if approved
+special creation during cascades
 Won through special clear
 terminal input blocked
 ```
@@ -2286,12 +2323,12 @@ Do not extract preemptively.
 
 ---
 
-# Recommended Codex Start Prompt
+# Recommended Codex Prompt — Review the Approved Step 1 Record
 
 ```text
 Follow AGENTS.md and Docs/Phases/PHASE10_EXECUTION.md.
 
-We are starting Phase 10 — Special Tiles / Power-Ups.
+Phase 10's Step 1 audit is complete. Review the approved Step 1 record against the current code without reopening its settled decisions. This prompt authorizes review only; implementation requires explicit approval for Step 2 or the next scoped step.
 
 IMPORTANT:
 This is a design-first phase.
@@ -2330,7 +2367,7 @@ No Unity scene/prefab changes.
 No code changes.
 No commit.
 
-For Step 1, specify the remaining details and confirm the already-approved contracts:
+Use this checklist to confirm the recorded contract, not to choose a new design:
 1. board representation
 2. normal-vs-special classification
 3. richer match-analysis shape
@@ -2348,9 +2385,9 @@ For Step 1, specify the remaining details and confirm the already-approved contr
 15. Light Ball targeting
 16. chain-reaction algorithm
 17. confirm approved Option A; no explicit combination bonuses
-18. Strategy decision
-19. Factory decision
-20. activation origin, with the post-swap position as the proposed baseline
+18. no Strategy hierarchy
+19. no Factory hierarchy
+20. post-swap activation origin
 21. normal-partner match timing and when first-player-round anchor preference expires
 22. exact resolution entry point for swap context and initial activations
 23. connected groups and a concrete shape/outcome table
@@ -2358,7 +2395,7 @@ For Step 1, specify the remaining details and confirm the already-approved contr
 25. remote-target eligibility, pending-effect exclusions, and no-target fallback
 26. chain read state and deduplicated physical/color-clear facts
 
-Compare alternatives and recommend the smallest clean design.
+Use the approved enum/classification, SwapAnalysis returned by SwapValidator.Analyze, one shared round routine, in-place creation views, and precise smaller-coordinate center anchors. Report a concrete contradiction if one is found; do not silently redesign the contract.
 
 Pay special attention to:
 - current FindMatches only returns positions
