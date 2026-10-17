@@ -81,7 +81,7 @@ The project may intentionally choose a smaller input rule or a more deterministi
 
 ---
 
-# Combination Reference — Scope Gate Required
+# Combination Reference — Approved Scope and Deferred Work
 
 Royal Match-style games also support power-up combinations.
 
@@ -119,17 +119,19 @@ Propeller + special
 → carry / apply the paired special near a remote target
 ```
 
-These details are **reference material**, not yet approved project rules.
+These bonus effects are **future reference material**, not approved Phase 10 rules.
 
-Step 1 must explicitly decide whether Phase 10 implements:
+Approved Phase 10 scope is Option A:
 
 ```text
-A. individual specials + chain reactions only
-B. individual specials + a small combination subset
-C. the full four-special combination matrix
+A. individual specials + chain reactions only — APPROVED for Phase 10
+B. individual specials + a small combination subset — deferred
+C. the full four-special combination matrix — deferred
 ```
 
-Do not silently implement the full matrix because it exists in another game.
+A special + special swap is still valid: queue both specials for their ordinary activation, including chains, for one player move. There is no combination bonus.
+
+Step 1 must preserve this approved scope. Explicit combination bonuses require separate future approval; do not implement them because they exist in another game.
 
 ---
 
@@ -202,16 +204,19 @@ visual distinction for specials
 deterministic tests
 ```
 
-If approved in Step 1:
+Approved special + special baseline:
 
 ```text
-special + special combinations
+adjacent special + special swap
+→ queue both for ordinary activation
+→ no combination bonus
 ```
 
 Phase 10 does **not** add:
 
 ```text
 blockers / obstacles
+explicit special-combination bonuses, transformations, or carry effects
 booster inventory
 pre-level boosters
 coins
@@ -367,17 +372,23 @@ A 2×2 square is not a 3-in-a-line.
 
 Current swap validation only understands line matches.
 
-If the project adopts:
+Approved rule:
 
 ```text
 2×2 same color → Propeller
 ```
 
-then creating that square must count as a valid player move.
+Creating that square must count as a valid player move.
 
 This means Phase 10 must deliberately evolve the definition of a valid Match-3 move.
 
 Do not bolt square detection onto Presentation.
+
+### Initial generation and refill
+
+The starting board must contain none of the approved resolvable patterns. The current generator already prevents line-3+ patterns; add same-color 2×2 prevention for Propeller in Step 3, when square-match semantics are introduced.
+
+Refill must continue allowing all approved patterns. It creates normal palette tiles without preventing lines or squares, so cascades can create specials.
 
 ---
 
@@ -416,6 +427,23 @@ disjoint match groups may each create their own special
 
 Do not let hash-set iteration order determine which special wins.
 
+### Connected groups and concrete shape cases
+
+Step 1 must define exactly what connects a match group: which matched cells are included, whether side-by-side runs merge, and how overlapping runs/squares share a creation decision. A priority list alone does not define group membership or guarantee one creation per intended group.
+
+Produce a small table of concrete board diagrams with expected matched cells, group membership, special kind/count, and anchor for at least:
+
+| Shape | Decision the Step 1 table must make explicit |
+| --- | --- |
+| Two parallel same-color lines touching side by side | One group or two, and how many specials result |
+| Plus/cross | Whether it qualifies as TNT and which anchor wins |
+| 2×3 same-color block | How overlapping squares and lines compete |
+| Square plus a tail / overlapping 3-line | Whether the result is Propeller, Rocket, TNT, or only a normal clear under the approved rules |
+| Six in a straight line | Which special is created and whether more than one is allowed |
+| Two T shapes sharing a cell | Grouping, priority, and creation count |
+
+The approved rows become Step 3 tests directly; do not invent these outcomes during implementation.
+
 ---
 
 ## 6. Where is the created special placed?
@@ -447,13 +475,19 @@ Do not leave this to collection iteration order.
 
 The exact policy is a Step 1 decision and must be tested.
 
+### A normal partner can create a match during special activation
+
+Swapping a special with a normal tile can move that normal tile into a qualifying line or square. Step 1 must explicitly decide when that pattern is analyzed relative to the special chain and gravity/refill, and whether it survives to be resolved in the same player move.
+
+Specify whether this is the first player-created normal round and receives swap-cell anchor preference. Define exactly when that preference expires; it must not leak into later cascades. Do not silently preserve or discard a pre-chain pattern merely because of the order an implementation happens to scan the Board.
+
 ---
 
 ## 7. Does the tile transformed into a special count toward score / goal?
 
 A match of four Reds should conceptually consume four Red match items even though one cell becomes a Rocket.
 
-Recommended contract to evaluate:
+Approved contract:
 
 ```text
 clear/consume all matched normal tiles
@@ -475,23 +509,30 @@ Do not silently count only three Reds because the fourth position becomes specia
 
 ## 8. Does activating a special itself score?
 
-Current Phase 9 rule is based on cleared `TileType` facts.
-
-The cleanest Phase 10 baseline may be:
+Current Phase 9 rule is based on cleared `TileType` facts. The approved Phase 10 boundary is:
 
 ```text
-normal colored tiles removed by special effects
-→ score and goal normally
+ClearCells
+→ truthfully reports every non-Empty TileType it physically removes, including specials
+
+resolution aggregation
+→ retains only normal collectible TileTypes for ResolutionResult
+
+ResolutionResult
+→ accepts only normal collectible TileTypes; rejects specials, Empty, and undefined values
+
+normal colored tiles consumed by matches or special effects
+→ score normally; advance the goal when their color matches
 
 the special item that activates
-→ no independent color-goal credit
+→ no independent color score or goal credit
 ```
 
-Step 1 must explicitly approve the score semantics.
+Do not make `ClearCells` hide physical removals to satisfy scoring. Filter the truthful clear facts at the `ResolutionResult` boundary using the shared tile classification. A normal tile consumed to create a special still contributes its original color, captured before replacement.
 
-If the project wants special cells themselves to add generic score, `ResolutionResult` may need a richer fact model.
+`LevelProgress.GoalTileType` must also be a normal collectible color. Replace its current "defined and non-Empty" check with the same central normal/special classification during Step 2; newly defined specials must not become valid goals.
 
-Do not change the result contract accidentally inside activation code.
+No separate special-item score is added in Phase 10. A richer scoring contract would require separate future approval.
 
 ---
 
@@ -541,13 +582,33 @@ normal + special
 special + special
 ```
 
-A likely rule:
+Approved rule:
 
 ```text
 any adjacent swap involving a special is a valid player action
 ```
 
-but the exact activation semantics must be approved.
+For special + normal, activate the special under the approved individual rules. For special + special, queue both for ordinary activation, with no combination bonus. Either accepted action costs one move after the full resolution completes.
+
+Step 1 still specifies the remaining activation details and deterministic queue order; it must not reopen the approved no-bonus combination scope.
+
+### Activation position and resolution entry point
+
+Step 1 must explicitly settle whether a swapped special activates at its old cell or its new cell. Proposed baseline: apply the logical swap first, then activate each special at its post-swap position. For example, a Rocket moved vertically would clear its new row, not its old row. A tap, if supported, uses the special's current cell.
+
+Write the exact minimal resolution entry-point contract before Step 4 needs player-selected anchors or Step 6 integrates special input. The current `ResolveUntilStable(onResolved)` receives neither swap positions nor initial activations.
+
+State how the approved API carries or derives:
+
+```text
+the two player-selected cells, when a swap exists
+the classified action and initial special activations at the approved positions
+the normal partner color for Light Ball, when present
+the lifetime of first-player-round anchor preference
+the existing once-per-completed-move result callback
+```
+
+Choose ordinary arguments or one small data value only if it simplifies those concrete needs. Do not add a command hierarchy, generic context framework, or an API that later steps must redesign independently.
 
 Consider whether `SwapValidator` should grow this responsibility or whether a small move-classification concept is now clearer.
 
@@ -582,6 +643,12 @@ Targeting must be deterministic under tests.
 
 If random selection is used, use an injected `System.Random`.
 
+### Eligible remote targets
+
+Step 1 must define the exact candidate set before a random choice is made. Specify whether the target may be another special (and therefore chain), whether it must lie outside the takeoff footprint, and how to exclude the Propeller itself.
+
+Also settle whether already-planned removals and specials already queued/activated remain eligible. A frozen Board still contains those cells physically; reading it alone does not prevent a wasted or duplicate target. Define the no-eligible-target fallback explicitly, and use a stable candidate order before selecting a random index.
+
 ### Important RNG separation
 
 Do not casually share the refill RNG with Propeller targeting.
@@ -597,6 +664,10 @@ Propeller target choice
 A separate deterministic RNG stream is likely cleaner.
 
 Step 1 must decide the smallest implementation.
+
+The targeting stream is part of the level session: every start/restart must create a fresh deterministic Propeller stream, just as refill receives a fresh stream. Step 1 must specify its owner and seed derivation; do not reuse the refill stream or retain a targeting stream from the previous level.
+
+Restarting with the same configuration and replaying the same moves must reproduce both target choices and refill behavior. Test stream isolation and restart reproducibility separately; no generic random-service framework is needed.
 
 This is a concrete reason to revisit random-stream ownership; it is not a reason to add a generic random-service framework.
 
@@ -657,22 +728,21 @@ Orientation is logical gameplay data.
 
 ## 14. Light Ball target color
 
-For a swap with a normal tile:
+Approved targeting contract for a swap with a normal tile:
 
 ```text
 target = the normal tile's color
 ```
 
-If single-tap activation is included, define a deterministic policy.
-
-Possible policy:
+For a chain-triggered activation or any activation without a normal partner (including an ordinary special + special swap, or a tap if approved):
 
 ```text
 choose the most common normal color on the Board
-tie-break by palette order or TileType order
+tie-break by the lowest normal TileType numeric value
+if no normal colors exist, produce no additional color clear
 ```
 
-Do not use nondeterministic dictionary order.
+Count only normal collectible tiles, excluding Empty and specials. Removing/activating the Light Ball itself gives no color score or goal credit. Do not use nondeterministic dictionary order.
 
 ---
 
@@ -712,22 +782,34 @@ chain order can be tested
 
 Do not over-generalize this into a reusable graph framework.
 
+### Chain read state and pending effects
+
+Step 1 must make the chain's read-state contract explicit. Recommended approach: keep Board positions/content fixed while computing one activation chain, accumulate its affected positions, then apply the logical changes before gravity/refill. This does not require cloning the Board if ownership already prevents mutation.
+
+Define how pending removal/activation sets affect target eligibility and how Light Ball counts colors against that read state. Deduplicate physical removals and normal-color facts when multiple effects hit the same cell. Frozen contents alone do not define any of those policies.
+
+### Activation chain and creation ordering
+
+Resolve an existing special activation chain completely before creating specials from newly found normal matches. Finish the chain's effects before continuing gravity/refill and normal-match resolution.
+
+Newly created specials are not retroactively hit or activated by the already-resolved effect that caused that resolution. They may be activated by a later, separate effect. Step 1 must preserve this phase boundary when defining the resolution flow.
+
 ---
 
 ## 16. Special + special combinations
 
-Do not assume:
+Approved Phase 10 baseline:
 
 ```text
 two specials swapped
-→ just activate both independently
+→ valid adjacent action
+→ queue both for ordinary activation, each at most once in the chain
+→ one player move, no combination bonus
 ```
 
-Combination behavior is a separate game rule.
+Explicit combination bonuses are a separate game rule and are deferred beyond this Phase 10 scope. Ordinary activation of both specials is not a combination bonus.
 
-Step 1 must decide the Phase 10 matrix.
-
-If combinations are approved, define the full matrix **before implementation**.
+The optional combination step remains documented as future work. If separately approved later, define the selected matrix **before that future implementation**.
 
 For each pair specify:
 
@@ -823,6 +905,8 @@ They produce cleared facts.
 
 `LevelProgress` interprets those facts exactly as before.
 
+Its scoring and Win/Lose rules remain unchanged. Its goal-type constructor validation does change in Step 2 to use the shared normal-color classification; "separate from specials" does not mean the entire class is left untouched.
+
 ---
 
 # Pattern Guidance
@@ -886,7 +970,7 @@ BombState
 
 ## Goal
 
-Decide the entire logical contract before changing code.
+Decide the remaining logical contract before changing code, preserving the approved generation, rendering timing, clear/result, goal classification, chain-edge, and Option A scope clarifications above.
 
 No file changes.
 
@@ -938,10 +1022,23 @@ Produce a concise table covering:
 14. TNT footprint
 15. Light Ball target policy
 16. chain-reaction algorithm
-17. special-combination scope
+17. confirm approved Option A (ordinary two-special activation, no combination bonuses)
 18. Strategy decision
 19. Factory decision
+20. initial generation prevents lines and squares; refill allows both
+21. truthful physical clear facts vs normal-only ResolutionResult and goal validation
+22. minimal special rendering by Step 4; distinctive visuals in Step 8
+23. existing activation chain completes before new special creation
+24. activation position after a swap, with an old-cell/new-cell example
+25. special + normal partner match timing and lifetime of swap-anchor preference
+26. exact resolution entry point carrying/deriving swap context and initial activations
+27. connected-group definition and concrete shape/outcome table
+28. Propeller RNG owner, seed derivation, and reset on every restart
+29. Propeller eligibility, pending-effect exclusions, and no-target fallback
+30. chain read state, target evaluation, and deduplicated clear facts
 ```
+
+These are design outputs for Step 1, not authorization to implement them while reviewing this plan. Preserve the previously approved contracts; settle the remaining questions before later steps choose APIs or behavior.
 
 ## Required Special Rule Table
 
@@ -956,19 +1053,16 @@ At minimum propose the project contract for:
 
 Do not implement.
 
-## Required Combination Decision
+## Approved Combination Scope
 
-Recommend exactly one:
+Confirm the existing approval rather than choosing a new scope:
 
 ```text
-A. no explicit combinations in Phase 10
-B. selected combinations only
-C. full four-special matrix
+A. four individual specials + chain reactions, no explicit combination bonuses
+special + special swap → ordinary activation of both, one player move
 ```
 
-If B or C, provide the exact matrix.
-
-Do not say "we can decide later".
+Selected bonus combinations and the full matrix are deferred future work, not undecided Phase 10 tasks. Step 7 is skipped without implementation or commit.
 
 ## Required Move Flow Diagrams
 
@@ -979,8 +1073,9 @@ Show:
 ```text
 swap
 → shape analysis
-→ create specials if qualified
-→ clear / fall / refill
+→ decide special creations and first-round anchors
+→ consume original normal colors, then place specials
+→ fall / refill
 → cascades
 → stable
 → LevelProgress
@@ -999,15 +1094,16 @@ player action
 → LevelProgress
 ```
 
-### Special + special combination
+For a special + normal swap, show both the special's activation position and the normal partner's possible match. State the approved analysis/anchor timing rather than assuming it is an ordinary cascade.
 
-If in scope:
+### Special + special ordinary activation
 
 ```text
 swap specials
-→ combination effect
-→ chains
+→ queue both for ordinary activation
+→ finish existing special chain, no combination bonus
 → normal resolution
+→ create specials from newly found normal matches, without retroactive hits
 → stable
 → LevelProgress
 ```
@@ -1066,6 +1162,12 @@ IsRocket
 
 Exact API must come from Step 1.
 
+## Test Board Notation
+
+Choose distinct test-fixture symbols for every special kind, including Rocket orientations. `P` already means Purple in `TestBoards` and the PlayMode helpers; preserve that meaning rather than reusing it for Propeller.
+
+Update the relevant parsers/formatters consistently in their existing test assemblies. This is fixture notation, not a reason to add a shared test framework or runtime string-based tile model.
+
 ## Requirements
 
 - Board can store every approved special kind.
@@ -1074,7 +1176,9 @@ Exact API must come from Step 1.
 - BoardGenerator creates only normal palette tiles.
 - PaletteValidation rejects specials in the normal spawn palette.
 - MatchFinder does not treat specials as normal matching colors.
-- LevelProgress goal type remains a normal collectible color.
+- LevelProgress goal type remains a normal collectible color, validated through the shared classification rather than Enum.IsDefined/non-Empty alone.
+- ClearCells continues reporting every TileType it physically removes, including special values; do not filter its truthful removal report for scoring.
+- ResolutionResult accepts only normal collectible TileTypes and rejects specials, Empty, and undefined values. Any caller assembling it filters physical removal facts using the shared classification.
 - Existing board behavior is unchanged when no specials are present.
 - Core stays Unity-free.
 
@@ -1102,6 +1206,8 @@ At minimum:
 - gravity moves specials correctly
 - refill never creates specials
 - ordinary match detection ignores special cells
+- every special is rejected as a LevelProgress goal and as a ResolutionResult entry
+- ClearCells reports normal and special values truthfully when physically removed
 - ordinary Phase 2–9 Core behavior remains unchanged
 
 If representation changes existing public types substantially, update tests mechanically but do not change gameplay semantics.
@@ -1223,6 +1329,16 @@ Update pure validation logic here or in the approved move-classification type.
 
 Do not integrate special activation yet.
 
+## Initial Generation and Refill
+
+Update BoardGenerator when the new square-match rule is introduced: the initial board must have no approved resolvable patterns. Preserve line-3+ prevention and add same-color 2×2 prevention.
+
+Keep refill unconstrained by match prevention so it can create line and square patterns that resolve into cascades/specials. Determinism remains required, although generated layouts may change to satisfy the new starting-board rule.
+
+Keep the minimum palette size at three normal colors. During left-to-right, bottom-to-top generation, a blocked square's color equals both the immediate left and below tiles. Any horizontal or vertical exclusion that also exists is therefore that same color; square prevention never raises the maximum of two distinct excluded colors. There is always a candidate with three colors; do not raise the minimum "to be safe".
+
+Inspect seed-dependent tests when generated layouts change, including `Resolve_SeveralRealMoves_LeaveNoStaleLookupState` and fixtures using seeds such as 42 or 7. Update seeds, explicit fixtures, or exact expected layouts as needed while preserving each test's behavioral strength. Do not lower its required number of moves, remove identity/lookup checks, or weaken stability assertions merely to make a new layout pass.
+
 ## Tests
 
 At minimum:
@@ -1242,6 +1358,10 @@ At minimum:
 - no false square from different colors
 - no false T/L through a special cell
 - Propeller-forming swap passes move validation
+- every concrete shape/outcome row approved in Step 1, including adjacent/overlapping groups
+- generated boards contain no resolvable lines or same-color 2×2 squares, including small-board and multiple-seed cases
+- refill can still produce line and square patterns rather than excluding them
+- three-color palettes remain sufficient with line and square prevention
 
 ## Learning Questions
 
@@ -1289,7 +1409,7 @@ A likely round:
 analyze matches
 → decide special creations
 → consume all matched normal tiles
-→ ResolutionResult records every consumed normal TileType
+→ filter physical clear facts to normal collectible colors for ResolutionResult
 → place special(s) at creation anchor(s)
 → remove/update views
 → gravity
@@ -1299,15 +1419,15 @@ analyze matches
 
 Exact implementation must match Step 1/3 decisions.
 
+Use the resolution entry-point contract approved in Step 1 to receive the first player swap's context and anchor preference. Preserve its explicit lifetime; do not invent a separate temporary API here that Step 6 must replace for queued activations.
+
 ## Critical Score / Goal Rule
 
 If four Reds create a Rocket:
 
 ```text
-ResolutionResult should still report four Red match items consumed
+ResolutionResult reports four Red match items consumed
 ```
-
-unless Step 1 explicitly approved different semantics.
 
 The special appears **after** those match-item facts are captured.
 
@@ -1325,6 +1445,8 @@ Cascades must not need player input.
 ## Visual Contract
 
 Presentation must end each round with one correct view per occupied Board cell.
+
+Add minimal special rendering support by this step at the latest. TileView must be able to represent every approved special without throwing for an unknown type. Simple temporary appearance is sufficient here; Step 8 owns distinctive icons/orientation visuals and activation feedback.
 
 For a special creation anchor, either:
 
@@ -1347,11 +1469,13 @@ At minimum:
 - T/L leaves one TNT
 - 5-line leaves one Light Ball
 - all consumed normal colors are in ResolutionResult
+- ResolutionResult contains no special values, and creating a special preserves credit for the original normal color
 - created special remains on board through gravity rules
 - refill does not overwrite the special
 - cascade can create special if approved
 - unrelated TileView identities remain stable
 - final Board/View/lookup agree
+- TileView can represent newly created specials without throwing before Step 8
 
 ## Commit
 
@@ -1365,11 +1489,11 @@ STOP.
 
 ---
 
-# Step 5 — Individual Special Activation and Chain Reactions
+# Step 5a — Rocket, TNT, and the Chain Queue
 
 ## Goal
 
-Implement the logical effect of each individual special.
+Implement Rocket and TNT logical effects plus the shared activation-chain queue using the Step 1 contract. Keep this review separate from Propeller targeting and Light Ball color selection, which belong to Step 5b.
 
 Do not integrate player input yet.
 
@@ -1396,37 +1520,9 @@ Clip cleanly at board edges/corners.
 
 Do not special-case every edge manually; compute positions from coordinates.
 
-## Propeller
-
-Implement:
-
-```text
-local takeoff effect
-+
-one remote target
-```
-
-using the approved target selection and separate deterministic RNG ownership.
-
-Do not read `LevelProgress` directly to choose a target.
-
-If objective-aware targeting is deferred, document that this Phase 10 Propeller targets using the approved board-only policy.
-
-## Light Ball
-
-Implement the approved target-color behavior.
-
-At minimum, if activated through a known normal-color target:
-
-```text
-clear every normal board item of that TileType
-```
-
-Special cells should not accidentally count as that color unless the Step 1 representation explicitly says they do.
-
 ## Chain Queue
 
-Use the approved queue/set approach or the exact Step 1 equivalent.
+Use the approved queue/set approach or the exact Step 1 equivalent. Honor the approved read-state/pending-effect contract and activation origin. Keep this step's activation tests scoped to Rocket/TNT; do not add no-op handlers for the Step 5b specials to pretend they already work.
 
 Contract:
 
@@ -1438,11 +1534,15 @@ same special hit by several effects
 → still activates once
 
 chains eventually terminate
+existing activation chain finishes before specials from newly found normal matches are created
+newly created specials are not retroactively hit by the completed effect
 ```
 
 ## Clear Facts
 
-All **normal colored tiles** removed by special effects must be included in the eventual `ResolutionResult`.
+ClearCells truthfully reports what it physically removes, including specials. Filter these facts using the shared normal/special classification before constructing the eventual `ResolutionResult`.
+
+All **normal collectible tiles** consumed by matches or special effects must be included. Special items themselves must not be included, and ResolutionResult rejects them. A normal tile consumed to create a special counts as its original color; removing/activating the special gives no color score or goal credit.
 
 Do not let special resolution update score or goal directly.
 
@@ -1463,43 +1563,121 @@ At minimum:
 - exact footprint
 - chain
 
-### Propeller
-- local neighbors
-- deterministic remote target
-- same seed/state → same target
-- remote special target chains if approved
-- RNG does not perturb refill RNG
-
-### Light Ball
-- correct target color only
-- all matching normal items
-- no matching items
-- specials not mistaken for target color
-
 ### Chains
 - two-special chain
 - three-special chain
 - same special reached twice activates once
+- overlapping effects remove and report each original normal tile once
 - result contains exactly the normal clears
+- removed special items are reported truthfully by ClearCells but excluded from ResolutionResult
+- chain completes before new special creation; new specials survive the completed effect without retroactive activation
 - final logical state deterministic
+- activation uses the approved origin, with a case distinguishing old and post-swap cells
 
 ## Learning Questions
 
 - Why resolve effects as positions/facts instead of manipulating views?
 - Why is a queue safer than uncontrolled recursive activation?
 - Why must the same special activate at most once?
-- Why should Propeller randomness use a separate deterministic stream?
-- Why does Light Ball need an explicit target-color contract?
+- Why must a frozen read state still track pending removals?
 
 ## Commit
 
 Suggested:
 
 ```text
-Resolve individual special tile effects
+Resolve rocket and TNT activation chains
 ```
 
-STOP.
+STOP after Step 5a and wait for explicit approval before reading or implementing Step 5b. Do not integrate player input or start Step 6.
+
+---
+
+# Step 5b — Propeller and Light Ball
+
+## Goal
+
+After Step 5a approval, extend the tested chain queue with Propeller and Light Ball. Do not integrate player input yet; tests trigger effects through the approved Core/resolution entry points.
+
+## Propeller
+
+Implement:
+
+```text
+local takeoff effect
++
+one remote target
+```
+
+Use the exact Step 1 footprint, eligible-target set, pending-effect exclusions, stable candidate ordering, and no-eligible-target fallback. If a remote special is eligible, it enters the same once-per-chain queue.
+
+Use the separately owned deterministic targeting stream; never consume refill RNG values. Test the fresh-stream restart contract here. Production level-start/restart wiring is completed in Step 6 alongside special-move integration.
+
+Do not read `LevelProgress` directly to choose a target. If objective-aware targeting is deferred, document the approved board-only policy.
+
+## Light Ball
+
+Implement the approved target-color behavior:
+
+```text
+normal swap partner → clear every normal board item of the partner's TileType
+chain-triggered / no normal partner → most common normal board color
+tie → lowest normal TileType numeric value
+no normal colors → no additional color clear
+```
+
+Use the Step 1 chain read-state contract when counting colors. Special cells are excluded from normal-color counts and color clears. Their own activation/removal follows the chain rules and contributes no color score or goal credit.
+
+## Shared Chain and Clear-Fact Contract
+
+Preserve Step 5a's queue, deduplication, truthful physical removal facts, normal-only ResolutionResult, and no-retroactive-hit boundary. Extend it to mixed chains involving all four special kinds; do not introduce a second activation engine.
+
+## Tests
+
+### Propeller
+- exact local neighbors and edge/corner behavior
+- eligible remote cells follow the approved rules, including self/takeoff-area exclusions
+- planned removals and already queued/activated specials follow the approved eligibility policy
+- no eligible target uses the explicit fallback
+- deterministic remote target and stable candidate ordering
+- same seed/state → same target
+- remote special target chains if approved
+- RNG does not perturb refill RNG
+- recreating the targeting stream reproduces choices for a restarted session
+
+### Light Ball
+- correct target color only
+- normal swap partner determines the color
+- chain-triggered / no-partner activation selects the most common normal color
+- tied counts use the fixed TileType-order tie-break
+- all matching normal items
+- no matching items
+- no normal colors produces no additional color clear
+- specials not mistaken for target color
+
+### Mixed Chains
+- Rocket/TNT hits Propeller or Light Ball and the chain completes
+- the same special reached through several paths still activates once
+- overlapping effects produce exact, deduplicated normal-color facts
+- no newly created special is retroactively activated
+- deterministic final logical state with separate refill/targeting streams
+
+## Learning Questions
+
+- Why should Propeller randomness use a separate deterministic stream?
+- Why must restart recreate that stream too?
+- Why do eligibility rules matter even when the Board is frozen?
+- Why does Light Ball need both partner-color and no-partner contracts?
+
+## Commit
+
+Suggested:
+
+```text
+Resolve propeller and light ball effects
+```
+
+STOP after Step 5b and wait for explicit approval before Step 6.
 
 ---
 
@@ -1509,7 +1687,15 @@ STOP.
 
 Connect the already-tested special behavior to player actions.
 
-Do not implement special + special combinations here unless Step 1 explicitly chose to merge them.
+Implement the approved ordinary two-special activation path here. Explicit special-combination bonuses remain deferred; do not implement them in this step or later in Phase 10.
+
+Both Steps 5a and 5b must be complete and approved before this integration step.
+
+## Resolution Context and Session Wiring
+
+Use the Step 1 entry point to carry/derive the player swap, approved activation positions, initial queued specials, and any Light Ball partner color. A special + normal action must follow the approved normal-partner match timing and anchor-preference lifetime; later cascades must not inherit the original player anchor preference accidentally.
+
+Wire the Propeller targeting stream into the level session. BoardBootstrap must recreate it on every start/restart from the approved deterministic seed derivation, alongside the fresh refill stream. Preserve the existing refill seed policy; do not retain an old targeting stream or share refill RNG state.
 
 ## Player Move Classification
 
@@ -1520,7 +1706,7 @@ normal swap that creates a match
 invalid normal swap
 single-special activation
 special + normal swap
-special + special swap / combination
+special + special swap → queue both for ordinary activation, no combination bonus
 ```
 
 Use the smallest approved classification.
@@ -1590,6 +1776,12 @@ At minimum:
 - normal valid still costs one
 - special activation costs one
 - long special chain costs one
+- adjacent special + special swap is valid, queues both for ordinary activation, and costs one move without a combination bonus
+- Light Ball with no normal partner uses the approved most-common-color fallback
+- swapped specials activate at the approved cell, with old/post-swap positions producing distinguishable footprints
+- a special + normal swap that also forms a normal pattern follows the approved timing/anchor policy and still costs only one move
+- first-player-round anchor preference expires before later cascades
+- restart recreates the Propeller targeting stream; replaying the same moves reproduces targets and refill results
 - special-created normal cascade costs no extra move
 - score/goal include all normal clears
 - Won can be reached through a special effect
@@ -1613,15 +1805,13 @@ STOP.
 
 ---
 
-# Step 7 — Special + Special Combinations
+# Step 7 — Special + Special Combination Bonuses (Deferred / Future Work)
 
 ## Goal
 
-Implement only the exact combination scope approved in Step 1.
+Approved Option A excludes explicit combination bonuses from Phase 10. Skip this step with no implementation and no commit. The ordinary two-special activation path is implemented in Step 6.
 
-If Step 1 chose **A: no combinations**, explicitly skip this step with no commit.
-
-Do not add combinations opportunistically in earlier steps.
+Keep the contracts below as future reference only. Implementing a subset or full bonus matrix requires separate approval beyond this Phase 10 scope; do not add it opportunistically in earlier steps.
 
 ## Combination Contract
 
@@ -1709,13 +1899,11 @@ One focused test per approved combination minimum, plus:
 
 ## Commit
 
-If implemented:
+No implementation or commit in Phase 10. For separately approved future combination work, a possible commit message is:
 
 ```text
 Add special tile combinations
 ```
-
-Otherwise no commit.
 
 STOP.
 
@@ -1727,7 +1915,7 @@ STOP.
 
 Make every special visually distinguishable without an art-production detour.
 
-Gameplay logic should already work before this step.
+Gameplay logic and minimal special rendering already work before this step. Build on Step 4's non-throwing special representation; this step adds distinctive icons/orientation visuals and activation feedback.
 
 ## Required Visual Distinction
 
@@ -1853,7 +2041,9 @@ Won through special clear
 terminal input blocked
 ```
 
-If combinations are in scope, smoke-test representative combinations, not just unit tests.
+Smoke-test an ordinary special + special swap: both activate through the chain queue, the action costs one move, and no combination bonus occurs. Explicit combination bonuses remain deferred.
+
+Also verify a swapped Rocket/TNT whose old and new footprints differ, a special + normal swap whose normal partner forms a pattern, and a restart followed by the same moves reproducing Propeller targets and refill behavior. Use the approved Step 1 timing/anchor/eligibility contracts when checking these cases.
 
 Restore any temporary level config afterward.
 
@@ -1905,7 +2095,7 @@ score / goal
 Won / Lost
 restart busy gate
 visual consistency
-combinations if in scope
+ordinary two-special activation; explicit combination bonuses remain deferred
 ```
 
 Only add a test if a real contract is missing.
@@ -1953,7 +2143,7 @@ All Phase 2–9 behavior remains correct:
 
 ```text
 normal generation
-no initial normal matches
+no initial approved resolvable patterns, including same-color 2×2 squares
 normal adjacent swap
 invalid rollback
 ordinary matching
@@ -1961,6 +2151,8 @@ clear / gravity / refill
 cascades
 input locking
 ResolutionResult
+truthful ClearCells removal facts; normal-only ResolutionResult rejects specials
+normal-only GoalTileType validation through the shared classification
 moves
 score
 goal
@@ -1983,10 +2175,16 @@ one move cost
 visual correct
 ```
 
-If combinations are approved:
+Confirm the approved Option A boundary:
 
 ```text
-every approved pair has deterministic tested behavior
+special + special swaps queue both for ordinary activation
+one move, no explicit combination bonuses
+existing chains finish before new special creation; no retroactive hits
+Light Ball partner/fallback/tie/no-normal-color rules are tested
+activation origin and normal-partner match/anchor timing match Step 1
+Propeller target eligibility and no-target fallback are tested
+both random streams restart reproducibly without sharing state
 ```
 
 ## Confirm Boundaries
@@ -2044,7 +2242,7 @@ approved special rules
 final architecture
 test totals
 runtime result
-combination scope/result
+Option A confirmed; explicit combination bonuses deferred
 deferred work
 ```
 
@@ -2078,7 +2276,7 @@ Do not redesign exception recovery during a special feature unless a real failur
 
 Propeller introduces a real second use of randomness.
 
-Do not consume Propeller randomness from the refill RNG without an explicit decision.
+Keep the existing refill-seed reuse policy unchanged. Propeller has its own deterministic targeting stream, recreated on every start/restart under the approved Step 1 ownership/seed contract; do not consume refill RNG state for targeting.
 
 ## BoardView WatchList
 
@@ -2132,7 +2330,7 @@ No Unity scene/prefab changes.
 No code changes.
 No commit.
 
-For Step 1, explicitly decide:
+For Step 1, specify the remaining details and confirm the already-approved contracts:
 1. board representation
 2. normal-vs-special classification
 3. richer match-analysis shape
@@ -2149,9 +2347,16 @@ For Step 1, explicitly decide:
 14. TNT footprint
 15. Light Ball targeting
 16. chain-reaction algorithm
-17. combination scope
+17. confirm approved Option A; no explicit combination bonuses
 18. Strategy decision
 19. Factory decision
+20. activation origin, with the post-swap position as the proposed baseline
+21. normal-partner match timing and when first-player-round anchor preference expires
+22. exact resolution entry point for swap context and initial activations
+23. connected groups and a concrete shape/outcome table
+24. Propeller RNG owner, seed derivation, and restart reset
+25. remote-target eligibility, pending-effect exclusions, and no-target fallback
+26. chain read state and deduplicated physical/color-clear facts
 
 Compare alternatives and recommend the smallest clean design.
 
@@ -2163,11 +2368,23 @@ Pay special attention to:
 - Propeller randomness should not silently perturb refill randomness
 - specials must not accidentally participate as normal colors
 - LevelProgress must remain independent from special gameplay rules
+- initial generation prevents all approved patterns, including 2x2 squares; refill still allows them
+- ClearCells reports physical removals truthfully; ResolutionResult accepts only normal collectible colors
+- LevelProgress goal validation uses that same normal-color classification
+- minimal special rendering is ready by Step 4; distinctive visuals remain in Step 8
+- Light Ball uses the normal partner color, otherwise the most common normal color with a fixed TileType-order tie-break; no normal colors means no extra color clear
+- existing chains complete before new special creation; no retroactive hits on newly created specials
+- a frozen Board still needs explicit pending-removal and target-eligibility rules
+- three normal palette colors remain sufficient; preserve strong seeded regression tests when layouts change
+- test notation must preserve P for Purple and give specials distinct symbols
+- LevelProgress scoring/outcome rules remain unchanged, but its goal-type validation must change
 
-Also recommend exactly one combination scope:
-A. none
-B. selected subset
-C. full four-special matrix
+Step 5 is split into 5a (Rocket, TNT, chain queue) and 5b (Propeller, Light Ball). Each has a separate approval stop; do not implement both under one approval.
+
+Preserve the approved combination scope:
+A. four individual specials + chain reactions, no explicit combination bonuses.
+A special + special swap queues both for ordinary activation and costs one move.
+Step 7 remains deferred future work, with no implementation or commit in Phase 10.
 
 Do not implement until I approve.
 
@@ -2184,6 +2401,8 @@ STOP.
 Approved.
 
 Proceed to the next step in Docs/Phases/PHASE10_EXECUTION.md only.
+
+The activation work has two separate steps: 5a, then 5b. Approval for 5a does not authorize 5b; approval for 5b does not authorize Step 6.
 
 Before editing:
 - inspect the exact files involved
@@ -2240,7 +2459,7 @@ Explain:
 17. player move classification
 18. move-cost behavior
 19. score / goal fact flow
-20. special + special combinations, if implemented
+20. ordinary two-special activation and why explicit combination bonuses remain deferred
 21. why Strategy was or was not used
 22. why Factory was or was not used
 23. how Presentation stays separate
