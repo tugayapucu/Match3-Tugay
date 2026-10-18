@@ -95,7 +95,6 @@ namespace Match3.Core.Tests
         }
 
         [TestCase(TileType.Propeller)]
-        [TestCase(TileType.LightBall)]
         public void DeferredEffects_AreRejectedExplicitly(TileType type)
         {
             var board = new Board(1, 1);

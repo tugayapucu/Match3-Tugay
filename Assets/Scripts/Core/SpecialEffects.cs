@@ -48,7 +48,7 @@ namespace Match3.Core
             while (queue.Count > 0)
             {
                 SpecialActivation activation = queue.Dequeue();
-                var footprint = GetFootprint(board, activation.Position);
+                var footprint = GetFootprint(board, activation.Position, activation.TargetColor);
                 effects.Add(new SpecialEffect(activation.Position, board.GetTile(activation.Position), footprint));
                 foreach (GridPosition cell in footprint)
                 {
@@ -78,7 +78,7 @@ namespace Match3.Core
         }
 
         // Geometry includes Empty cells; the chain planner later selects occupied cells for removal.
-        public static IReadOnlyList<GridPosition> GetFootprint(Board board, GridPosition origin)
+        public static IReadOnlyList<GridPosition> GetFootprint(Board board, GridPosition origin, TileType? targetColor = null)
         {
             if (board == null)
             {
@@ -88,6 +88,11 @@ namespace Match3.Core
             if (!board.IsInBounds(origin))
             {
                 throw new ArgumentOutOfRangeException(nameof(origin), origin, "Activation must be within the board.");
+            }
+
+            if (targetColor.HasValue && !TileRules.IsNormalMatchItem(targetColor.Value))
+            {
+                throw new ArgumentException("The target must be a normal color.", nameof(targetColor));
             }
 
             var cells = new List<GridPosition>();
@@ -120,6 +125,25 @@ namespace Match3.Core
                         }
                     }
                     break;
+                case TileType.LightBall:
+                    cells.Add(origin);
+                    TileType? color = targetColor ?? MostCommonColor(board);
+                    if (color.HasValue)
+                    {
+                        for (int y = 0; y < board.Height; y++)
+                        {
+                            for (int x = 0; x < board.Width; x++)
+                            {
+                                var cell = new GridPosition(x, y);
+                                if (board.GetTile(cell) == color.Value)
+                                {
+                                    cells.Add(cell);
+                                }
+                            }
+                        }
+                    }
+                    cells.Sort(ComparePositions);
+                    break;
                 default:
                     if (TileRules.IsSpecial(type))
                     {
@@ -129,6 +153,36 @@ namespace Match3.Core
             }
 
             return cells.AsReadOnly();
+        }
+
+        private static TileType? MostCommonColor(Board board)
+        {
+            var counts = new Dictionary<TileType, int>();
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    TileType type = board.GetTile(new GridPosition(x, y));
+                    if (TileRules.IsNormalMatchItem(type))
+                    {
+                        counts.TryGetValue(type, out int count);
+                        counts[type] = count + 1;
+                    }
+                }
+            }
+
+            TileType? best = null;
+            int bestCount = 0;
+            foreach (var entry in counts)
+            {
+                if (!best.HasValue || entry.Value > bestCount
+                    || (entry.Value == bestCount && (int)entry.Key < (int)best.Value))
+                {
+                    best = entry.Key;
+                    bestCount = entry.Value;
+                }
+            }
+            return best;
         }
     }
 }

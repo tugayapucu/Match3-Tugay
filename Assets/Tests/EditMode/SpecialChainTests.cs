@@ -125,7 +125,6 @@ namespace Match3.Core.Tests
         }
 
         [TestCase("HF")]
-        [TestCase("HL")]
         public void Plan_DeferredSpecialInChain_FailsBeforeBoardMutation(string row)
         {
             var board = TestBoards.Create(row);
