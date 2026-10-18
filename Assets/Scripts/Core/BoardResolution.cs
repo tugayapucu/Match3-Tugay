@@ -49,6 +49,44 @@ namespace Match3.Core
             return cleared;
         }
 
+        // Consumed normal colors have already been reported by ClearCells. Place specials into those holes.
+        public static void PlaceSpecials(Board board, IReadOnlyList<TileSpawn> creations)
+        {
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+
+            if (creations == null)
+            {
+                throw new ArgumentNullException(nameof(creations));
+            }
+
+            var targets = new HashSet<GridPosition>();
+            foreach (TileSpawn creation in creations)
+            {
+                if (!board.IsInBounds(creation.Position))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(creations), creation.Position, "Creation must be within the board.");
+                }
+
+                if (!TileRules.IsSpecial(creation.Type) || !targets.Add(creation.Position))
+                {
+                    throw new ArgumentException("Each placement must be a special at a distinct cell.", nameof(creations));
+                }
+
+                if (!TileRules.IsEmpty(board.GetTile(creation.Position)))
+                {
+                    throw new InvalidOperationException("Consume the normal tile before placing its special.");
+                }
+            }
+
+            foreach (TileSpawn creation in creations)
+            {
+                board.SetTile(creation.Position, creation.Type);
+            }
+        }
+
         // Drops every tile as far down its column as possible, keeping the tiles' order; Empty cells end up on top.
         // Returns one move per tile that changed cell (column by column, bottom to top). Stationary tiles are not listed.
         public static IReadOnlyList<TileMove> ApplyGravity(Board board)

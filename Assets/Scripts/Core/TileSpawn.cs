@@ -2,8 +2,8 @@ using System;
 
 namespace Match3.Core
 {
-    // One new tile created by refill: which cell it fills and what it is.
-    // Logical only; Presentation decides where above the board the new visual appears.
+    // One tile placement, from refill or special creation: its logical cell and type.
+    // Presentation decides whether the visual drops from above or appears in place.
     public readonly struct TileSpawn : IEquatable<TileSpawn>
     {
         public GridPosition Position { get; }
