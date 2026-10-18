@@ -86,9 +86,9 @@ namespace Match3.Presentation
                 throw new ArgumentException("An invalid swap cannot be resolved.", nameof(move));
             }
 
-            if (move.Kind != SwapKind.NormalMatch || move.InitialActivations.Count != 0)
+            if (move.Kind != SwapKind.NormalMatch && move.Kind != SwapKind.SpecialSwap)
             {
-                throw new NotSupportedException("Special activation is not implemented yet.");
+                throw new ArgumentException("Unknown swap kind.", nameof(move));
             }
 
             if (onResolved == null)
@@ -106,25 +106,29 @@ namespace Match3.Presentation
             bool firstScan = true;
             while (true)
             {
+                bool removedByEffects = false;
+                if (firstScan && move != null && move.InitialActivations.Count > 0)
+                {
+                    // Plan the complete chain on the stable Board before removing anything.
+                    var plan = SpecialEffects.Plan(board, move.InitialActivations);
+                    AddNormalClears(cleared, BoardResolution.ClearCells(board, plan.RemovedPositions));
+                    boardView.RemoveViews(plan.RemovedPositions);
+                    removedByEffects = plan.RemovedPositions.Count > 0;
+                }
+
+                // Only surviving normal patterns qualify; effects may have broken an earlier match.
                 var analysis = MatchFinder.Analyze(board);
                 var creations = SpecialCreationRules.FindCreations(analysis,
                     firstScan ? move?.First : null, firstScan ? move?.Second : null);
                 // Expire preference after the first scan, including an empty scan.
                 firstScan = false;
-                if (analysis.MatchedPositions.Count == 0)
+                if (analysis.MatchedPositions.Count == 0 && !removedByEffects)
                 {
                     break;
                 }
 
                 // Each pair: Core changes the Board first, then BoardView catches up.
-                var removed = BoardResolution.ClearCells(board, analysis.MatchedPositions);
-                foreach (TileType type in removed)
-                {
-                    if (TileRules.IsNormalMatchItem(type))
-                    {
-                        cleared.Add(type);
-                    }
-                }
+                AddNormalClears(cleared, BoardResolution.ClearCells(board, analysis.MatchedPositions));
                 BoardResolution.PlaceSpecials(board, creations);
                 boardView.RemoveViews(analysis.MatchedPositions);
                 boardView.PlaceSpecialViews(creations);
@@ -140,6 +144,18 @@ namespace Match3.Presentation
 
             // Stable: hand over the facts. Scoring and goals are decided by whoever receives them.
             onResolved(new ResolutionResult(cleared));
+        }
+
+        // Both effects and matches report physical removals; the move result accepts only normal colors.
+        private static void AddNormalClears(List<TileType> cleared, IReadOnlyList<TileType> removed)
+        {
+            foreach (TileType type in removed)
+            {
+                if (TileRules.IsNormalMatchItem(type))
+                {
+                    cleared.Add(type);
+                }
+            }
         }
 
         private static void ValidateDuration(float duration, string parameterName)

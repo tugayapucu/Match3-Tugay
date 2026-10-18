@@ -450,6 +450,44 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Runner_RocketChain_ReportsOnlyNormalColorsAndKeepsSurvivors()
+        {
+            var board = CreateBoard("RGB", "BGG", "HVR");
+            boardView.Render(board);
+            var oldRocket = boardView.GetTileView(new GridPosition(0, 0));
+            var oldVertical = boardView.GetTileView(new GridPosition(1, 0));
+            var blue = boardView.GetTileView(new GridPosition(0, 1));
+            var green = boardView.GetTileView(new GridPosition(2, 1));
+            var move = DirectActivationMove(new GridPosition(0, 0), new GridPosition(1, 0),
+                new SpecialActivation(new GridPosition(0, 0)));
+            int callbacks = 0;
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 0, 2, 3, 5), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedCount, Is.EqualTo(3));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(1));
+                    Assert.That(result.CountOf(TileType.Green), Is.EqualTo(2));
+                });
+            yield return null;
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(oldRocket == null && oldVertical == null, Is.True);
+            Assert.That(boardView.GetTileView(new GridPosition(0, 0)), Is.SameAs(blue));
+            Assert.That(boardView.GetTileView(new GridPosition(2, 0)), Is.SameAs(green));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("GYO", "RBB", "BRG"))));
+            AssertViewsMatchBoard(board);
+        }
+
+        // Inject the approved passive contract for direct activation tests; mouse classification comes in Step 6.
+        private static SwapAnalysis DirectActivationMove(
+            GridPosition first, GridPosition second, params SpecialActivation[] activations)
+        {
+            return (SwapAnalysis)Activator.CreateInstance(typeof(SwapAnalysis),
+                BindingFlags.Instance | BindingFlags.NonPublic, null,
+                new object[] { SwapKind.SpecialSwap, first, second, activations }, null);
+        }
+
+        [UnityTest]
         public IEnumerator Runner_SameSeedTwice_ProducesTheSameResult()
         {
             var firstResult = new List<TileType>();
