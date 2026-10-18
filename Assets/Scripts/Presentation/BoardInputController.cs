@@ -138,22 +138,24 @@ namespace Match3.Presentation
             }
 
             // The Board now holds the attempted result; Core decides whether it is a real Match-3 move.
-            bool isValidMove = SwapValidator.IsValidResult(board, first, position);
+            SwapAnalysis move = SwapValidator.Analyze(board, first, position);
             // Only an accepted adjacent swap is a move; rejected clicks above never reach this point.
             onBusyChanged(true);
-            StartCoroutine(FinishSwap(first, position, isValidMove));
+            StartCoroutine(FinishSwap(move));
         }
 
-        private IEnumerator FinishSwap(GridPosition first, GridPosition second, bool isValidMove)
+        private IEnumerator FinishSwap(SwapAnalysis move)
         {
+            GridPosition first = move.First;
+            GridPosition second = move.Second;
             // Both outcomes animate forward, so the player sees the attempted move.
             yield return boardView.AnimateSwap(first, second, swapDuration);
 
-            if (isValidMove)
+            if (move.Kind != SwapKind.Invalid)
             {
                 // Clear, fall and refill until no matches remain, including every cascade.
                 ResolutionResult result = null;
-                yield return resolution.ResolveUntilStable(r => result = r);
+                yield return resolution.ResolveUntilStable(move, r => result = r);
                 // The board is stable now: report the whole move exactly once, before the cleanup below.
                 // The receiver may disable this component (level over); the cleanup still runs, because
                 // a disabled MonoBehaviour's running coroutines continue.

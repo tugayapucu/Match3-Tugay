@@ -322,11 +322,11 @@ namespace Match3.Presentation.Tests
                 "RRR",
                 "BRG");
 
-            yield return RunAndCheckResult(board, new ScriptedRandom(0, 3, 4, 5, 3),
+            yield return RunAndCheckResult(board, new ScriptedRandom(0, 3, 4, 5),
                 new[] { TileType.Red, TileType.Red, TileType.Red, TileType.Red, TileType.Red },
-                "ROY",
-                "GPB",
-                "BYG");
+                "RPO",
+                "GYB",
+                "BTG");
         }
 
         [UnityTest]

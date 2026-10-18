@@ -70,19 +70,64 @@ namespace Match3.Presentation
                 throw new ArgumentNullException(nameof(onResolved));
             }
 
-            return ResolveUntilStableRoutine(onResolved);
+            return ResolveUntilStableRoutine(null, onResolved);
         }
 
-        private IEnumerator ResolveUntilStableRoutine(Action<ResolutionResult> onResolved)
+        // Player context applies to the first scan only; the callback-only overload resolves standalone cascades.
+        public IEnumerator ResolveUntilStable(SwapAnalysis move, Action<ResolutionResult> onResolved)
+        {
+            if (move == null)
+            {
+                throw new ArgumentNullException(nameof(move));
+            }
+
+            if (move.Kind == SwapKind.Invalid)
+            {
+                throw new ArgumentException("An invalid swap cannot be resolved.", nameof(move));
+            }
+
+            if (move.Kind != SwapKind.NormalMatch || move.InitialActivations.Count != 0)
+            {
+                throw new NotSupportedException("Special activation is not implemented yet.");
+            }
+
+            if (onResolved == null)
+            {
+                throw new ArgumentNullException(nameof(onResolved));
+            }
+
+            return ResolveUntilStableRoutine(move, onResolved);
+        }
+
+        private IEnumerator ResolveUntilStableRoutine(SwapAnalysis move, Action<ResolutionResult> onResolved)
         {
             // Collected across every round, so one player move produces one result.
             var cleared = new List<TileType>();
-            var matches = MatchFinder.FindMatches(board);
-            while (matches.Count > 0)
+            bool firstScan = true;
+            while (true)
             {
+                var analysis = MatchFinder.Analyze(board);
+                var creations = SpecialCreationRules.FindCreations(analysis,
+                    firstScan ? move?.First : null, firstScan ? move?.Second : null);
+                // Expire preference after the first scan, including an empty scan.
+                firstScan = false;
+                if (analysis.MatchedPositions.Count == 0)
+                {
+                    break;
+                }
+
                 // Each pair: Core changes the Board first, then BoardView catches up.
-                cleared.AddRange(BoardResolution.ClearCells(board, matches));
-                boardView.RemoveViews(matches);
+                var removed = BoardResolution.ClearCells(board, analysis.MatchedPositions);
+                foreach (TileType type in removed)
+                {
+                    if (TileRules.IsNormalMatchItem(type))
+                    {
+                        cleared.Add(type);
+                    }
+                }
+                BoardResolution.PlaceSpecials(board, creations);
+                boardView.RemoveViews(analysis.MatchedPositions);
+                boardView.PlaceSpecialViews(creations);
 
                 var moves = BoardResolution.ApplyGravity(board);
                 yield return boardView.AnimateFalls(moves, fallDuration);
@@ -90,8 +135,7 @@ namespace Match3.Presentation
                 var spawns = BoardResolution.Refill(board, palette, random);
                 yield return boardView.AnimateRefill(spawns, refillDuration);
 
-                // Refill may have created new matches: if so, the loop runs again (a cascade).
-                matches = MatchFinder.FindMatches(board);
+                // Refill may have created new patterns; the same loop handles every cascade.
             }
 
             // Stable: hand over the facts. Scoring and goals are decided by whoever receives them.

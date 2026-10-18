@@ -495,18 +495,19 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Swap_CreatingAnIntersectionAtASwappedCell_IsResolved()
         {
-            // Moving the top R down to (1,2) completes row y=2 and column x=1 (a T shape): 5 cells clear.
-            SetBoard(new ScriptedRandom(0, 0, 4, 5, 3),
+            // Five Reds count; TNT appears at the selected (1,2), then falls to (1,0).
+            SetBoard(new ScriptedRandom(0, 0, 4, 5),
                 "GRB",
                 "RYR",
                 "BRG",
                 "PRO");
 
             yield return VerifyValidMove(new GridPosition(1, 3), new GridPosition(1, 2), 1, true,
-                "ROY",
-                "GPB",
-                "BRG",
-                "PYO");
+                "RPO",
+                "GRB",
+                "BYG",
+                "PTO");
+            Assert.That(reportedResults[0].CountOf(TileType.Red), Is.EqualTo(5));
         }
 
         [UnityTest]
@@ -572,16 +573,17 @@ namespace Match3.Presentation.Tests
         public IEnumerator Resolve_CascadeRoundIsAnIntersection_ResolvesBothRunsThenStabilises()
         {
             // Round 1 clears column 0 and refills it with P P P. That column, plus the P P already in row 1,
-            // forms an L/T intersection at (0,1): round 2 clears 5 cells, two columns fall, then the board is stable.
-            SetBoard(new ScriptedRandom(4, 4, 4, 2, 1, 0, 5, 4),
+            // forms an intersection at (0,1): five Purples count and TNT falls to (0,0).
+            SetBoard(new ScriptedRandom(4, 4, 4, 2, 1, 0, 5),
                 "GBY",
                 "GPP",
                 "RGO");
 
             yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 2, true,
-                "ROP",
-                "GBY",
-                "BRO");
+                "GRO",
+                "BBY",
+                "TRO");
+            Assert.That(reportedResults[0].CountOf(TileType.Purple), Is.EqualTo(5));
         }
 
         [UnityTest]

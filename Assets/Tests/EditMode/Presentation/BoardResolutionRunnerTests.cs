@@ -84,5 +84,21 @@ namespace Match3.Presentation.Tests
             // Thrown on the call itself, not later when the coroutine is first stepped.
             Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(null));
         }
+
+        [Test]
+        public void ResolveUntilStable_PlayerOverload_RejectsMissingOrInvalidContextImmediately()
+        {
+            var board = new Board(3, 1);
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var invalid = SwapValidator.Analyze(board, first, second);
+            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+
+            Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(null, r => { }));
+            Assert.Throws<ArgumentException>(() => runner.ResolveUntilStable(invalid, r => { }));
+            for (int x = 0; x < 3; x++) board.SetTile(new GridPosition(x, 0), TileType.Red);
+            var valid = SwapValidator.Analyze(board, first, second);
+            Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(valid, null));
+        }
     }
 }
