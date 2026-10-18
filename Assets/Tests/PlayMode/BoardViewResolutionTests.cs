@@ -478,6 +478,138 @@ namespace Match3.Presentation.Tests
             AssertViewsMatchBoard(board);
         }
 
+        [UnityTest]
+        public IEnumerator Runner_ChainBreaksFourLineBeforeCreation_OnlyActualClearsCount()
+        {
+            var board = CreateBoard("RRVR", "GBRY");
+            var first = new GridPosition(2, 1);
+            var second = new GridPosition(2, 0);
+            board.TrySwapAdjacent(first, second);
+            Assert.That(MatchFinder.FindMatches(board).Count, Is.EqualTo(4));
+            boardView.Render(board);
+            var survivor = boardView.GetTileView(new GridPosition(1, 0));
+            int callbacks = 0;
+            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 2), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedCount, Is.EqualTo(1));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(1));
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("RRBR", "GBGY"))));
+            Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(survivor));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_NewRocketFallsIntoOldActivationCell_WithoutRetroactiveActivation()
+        {
+            var board = CreateBoard("RRHR", "GBRY");
+            var first = new GridPosition(2, 1);
+            var second = new GridPosition(2, 0);
+            board.TrySwapAdjacent(first, second);
+            boardView.Render(board);
+            var oldRocket = boardView.GetTileView(second);
+            int callbacks = 0;
+            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 2, 2, 3, 1, 3, 5), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedCount, Is.EqualTo(7));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(4));
+                });
+            yield return null;
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(oldRocket == null, Is.True);
+            Assert.That(board.GetTile(second), Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("BYGO", "GBHY"))));
+            Assert.That(CountActiveViews(), Is.EqualTo(8));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_EmptyFirstScanExpiresAnchor_CascadeTilesAtOldBlastCellsCountAgain()
+        {
+            var board = CreateBoard("RH", "GR");
+            var first = new GridPosition(1, 1);
+            var second = new GridPosition(1, 0);
+            board.TrySwapAdjacent(first, second);
+            boardView.Render(board);
+            int callbacks = 0;
+            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(0, 0, 1, 2, 3), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedCount, Is.EqualTo(5));
+                    Assert.That(result.CountOf(TileType.Green), Is.EqualTo(1));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(4));
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("GY", "FB"))));
+            Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Propeller),
+                "The old second selection would wrongly put the cascade special in column 1.");
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_OnlySpecialRemoved_StillRefillsAndReportsAnEmptyColorResult()
+        {
+            var board = CreateBoard("H");
+            boardView.Render(board);
+            var origin = new GridPosition(0, 0);
+            var move = DirectActivationMove(origin, origin, new SpecialActivation(origin));
+            int callbacks = 0;
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedTiles, Is.Empty);
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(board.GetTile(origin), Is.EqualTo(TileType.Green));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_SameChainAndRefillSeed_ProduceIdenticalFinalBoardsAndColorFacts()
+        {
+            TileType[,] previousBoard = null;
+            IReadOnlyList<TileType> previousColors = null;
+            for (int run = 0; run < 2; run++)
+            {
+                var board = CreateBoard("RGB", "BGG", "HVT");
+                boardView.Render(board);
+                var move = DirectActivationMove(new GridPosition(0, 0), new GridPosition(1, 0),
+                    new SpecialActivation(new GridPosition(0, 0)));
+                ResolutionResult result = null;
+                yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                    new System.Random(53), 0f, 0f).ResolveUntilStable(move, r => result = r);
+
+                Assert.That(result, Is.Not.Null);
+                Assert.That(result.ClearedCount, Is.GreaterThanOrEqualTo(6));
+                if (run > 0)
+                {
+                    Assert.That(ReadTiles(board), Is.EqualTo(previousBoard));
+                    Assert.That(result.ClearedTiles, Is.EquivalentTo(previousColors));
+                }
+                previousBoard = ReadTiles(board);
+                previousColors = result.ClearedTiles;
+                AssertViewsMatchBoard(board);
+            }
+        }
+
         // Inject the approved passive contract for direct activation tests; mouse classification comes in Step 6.
         private static SwapAnalysis DirectActivationMove(
             GridPosition first, GridPosition second, params SpecialActivation[] activations)
