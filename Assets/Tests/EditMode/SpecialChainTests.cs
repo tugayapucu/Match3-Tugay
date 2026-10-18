@@ -1,0 +1,135 @@
+using System;
+using System.Collections.Generic;
+using NUnit.Framework;
+
+namespace Match3.Core.Tests
+{
+    public class SpecialChainTests
+    {
+        [TestCase("RGB/BGG/HVR", 2, 5)]
+        [TestCase("RGB/BGG/HVT", 3, 9)]
+        public void Plan_RocketChains_UseFrozenBoardAndUniqueOccupiedRemovals(string layout, int count, int removed)
+        {
+            var board = TestBoards.Create(layout.Split('/'));
+            var before = Snapshot(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(0, 0)) });
+
+            Assert.That(plan.Effects.Count, Is.EqualTo(count));
+            Assert.That(plan.RemovedPositions.Count, Is.EqualTo(removed));
+            Assert.That(new HashSet<GridPosition>(plan.RemovedPositions).Count, Is.EqualTo(removed));
+            Assert.That(plan.Effects[0].Type, Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(plan.Effects[1].Type, Is.EqualTo(TileType.VerticalRocket));
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void Plan_DuplicateInitialRequestsAndRepeatedHits_ActivateEachSpecialOnceInStableOrder()
+        {
+            var board = TestBoards.Create("RGB", "BGG", "HVT");
+            var rocket = new SpecialActivation(new GridPosition(0, 0));
+            var tnt = new SpecialActivation(new GridPosition(2, 0));
+            var first = SpecialEffects.Plan(board, new[] { tnt, rocket, rocket });
+            var second = SpecialEffects.Plan(board, new[] { rocket, tnt });
+            var expected = new[] { new GridPosition(0, 0), new GridPosition(2, 0), new GridPosition(1, 0) };
+
+            Assert.That(first.Effects.Count, Is.EqualTo(3));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.That(first.Effects[i].Origin, Is.EqualTo(expected[i]));
+                Assert.That(second.Effects[i].Origin, Is.EqualTo(expected[i]));
+                Assert.That(first.Effects[i].Footprint, Is.EqualTo(second.Effects[i].Footprint));
+            }
+            Assert.That(first.RemovedPositions, Is.EqualTo(second.RemovedPositions));
+        }
+
+        [Test]
+        public void Plan_TntStartsChainAndInitialRequestsSortByYBeforeX()
+        {
+            var board = TestBoards.Create("RGB", "BGG", "HVT");
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(2, 0)) });
+            Assert.That(plan.Effects.Count, Is.EqualTo(3));
+            Assert.That(plan.Effects[0].Type, Is.EqualTo(TileType.TNT));
+            Assert.That(plan.Effects[1].Type, Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(plan.Effects[2].Type, Is.EqualTo(TileType.VerticalRocket));
+
+            board = TestBoards.Create("TGR", "RGH");
+            plan = SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(new GridPosition(0, 1)), new SpecialActivation(new GridPosition(2, 0))
+            });
+            Assert.That(plan.Effects[0].Origin, Is.EqualTo(new GridPosition(2, 0)));
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(new GridPosition(0, 1)));
+        }
+
+        [Test]
+        public void OverlappingEffects_ClearFactsIncludeSpecialsButResultContainsEachNormalOnce()
+        {
+            var board = TestBoards.Create("RGB", "BGG", "HVT");
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(0, 0)) });
+            var physical = BoardResolution.ClearCells(board, plan.RemovedPositions);
+            var colors = new List<TileType>();
+            foreach (TileType type in physical)
+                if (TileRules.IsNormalMatchItem(type)) colors.Add(type);
+            var result = new ResolutionResult(colors);
+
+            Assert.That(physical.Count, Is.EqualTo(9));
+            Assert.That(physical, Does.Contain(TileType.HorizontalRocket));
+            Assert.That(physical, Does.Contain(TileType.VerticalRocket));
+            Assert.That(physical, Does.Contain(TileType.TNT));
+            Assert.That(result.ClearedCount, Is.EqualTo(6));
+            Assert.That(result.CountOf(TileType.Red), Is.EqualTo(1));
+            Assert.That(result.CountOf(TileType.Green), Is.EqualTo(3));
+            Assert.That(result.CountOf(TileType.Blue), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Plan_HolesAreExcludedAndReturnedCollectionsAreReadOnlySnapshots()
+        {
+            var board = TestBoards.Create("...", "..R", "H.V");
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(0, 0)) });
+            Assert.That(plan.RemovedPositions, Is.EqualTo(new[]
+            {
+                new GridPosition(0, 0), new GridPosition(2, 0), new GridPosition(2, 1)
+            }));
+            Assert.Throws<NotSupportedException>(() => ((IList<GridPosition>)plan.RemovedPositions).Clear());
+            Assert.Throws<NotSupportedException>(() => ((IList<SpecialEffect>)plan.Effects).Clear());
+            Assert.Throws<NotSupportedException>(() => ((IList<GridPosition>)plan.Effects[0].Footprint).Clear());
+            BoardResolution.ClearCells(board, plan.RemovedPositions);
+            Assert.That(plan.Effects[0].Type, Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(plan.RemovedPositions.Count, Is.EqualTo(3));
+        }
+
+        [TestCase("HF")]
+        [TestCase("HL")]
+        public void Plan_DeferredSpecialInChain_FailsBeforeBoardMutation(string row)
+        {
+            var board = TestBoards.Create(row);
+            var before = Snapshot(board);
+            Assert.Throws<NotSupportedException>(() => SpecialEffects.Plan(board,
+                new[] { new SpecialActivation(new GridPosition(0, 0)) }));
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void Plan_EmptyAndInvalidRequests_HaveExplicitBehavior()
+        {
+            var board = TestBoards.Create("HR");
+            Assert.That(SpecialEffects.Plan(board, new SpecialActivation[0]).Effects, Is.Empty);
+            Assert.Throws<ArgumentNullException>(() => SpecialEffects.Plan(null, new SpecialActivation[0]));
+            Assert.Throws<ArgumentNullException>(() => SpecialEffects.Plan(board, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpecialEffects.Plan(board,
+                new[] { new SpecialActivation(new GridPosition(2, 0)) }));
+            Assert.Throws<ArgumentException>(() => SpecialEffects.Plan(board,
+                new[] { new SpecialActivation(new GridPosition(1, 0)) }));
+        }
+
+        private static TileType[,] Snapshot(Board board)
+        {
+            var result = new TileType[board.Width, board.Height];
+            for (int y = 0; y < board.Height; y++)
+                for (int x = 0; x < board.Width; x++)
+                    result[x, y] = board.GetTile(new GridPosition(x, y));
+            return result;
+        }
+    }
+}

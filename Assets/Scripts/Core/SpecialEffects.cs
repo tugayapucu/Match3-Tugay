@@ -6,6 +6,65 @@ namespace Match3.Core
     // Plans effect geometry from logical cells; never changes the Board or manipulates views.
     public static class SpecialEffects
     {
+        // Read the stable Board for the entire chain; callers apply the completed plan afterwards.
+        public static SpecialEffectPlan Plan(Board board, IReadOnlyList<SpecialActivation> initialActivations)
+        {
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+            if (initialActivations == null)
+            {
+                throw new ArgumentNullException(nameof(initialActivations));
+            }
+
+            var initial = new List<SpecialActivation>(initialActivations);
+            initial.Sort((first, second) => ComparePositions(first.Position, second.Position));
+            var queue = new Queue<SpecialActivation>();
+            // Keep entries after dequeue: the set covers both queued and already-processed specials.
+            var scheduled = new HashSet<GridPosition>();
+            foreach (SpecialActivation activation in initial)
+            {
+                if (scheduled.Add(activation.Position))
+                {
+                    queue.Enqueue(activation);
+                }
+            }
+
+            var removals = new HashSet<GridPosition>();
+            var effects = new List<SpecialEffect>();
+            while (queue.Count > 0)
+            {
+                SpecialActivation activation = queue.Dequeue();
+                var footprint = GetFootprint(board, activation.Position);
+                effects.Add(new SpecialEffect(activation.Position, board.GetTile(activation.Position), footprint));
+                foreach (GridPosition cell in footprint)
+                {
+                    TileType type = board.GetTile(cell);
+                    if (TileRules.IsEmpty(type))
+                    {
+                        continue;
+                    }
+
+                    removals.Add(cell);
+                    if (TileRules.IsSpecial(type) && scheduled.Add(cell))
+                    {
+                        queue.Enqueue(new SpecialActivation(cell));
+                    }
+                }
+            }
+
+            var orderedRemovals = new List<GridPosition>(removals);
+            orderedRemovals.Sort(ComparePositions);
+            return new SpecialEffectPlan(orderedRemovals, effects);
+        }
+
+        private static int ComparePositions(GridPosition first, GridPosition second)
+        {
+            int byY = first.Y.CompareTo(second.Y);
+            return byY != 0 ? byY : first.X.CompareTo(second.X);
+        }
+
         // Geometry includes Empty cells; the chain planner later selects occupied cells for removal.
         public static IReadOnlyList<GridPosition> GetFootprint(Board board, GridPosition origin)
         {
