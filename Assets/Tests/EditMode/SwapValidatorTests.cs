@@ -6,6 +6,32 @@ namespace Match3.Core.Tests
     // Every board here is the state AFTER the swap, matching SwapValidator's contract.
     public class SwapValidatorTests
     {
+        [TestCase("RRRB", SwapKind.NormalMatch)]
+        [TestCase("RGBR", SwapKind.Invalid)]
+        [TestCase("HGBR", SwapKind.Invalid)]
+        public void Analyze_CarriesSwapCellsWithoutAddingActivationBehavior(string row, SwapKind kind)
+        {
+            var first = new GridPosition(2, 0);
+            var second = new GridPosition(3, 0);
+            var analysis = SwapValidator.Analyze(TestBoards.Create(row), first, second);
+
+            Assert.That(analysis.Kind, Is.EqualTo(kind));
+            Assert.That(analysis.First, Is.EqualTo(first));
+            Assert.That(analysis.Second, Is.EqualTo(second));
+            Assert.That(analysis.InitialActivations, Is.Empty);
+            Assert.Throws<NotSupportedException>(() =>
+                ((System.Collections.Generic.ICollection<SpecialActivation>)analysis.InitialActivations)
+                .Add(new SpecialActivation(first)));
+        }
+
+        [TestCase(TileType.Empty)]
+        [TestCase(TileType.LightBall)]
+        [TestCase((TileType)99)]
+        public void ActivationData_NonNormalTargetColor_Throws(TileType type)
+        {
+            Assert.Throws<ArgumentException>(() => new SpecialActivation(new GridPosition(0, 0), type));
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void IsValidResult_SwapCreatesOnlyASquare_ReturnsTrue(bool reverseSelection)

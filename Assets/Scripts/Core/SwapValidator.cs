@@ -9,6 +9,12 @@ namespace Match3.Core
         // This only inspects that result; it never changes the Board.
         public static bool IsValidResult(Board board, GridPosition first, GridPosition second)
         {
+            return Analyze(board, first, second).Kind != SwapKind.Invalid;
+        }
+
+        // Normal matches only for now; special-swap classification is added with activation integration.
+        public static SwapAnalysis Analyze(Board board, GridPosition first, GridPosition second)
+        {
             if (board == null)
             {
                 throw new ArgumentNullException(nameof(board));
@@ -30,11 +36,11 @@ namespace Match3.Core
             {
                 if (matched == first || matched == second)
                 {
-                    return true;
+                    return new SwapAnalysis(SwapKind.NormalMatch, first, second);
                 }
             }
 
-            return false;
+            return new SwapAnalysis(SwapKind.Invalid, first, second);
         }
     }
 }
