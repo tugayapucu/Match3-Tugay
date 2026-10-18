@@ -511,6 +511,26 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Swap_FourLine_UsesSecondSelectionAndReportsOneScoredMove()
+        {
+            UseLevel(1, TileType.Red, 4);
+            SetBoard(new ScriptedRandom(1, 2, 3), "RRRBR");
+            var survivingBlue = boardView.GetTileView(new GridPosition(3, 0));
+
+            yield return Swap(new GridPosition(4, 0), new GridPosition(3, 0));
+
+            AssertStable();
+            Assert.That(board.GetTile(new GridPosition(3, 0)), Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(boardView.GetTileView(new GridPosition(4, 0)), Is.SameAs(survivingBlue));
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(reportedResults[0].CountOf(TileType.Red), Is.EqualTo(4));
+            Assert.That(level.Score, Is.EqualTo(400));
+            Assert.That(level.MovesRemaining, Is.Zero);
+            Assert.That(level.Status, Is.EqualTo(LevelStatus.Won));
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+        }
+
+        [UnityTest]
         public IEnumerator Sequence_ValidMoveThenAnotherValidMove_BothResolveFromTheCurrentBoard()
         {
             // Move 1 completes G G G in column 0 (refilled Y, R, O).

@@ -330,6 +330,120 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Runner_FourHorizontal_CreatesRocketAndCreditsFourColors()
+        {
+            yield return CheckCreation(CreateBoard("RRRR"), new ScriptedRandom(1, 2, 1),
+                TileType.HorizontalRocket, new GridPosition(1, 0), 4);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_FourVertical_CreatedRocketFallsAndSurvivesRefill()
+        {
+            yield return CheckCreation(CreateBoard("R", "R", "R", "R"), new ScriptedRandom(1, 2, 1),
+                TileType.VerticalRocket, new GridPosition(0, 0), 4);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_FiveLine_CreatesLightBallAndCreditsFiveColors()
+        {
+            yield return CheckCreation(CreateBoard("RRRRR"), new ScriptedRandom(1, 2, 1, 2),
+                TileType.LightBall, new GridPosition(2, 0), 5);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_Square_CreatesPropellerAndCreditsFourColors()
+        {
+            yield return CheckCreation(CreateBoard("RR", "RR"), new ScriptedRandom(1, 2, 1),
+                TileType.Propeller, new GridPosition(0, 0), 4);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_LShape_CreatesTntAndKeepsUnrelatedViews()
+        {
+            var board = CreateBoard("RRR", "GBR", "YOR");
+            boardView.Render(board);
+            var survivor = boardView.GetTileView(new GridPosition(0, 1));
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 2, 1, 2), 0.05f, 0.05f).ResolveUntilStable(result =>
+                {
+                    Assert.That(result.ClearedCount, Is.EqualTo(5));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(5));
+                });
+            Assert.That(board.GetTile(new GridPosition(2, 0)), Is.EqualTo(TileType.TNT));
+            Assert.That(boardView.GetTileView(new GridPosition(0, 1)), Is.SameAs(survivor));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_DisjointGroups_CreateTwoSpecialsAndKeepSurvivorIdentity()
+        {
+            var board = CreateBoard("RRRRBGGGG");
+            boardView.Render(board);
+            var survivor = boardView.GetTileView(new GridPosition(4, 0));
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 2, 3, 2, 0, 3), 0f, 0f).ResolveUntilStable(result =>
+                {
+                    Assert.That(result.ClearedCount, Is.EqualTo(8));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(4));
+                    Assert.That(result.CountOf(TileType.Green), Is.EqualTo(4));
+                });
+            Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(board.GetTile(new GridPosition(6, 0)), Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(boardView.GetTileView(new GridPosition(4, 0)), Is.SameAs(survivor));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_CascadeSquare_UsesDefaultAnchorInsteadOfTheOriginalSelectedCell()
+        {
+            var board = CreateBoard("GB", "GR", "GR");
+            boardView.Render(board);
+            var move = SwapValidator.Analyze(board, new GridPosition(0, 1), new GridPosition(1, 1));
+            var runner = new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(0, 0, 2, 1, 1, 3), 0.05f, 0.05f);
+            int callbacks = 0;
+
+            yield return runner.ResolveUntilStable(move, result =>
+            {
+                callbacks++;
+                Assert.That(result.CountOf(TileType.Green), Is.EqualTo(3));
+                Assert.That(result.CountOf(TileType.Red), Is.EqualTo(4));
+                Assert.That(result.ClearedCount, Is.EqualTo(7));
+            });
+
+            // The old second selection (1,1) belongs to the new square but has expired as an anchor preference.
+            Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Propeller));
+            Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.Blue));
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+            AssertViewsMatchBoard(board);
+        }
+
+        private IEnumerator CheckCreation(Board board, System.Random random, TileType type, GridPosition finalCell, int count)
+        {
+            boardView.Render(board);
+            var consumedView = boardView.GetTileView(finalCell);
+            int callbacks = 0;
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, random, 0.05f, 0.05f)
+                .ResolveUntilStable(result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedCount, Is.EqualTo(count));
+                    Assert.That(result.CountOf(TileType.Red), Is.EqualTo(count));
+                    foreach (TileType color in result.ClearedTiles)
+                        Assert.That(TileRules.IsNormalMatchItem(color), Is.True);
+                });
+            yield return null;
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(consumedView == null, Is.True, "The consumed normal visual was removed.");
+            Assert.That(board.GetTile(finalCell), Is.EqualTo(type));
+            Assert.That(boardView.GetTileView(finalCell).Type, Is.EqualTo(type));
+            Assert.That(CountActiveViews(), Is.EqualTo(board.Width * board.Height));
+            Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
         public IEnumerator Runner_SameSeedTwice_ProducesTheSameResult()
         {
             var firstResult = new List<TileType>();
