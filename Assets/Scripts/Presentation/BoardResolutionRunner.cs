@@ -14,6 +14,7 @@ namespace Match3.Presentation
         private readonly BoardView boardView;
         private readonly TileType[] palette;
         private readonly Random random;
+        private readonly Random targetingRandom;
         private readonly float fallDuration;
         private readonly float refillDuration;
 
@@ -21,7 +22,7 @@ namespace Match3.Presentation
         // The palette itself is validated by Core (generation at startup and Refill on use).
         public BoardResolutionRunner(
             Board board, BoardView boardView, IReadOnlyList<TileType> palette, Random random,
-            float fallDuration, float refillDuration)
+            float fallDuration, float refillDuration, Random targetingRandom = null)
         {
             if (board == null)
             {
@@ -43,6 +44,11 @@ namespace Match3.Presentation
                 throw new ArgumentNullException(nameof(random));
             }
 
+            if (ReferenceEquals(random, targetingRandom))
+            {
+                throw new ArgumentException("Targeting and refill must use separate Random instances.", nameof(targetingRandom));
+            }
+
             ValidateDuration(fallDuration, nameof(fallDuration));
             ValidateDuration(refillDuration, nameof(refillDuration));
 
@@ -56,6 +62,8 @@ namespace Match3.Presentation
             }
 
             this.random = random;
+            // Only Propeller requires this stream; the caller owns its session lifetime, just like refill.
+            this.targetingRandom = targetingRandom;
             this.fallDuration = fallDuration;
             this.refillDuration = refillDuration;
         }
@@ -110,7 +118,7 @@ namespace Match3.Presentation
                 if (firstScan && move != null && move.InitialActivations.Count > 0)
                 {
                     // Plan the complete chain on the stable Board before removing anything.
-                    var plan = SpecialEffects.Plan(board, move.InitialActivations);
+                    var plan = SpecialEffects.Plan(board, move.InitialActivations, targetingRandom);
                     AddNormalClears(cleared, BoardResolution.ClearCells(board, plan.RemovedPositions));
                     boardView.RemoveViews(plan.RemovedPositions);
                     removedByEffects = plan.RemovedPositions.Count > 0;

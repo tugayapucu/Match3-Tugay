@@ -610,6 +610,39 @@ namespace Match3.Presentation.Tests
             }
         }
 
+        [Test]
+        public void Runner_SharedRefillAndTargetingRandom_IsRejected()
+        {
+            var random = new System.Random(42);
+            var error = Assert.Throws<ArgumentException>(() => new BoardResolutionRunner(
+                CreateBoard("R"), boardView, FullPalette, random, 0f, 0f, random));
+            Assert.That(error.ParamName, Is.EqualTo("targetingRandom"));
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_PropellerUsesSeparateTargetingStreamAndPreservesUntouchedView()
+        {
+            var board = CreateBoard("FRGB");
+            boardView.Render(board);
+            var survivor = boardView.GetTileView(new GridPosition(3, 0));
+            int callbacks = 0;
+            var origin = new GridPosition(0, 0);
+            var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(0, 1, 3), 0.05f, 0.05f, new ScriptedRandom(0))
+                .ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedTiles, Is.EquivalentTo(new[] { TileType.Red, TileType.Green }));
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("RGYB"))));
+            Assert.That(boardView.GetTileView(new GridPosition(3, 0)), Is.SameAs(survivor));
+            AssertViewsMatchBoard(board);
+        }
+
         // Inject the approved passive contract for direct activation tests; mouse classification comes in Step 6.
         private static SwapAnalysis DirectActivationMove(
             GridPosition first, GridPosition second, params SpecialActivation[] activations)
