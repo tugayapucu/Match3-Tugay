@@ -19,6 +19,18 @@ namespace Match3.Core
             }
 
             var initial = new List<SpecialActivation>(initialActivations);
+            // Equal positions must describe the same request; sorting must never choose a target color.
+            var requestedColors = new Dictionary<GridPosition, TileType?>();
+            foreach (SpecialActivation activation in initial)
+            {
+                if (requestedColors.TryGetValue(activation.Position, out var color)
+                    && color != activation.TargetColor)
+                {
+                    throw new ArgumentException("Duplicate activation positions must have the same target color.",
+                        nameof(initialActivations));
+                }
+                requestedColors[activation.Position] = activation.TargetColor;
+            }
             initial.Sort((first, second) => ComparePositions(first.Position, second.Position));
             var queue = new Queue<SpecialActivation>();
             // Keep entries after dequeue: the set covers both queued and already-processed specials.

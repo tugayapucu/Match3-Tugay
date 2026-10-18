@@ -6,6 +6,31 @@ namespace Match3.Core.Tests
 {
     public class SpecialChainTests
     {
+        [TestCase(TileType.Red, TileType.Blue)]
+        [TestCase(TileType.Blue, TileType.Red)]
+        [TestCase(null, TileType.Red)]
+        [TestCase(TileType.Red, null)]
+        public void Plan_ConflictingDuplicateTargets_AreRejectedBeforeBoardChanges(TileType? first, TileType? second)
+        {
+            var board = TestBoards.Create("HR");
+            var before = Snapshot(board);
+            var origin = new GridPosition(0, 0);
+            var error = Assert.Throws<ArgumentException>(() => SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(origin, first), new SpecialActivation(origin, second)
+            }));
+            Assert.That(error.ParamName, Is.EqualTo("initialActivations"));
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void Plan_ExactDuplicateTargets_StillCollapseToOneActivation()
+        {
+            var board = TestBoards.Create("HR");
+            var request = new SpecialActivation(new GridPosition(0, 0), TileType.Red);
+            Assert.That(SpecialEffects.Plan(board, new[] { request, request }).Effects.Count, Is.EqualTo(1));
+        }
+
         [TestCase("RGB/BGG/HVR", 2, 5)]
         [TestCase("RGB/BGG/HVT", 3, 9)]
         public void Plan_RocketChains_UseFrozenBoardAndUniqueOccupiedRemovals(string layout, int count, int removed)
