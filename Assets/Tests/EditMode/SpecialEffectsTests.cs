@@ -6,6 +6,48 @@ namespace Match3.Core.Tests
 {
     public class SpecialEffectsTests
     {
+        [TestCase(7, 7, 3, 3, 25)]
+        [TestCase(7, 7, 3, 0, 15)]
+        [TestCase(7, 7, 0, 0, 9)]
+        [TestCase(7, 7, 6, 6, 9)]
+        [TestCase(1, 1, 0, 0, 1)]
+        [TestCase(2, 3, 0, 1, 6)]
+        [TestCase(8, 4, 7, 3, 9)]
+        public void Tnt_ExactSquareIsClippedToBoardBounds(int width, int height, int x, int y, int count)
+        {
+            var board = new Board(width, height);
+            var origin = new GridPosition(x, y);
+            board.SetTile(origin, TileType.TNT);
+            var expected = new List<GridPosition>();
+            // Independent distance rule, rather than copying the production offset loops.
+            for (int cellY = 0; cellY < height; cellY++)
+                for (int cellX = 0; cellX < width; cellX++)
+                    if (Math.Max(Math.Abs(cellX - x), Math.Abs(cellY - y)) <= 2)
+                        expected.Add(new GridPosition(cellX, cellY));
+
+            var footprint = SpecialEffects.GetFootprint(board, origin);
+
+            Assert.That(footprint.Count, Is.EqualTo(count));
+            Assert.That(footprint, Is.EqualTo(expected));
+            Assert.That(board.GetTile(origin), Is.EqualTo(TileType.TNT));
+        }
+
+        [Test]
+        public void TntAfterSwap_IsCenteredOnItsNewCell()
+        {
+            var board = new Board(7, 7);
+            var oldCell = new GridPosition(3, 2);
+            var newCell = new GridPosition(3, 3);
+            board.SetTile(oldCell, TileType.TNT);
+            board.SetTile(newCell, TileType.Blue);
+            board.TrySwapAdjacent(oldCell, newCell);
+
+            var footprint = SpecialEffects.GetFootprint(board, newCell);
+
+            Assert.That(footprint, Does.Contain(new GridPosition(3, 5)));
+            Assert.That(footprint, Has.No.Member(new GridPosition(3, 0)));
+        }
+
         [TestCase(TileType.HorizontalRocket, 0, 0)]
         [TestCase(TileType.HorizontalRocket, 4, 2)]
         [TestCase(TileType.HorizontalRocket, 2, 1)]

@@ -35,6 +35,20 @@ namespace Match3.Core
                         cells.Add(new GridPosition(origin.X, y));
                     }
                     break;
+                case TileType.TNT:
+                    // Y outside/X inside keeps every footprint in the same coordinate order.
+                    for (int dy = -2; dy <= 2; dy++)
+                    {
+                        for (int dx = -2; dx <= 2; dx++)
+                        {
+                            var cell = new GridPosition(origin.X + dx, origin.Y + dy);
+                            if (board.IsInBounds(cell))
+                            {
+                                cells.Add(cell);
+                            }
+                        }
+                    }
+                    break;
                 default:
                     if (TileRules.IsSpecial(type))
                     {
