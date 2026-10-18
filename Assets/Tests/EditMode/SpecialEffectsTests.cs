@@ -94,12 +94,5 @@ namespace Match3.Core.Tests
             Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Red));
         }
 
-        [TestCase(TileType.Propeller)]
-        public void DeferredEffects_AreRejectedExplicitly(TileType type)
-        {
-            var board = new Board(1, 1);
-            board.SetTile(new GridPosition(0, 0), type);
-            Assert.Throws<NotSupportedException>(() => SpecialEffects.GetFootprint(board, new GridPosition(0, 0)));
-        }
     }
 }

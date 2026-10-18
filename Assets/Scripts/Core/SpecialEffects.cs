@@ -7,7 +7,8 @@ namespace Match3.Core
     public static class SpecialEffects
     {
         // Read the stable Board for the entire chain; callers apply the completed plan afterwards.
-        public static SpecialEffectPlan Plan(Board board, IReadOnlyList<SpecialActivation> initialActivations)
+        public static SpecialEffectPlan Plan(Board board, IReadOnlyList<SpecialActivation> initialActivations,
+            Random targetingRandom = null)
         {
             if (board == null)
             {
@@ -49,7 +50,23 @@ namespace Match3.Core
             {
                 SpecialActivation activation = queue.Dequeue();
                 var footprint = GetFootprint(board, activation.Position, activation.TargetColor);
-                effects.Add(new SpecialEffect(activation.Position, board.GetTile(activation.Position), footprint));
+                TileType specialType = board.GetTile(activation.Position);
+                GridPosition? remoteTarget = null;
+                if (specialType == TileType.Propeller)
+                {
+                    if (targetingRandom == null)
+                    {
+                        throw new ArgumentNullException(nameof(targetingRandom), "Propeller needs its own targeting stream.");
+                    }
+                    remoteTarget = FindRemoteTarget(board, footprint, removals, scheduled, targetingRandom);
+                    if (remoteTarget.HasValue)
+                    {
+                        var combined = new List<GridPosition>(footprint) { remoteTarget.Value };
+                        combined.Sort(ComparePositions);
+                        footprint = combined.AsReadOnly();
+                    }
+                }
+                effects.Add(new SpecialEffect(activation.Position, specialType, footprint, remoteTarget));
                 foreach (GridPosition cell in footprint)
                 {
                     TileType type = board.GetTile(cell);
@@ -77,7 +94,7 @@ namespace Match3.Core
             return byY != 0 ? byY : first.X.CompareTo(second.X);
         }
 
-        // Geometry includes Empty cells; the chain planner later selects occupied cells for removal.
+        // Base geometry includes holes. Propeller's remote target requires chain state and is added by Plan.
         public static IReadOnlyList<GridPosition> GetFootprint(Board board, GridPosition origin, TileType? targetColor = null)
         {
             if (board == null)
@@ -125,6 +142,19 @@ namespace Match3.Core
                         }
                     }
                     break;
+                case TileType.Propeller:
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            var cell = new GridPosition(origin.X + dx, origin.Y + dy);
+                            if (Math.Abs(dx) + Math.Abs(dy) <= 1 && board.IsInBounds(cell))
+                            {
+                                cells.Add(cell);
+                            }
+                        }
+                    }
+                    break;
                 case TileType.LightBall:
                     cells.Add(origin);
                     TileType? color = targetColor ?? MostCommonColor(board);
@@ -145,14 +175,35 @@ namespace Match3.Core
                     cells.Sort(ComparePositions);
                     break;
                 default:
-                    if (TileRules.IsSpecial(type))
-                    {
-                        throw new NotSupportedException($"{type} effects are not implemented yet.");
-                    }
                     throw new ArgumentException("Activation requires a special at the origin.", nameof(origin));
             }
 
             return cells.AsReadOnly();
+        }
+
+        private static GridPosition? FindRemoteTarget(Board board, IReadOnlyList<GridPosition> local,
+            HashSet<GridPosition> removals, HashSet<GridPosition> scheduled, Random random)
+        {
+            var takeoffArea = new HashSet<GridPosition>(local);
+            var candidates = new List<GridPosition>();
+            // Loop order provides stable Y-then-X candidate ordering without relying on a set's order.
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var cell = new GridPosition(x, y);
+                    TileType type = board.GetTile(cell);
+                    if ((!TileRules.IsNormalMatchItem(type) && !TileRules.IsSpecial(type))
+                        || takeoffArea.Contains(cell) || removals.Contains(cell)
+                        || (TileRules.IsSpecial(type) && scheduled.Contains(cell)))
+                    {
+                        continue;
+                    }
+                    candidates.Add(cell);
+                }
+            }
+            // No draw when there is nowhere to fly: preserve the targeting stream's next value.
+            return candidates.Count == 0 ? (GridPosition?)null : candidates[random.Next(candidates.Count)];
         }
 
         private static TileType? MostCommonColor(Board board)

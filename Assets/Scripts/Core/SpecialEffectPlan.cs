@@ -8,12 +8,15 @@ namespace Match3.Core
         public GridPosition Origin { get; }
         public TileType Type { get; }
         public IReadOnlyList<GridPosition> Footprint { get; }
+        public GridPosition? RemoteTarget { get; }
 
-        internal SpecialEffect(GridPosition origin, TileType type, IEnumerable<GridPosition> footprint)
+        internal SpecialEffect(GridPosition origin, TileType type, IEnumerable<GridPosition> footprint,
+            GridPosition? remoteTarget = null)
         {
             Origin = origin;
             Type = type;
             Footprint = new List<GridPosition>(footprint).AsReadOnly();
+            RemoteTarget = remoteTarget;
         }
     }
 

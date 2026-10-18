@@ -124,12 +124,12 @@ namespace Match3.Core.Tests
             Assert.That(plan.RemovedPositions.Count, Is.EqualTo(3));
         }
 
-        [TestCase("HF")]
-        public void Plan_DeferredSpecialInChain_FailsBeforeBoardMutation(string row)
+        [Test]
+        public void Plan_PropellerWithoutTargetingStream_FailsBeforeBoardMutation()
         {
-            var board = TestBoards.Create(row);
+            var board = TestBoards.Create("HF");
             var before = Snapshot(board);
-            Assert.Throws<NotSupportedException>(() => SpecialEffects.Plan(board,
+            Assert.Throws<ArgumentNullException>(() => SpecialEffects.Plan(board,
                 new[] { new SpecialActivation(new GridPosition(0, 0)) }));
             Assert.That(Snapshot(board), Is.EqualTo(before));
         }
