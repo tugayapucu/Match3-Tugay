@@ -363,12 +363,15 @@ namespace Match3.Presentation.Tests
             var board = CreateBoard("RRR", "GBR", "YOR");
             boardView.Render(board);
             var survivor = boardView.GetTileView(new GridPosition(0, 1));
+            int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(1, 2, 1, 2), 0.05f, 0.05f).ResolveUntilStable(result =>
                 {
+                    callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(5));
                     Assert.That(result.CountOf(TileType.Red), Is.EqualTo(5));
                 });
+            Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(board.GetTile(new GridPosition(2, 0)), Is.EqualTo(TileType.TNT));
             Assert.That(boardView.GetTileView(new GridPosition(0, 1)), Is.SameAs(survivor));
             AssertViewsMatchBoard(board);
@@ -380,13 +383,16 @@ namespace Match3.Presentation.Tests
             var board = CreateBoard("RRRRBGGGG");
             boardView.Render(board);
             var survivor = boardView.GetTileView(new GridPosition(4, 0));
+            int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(1, 2, 3, 2, 0, 3), 0f, 0f).ResolveUntilStable(result =>
                 {
+                    callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(8));
                     Assert.That(result.CountOf(TileType.Red), Is.EqualTo(4));
                     Assert.That(result.CountOf(TileType.Green), Is.EqualTo(4));
                 });
+            Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.HorizontalRocket));
             Assert.That(board.GetTile(new GridPosition(6, 0)), Is.EqualTo(TileType.HorizontalRocket));
             Assert.That(boardView.GetTileView(new GridPosition(4, 0)), Is.SameAs(survivor));
