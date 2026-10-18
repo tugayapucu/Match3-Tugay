@@ -643,6 +643,86 @@ namespace Match3.Presentation.Tests
             AssertViewsMatchBoard(board);
         }
 
+        [UnityTest]
+        public IEnumerator Runner_LightBallExplicitColor_ReportsOnlyThoseNormalsAndKeepsOtherViews()
+        {
+            var board = CreateBoard("LRRGB");
+            boardView.Render(board);
+            var survivor = boardView.GetTileView(new GridPosition(3, 0));
+            var origin = new GridPosition(0, 0);
+            var move = DirectActivationMove(origin, new GridPosition(1, 0),
+                new SpecialActivation(origin, TileType.Red));
+            int callbacks = 0;
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(2, 3, 4), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedTiles, Is.EquivalentTo(new[] { TileType.Red, TileType.Red }));
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("BYPGB"))));
+            Assert.That(boardView.GetTileView(new GridPosition(3, 0)), Is.SameAs(survivor));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_MixedChain_ReportsExactDeduplicatedColorsAndRefillsEveryView()
+        {
+            var board = CreateBoard("RGB", "GFL", "HVT");
+            boardView.Render(board);
+            var origin = new GridPosition(0, 0);
+            var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+            int callbacks = 0;
+
+            yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(2, 1, 0, 3, 2, 1, 5, 3, 2), 0.05f, 0.05f, new ScriptedRandom())
+                .ResolveUntilStable(move, result =>
+                {
+                    callbacks++;
+                    Assert.That(result.ClearedTiles, Is.EquivalentTo(new[]
+                        { TileType.Red, TileType.Green, TileType.Green, TileType.Blue }));
+                });
+
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(ReadTiles(board), Is.EqualTo(ReadTiles(CreateBoard("RGB", "GBY", "BYO"))));
+            Assert.That(CountActiveViews(), Is.EqualTo(9));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
+        public IEnumerator Runner_MixedChainWithBothFreshStreams_ReplaysFinalBoardAndColorFacts()
+        {
+            TileType[,] previousBoard = null;
+            IReadOnlyList<TileType> previousColors = null;
+            for (int run = 0; run < 2; run++)
+            {
+                var board = CreateBoard("RGBYOPGB", "HFVTLRGB");
+                boardView.Render(board);
+                var origin = new GridPosition(0, 0);
+                var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+                int callbacks = 0;
+                ResolutionResult result = null;
+                yield return new BoardResolutionRunner(board, boardView, FullPalette,
+                    new System.Random(53), 0f, 0f, new System.Random(53 ^ 0x5EED1234))
+                    .ResolveUntilStable(move, r => { callbacks++; result = r; });
+
+                Assert.That(callbacks, Is.EqualTo(1));
+                Assert.That(result.ClearedCount, Is.GreaterThanOrEqualTo(9));
+                Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+                Assert.That(ReadTiles(board), Has.No.Member(TileType.Empty));
+                if (run > 0)
+                {
+                    Assert.That(ReadTiles(board), Is.EqualTo(previousBoard));
+                    Assert.That(result.ClearedTiles, Is.EquivalentTo(previousColors));
+                }
+                previousBoard = ReadTiles(board);
+                previousColors = result.ClearedTiles;
+                AssertViewsMatchBoard(board);
+            }
+        }
+
         // Inject the approved passive contract for direct activation tests; mouse classification comes in Step 6.
         private static SwapAnalysis DirectActivationMove(
             GridPosition first, GridPosition second, params SpecialActivation[] activations)
