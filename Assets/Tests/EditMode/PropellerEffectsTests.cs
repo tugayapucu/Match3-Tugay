@@ -56,6 +56,68 @@ namespace Match3.Core.Tests
             Assert.That(random.Calls, Is.Zero);
         }
 
+        [Test]
+        public void RemoteTarget_SkipsHolesAndRemovalsPlannedByEarlierEffects()
+        {
+            var board = TestBoards.Create("F.R", "HRR");
+            var random = new IndexRandom(0);
+            var plan = SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(new GridPosition(0, 1)),
+                new SpecialActivation(new GridPosition(0, 0))
+            }, random);
+
+            Assert.That(plan.Effects[1].Type, Is.EqualTo(TileType.Propeller));
+            Assert.That(plan.Effects[1].RemoteTarget, Is.EqualTo(new GridPosition(2, 1)));
+            Assert.That(random.LastBound, Is.EqualTo(1), "Bottom-row Reds are already scheduled for removal.");
+            Assert.That(random.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RemoteTarget_SkipsAnInitialSpecialThatIsQueuedButNotProcessed()
+        {
+            var board = TestBoards.Create("FRH");
+            var random = new IndexRandom(0);
+            var plan = SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(new GridPosition(0, 0)),
+                new SpecialActivation(new GridPosition(2, 0))
+            }, random);
+
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].RemoteTarget, Is.Null);
+            Assert.That(random.Calls, Is.Zero, "The queued Rocket is the only cell outside takeoff.");
+        }
+
+        [Test]
+        public void RemoteSpecial_EntersTheSameQueueAndCannotTargetTheProcessedPropeller()
+        {
+            var board = TestBoards.Create("F.RF");
+            var random = new IndexRandom(1);
+            var plan = SpecialEffects.Plan(board,
+                new[] { new SpecialActivation(new GridPosition(0, 0)) }, random);
+
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].RemoteTarget, Is.EqualTo(new GridPosition(3, 0)));
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(new GridPosition(3, 0)));
+            Assert.That(plan.Effects[1].RemoteTarget, Is.Null);
+            Assert.That(plan.RemovedPositions.Count, Is.EqualTo(3));
+            Assert.That(random.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ConflictingRequests_AreRejectedBeforeAnyTargetingDraw()
+        {
+            var board = TestBoards.Create("FRR");
+            var random = new IndexRandom(0);
+            var origin = new GridPosition(0, 0);
+            Assert.Throws<ArgumentException>(() => SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(origin, TileType.Red), new SpecialActivation(origin, TileType.Blue)
+            }, random));
+            Assert.That(random.Calls, Is.Zero);
+        }
+
         private sealed class IndexRandom : Random
         {
             private readonly int index;
