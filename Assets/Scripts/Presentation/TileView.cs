@@ -76,6 +76,13 @@ namespace Match3.Presentation
                     return new Color(0.6f, 0.2f, 0.8f);
                 case TileType.Orange:
                     return new Color(1f, 0.5f, 0f);
+                // Temporary special appearance; distinct icons and orientation arrive in Step 8.
+                case TileType.HorizontalRocket:
+                case TileType.VerticalRocket:
+                case TileType.Propeller:
+                case TileType.TNT:
+                case TileType.LightBall:
+                    return Color.white;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tileType), tileType, "Unknown tile type.");
             }
