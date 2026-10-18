@@ -40,6 +40,50 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
+        public void PlaceSpecialViews_ReplacesConsumedViewsInPlaceAndKeepsSurvivors()
+        {
+            var board = CreateBoard(3, 1);
+            boardView.Render(board);
+            var anchor = new GridPosition(1, 0);
+            var oldView = boardView.GetTileView(anchor);
+            var survivor = boardView.GetTileView(new GridPosition(2, 0));
+            boardView.RemoveViews(new[] { anchor });
+
+            boardView.PlaceSpecialViews(new[] { new TileSpawn(anchor, TileType.TNT) });
+
+            var special = boardView.GetTileView(anchor);
+            Assert.That(oldView == null, Is.True);
+            Assert.That(special.Type, Is.EqualTo(TileType.TNT));
+            Assert.That(special.Position, Is.EqualTo(anchor));
+            Assert.That(special.transform.localPosition, Is.EqualTo(new Vector3(1.5f, 0f, 0f)));
+            Assert.That(special.gameObject.activeSelf, Is.True);
+            Assert.That(boardView.GetTileView(new GridPosition(2, 0)), Is.SameAs(survivor));
+            Assert.That(GetViews().Length, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void PlaceSpecialViews_InvalidBatch_LeavesLookupUnchanged()
+        {
+            boardView.Render(CreateBoard(2, 1));
+            var anchor = new GridPosition(0, 0);
+            boardView.RemoveViews(new[] { anchor });
+            var creation = new TileSpawn(anchor, TileType.TNT);
+
+            Assert.Throws<ArgumentNullException>(() => boardView.PlaceSpecialViews(null));
+            Assert.Throws<ArgumentException>(() => boardView.PlaceSpecialViews(new[] { creation, creation }));
+            Assert.Throws<ArgumentException>(() => boardView.PlaceSpecialViews(new[]
+            {
+                creation, new TileSpawn(new GridPosition(3, 0), TileType.Red)
+            }));
+            Assert.Throws<InvalidOperationException>(() => boardView.PlaceSpecialViews(new[]
+            {
+                creation, new TileSpawn(new GridPosition(1, 0), TileType.TNT)
+            }));
+            Assert.That(GetViews().Length, Is.EqualTo(1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => boardView.GetTileView(anchor));
+        }
+
+        [Test]
         public void Render_CreatesOneViewPerCell_MatchingTheBoard()
         {
             var board = CreateBoard(3, 2);

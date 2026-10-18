@@ -140,6 +140,44 @@ namespace Match3.Presentation
             }
         }
 
+        // Consumed normal views have already gone. Created specials appear at their anchors, without falling in.
+        public void PlaceSpecialViews(IReadOnlyList<TileSpawn> creations)
+        {
+            if (creations == null)
+            {
+                throw new ArgumentNullException(nameof(creations));
+            }
+
+            if (tilePrefab == null)
+            {
+                throw new InvalidOperationException("Assign a TileView prefab before placing specials.");
+            }
+
+            var targets = new HashSet<GridPosition>();
+            foreach (TileSpawn creation in creations)
+            {
+                if (!TileRules.IsSpecial(creation.Type) || !targets.Add(creation.Position))
+                {
+                    throw new ArgumentException("Each placement must be a special at a distinct cell.", nameof(creations));
+                }
+
+                if (tileViews.ContainsKey(creation.Position))
+                {
+                    throw new InvalidOperationException("Remove the consumed view before placing a special.");
+                }
+            }
+
+            Transform root = tileRoot != null ? tileRoot : transform;
+            foreach (TileSpawn creation in creations)
+            {
+                var view = Instantiate(tilePrefab, root, false);
+                view.Initialize(creation.Position, creation.Type);
+                view.SetWorldPosition(GetWorldPosition(creation.Position));
+                tileViews.Add(creation.Position, view);
+                view.gameObject.SetActive(true);
+            }
+        }
+
         // Gravity visuals: slides the existing views named by Core's moves. The same objects survive, so
         // identity is never guessed from colour. Inputs are checked now; the animation runs when iterated.
         public IEnumerator AnimateFalls(IReadOnlyList<TileMove> moves, float duration)
