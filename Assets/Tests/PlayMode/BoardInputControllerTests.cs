@@ -771,6 +771,58 @@ namespace Match3.Presentation.Tests
             AssertLevelOver();
         }
 
+        [UnityTest]
+        public IEnumerator SpecialSwap_RocketUsesNewRow_WinsOnLastMoveAndCleansUp()
+        {
+            UseLevel(1, TileType.Yellow, 1);
+            SetBoard(new ScriptedRandom(2, 3, 1), "HGB", "RYO");
+
+            yield return VerifyValidMove(new GridPosition(0, 1), new GridPosition(0, 0), 1, true,
+                "BYG", "RGB");
+
+            AssertLevel(0, 200, 1, LevelStatus.Won);
+            Assert.That(reportedResults[0].ClearedTiles, Is.EquivalentTo(new[] { TileType.Yellow, TileType.Orange }));
+            AssertLevelOver();
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_VerticalRocketUsesNewColumn_LosesOnlyAfterFinishing()
+        {
+            UseLevel(1, TileType.Green, 2);
+            SetBoard(new ScriptedRandom(2, 3), "RGB", "VYO");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "RYB", "YBO");
+
+            AssertLevel(0, 100, 1, LevelStatus.Lost);
+            AssertLevelOver();
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_PropellerAcceptsMouseMoveAndUsesProductionResolutionPath()
+        {
+            UseLevel(4, TileType.Red, 9);
+            SetBoard(new ScriptedRandom(0, 1, 2, 3), "FRGB");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false, "RGBY");
+
+            AssertLevel(3, 300, 1, LevelStatus.Playing);
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(3));
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_TwoSpecialsAndLongMixedChain_CostOneMoveWithoutBonus()
+        {
+            UseLevel(3, TileType.Green, 10);
+            SetBoard(new ScriptedRandom(2, 1, 0, 3, 2, 1, 5, 3, 2), "RGB", "GFL", "HVT");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false,
+                "RGB", "GBY", "BYO");
+
+            AssertLevel(2, 400, 2, LevelStatus.Playing);
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(4), "Five activated specials give no color bonus.");
+        }
+
         // Plays one valid move and follows it to the end. Checks that the Board changes first, that input stays
         // locked and clicks are ignored through every stage, that exactly `expectedRounds` resolution rounds
         // happen (each round empties cells, then refills them), and the exact final stable board.
