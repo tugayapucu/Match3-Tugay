@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 
 namespace Match3.Core
 {
-    // A normal swap counts when a line or square match includes one of the two swapped cells.
+    // Describes an already-applied adjacent swap: a normal match, special activation, or invalid move.
     public static class SwapValidator
     {
         // Contract: `board` already contains the result of swapping `first` and `second`.
@@ -12,7 +13,6 @@ namespace Match3.Core
             return Analyze(board, first, second).Kind != SwapKind.Invalid;
         }
 
-        // Normal matches only for now; special-swap classification is added with activation integration.
         public static SwapAnalysis Analyze(Board board, GridPosition first, GridPosition second)
         {
             if (board == null)
@@ -29,6 +29,31 @@ namespace Match3.Core
             if (!board.IsInBounds(second))
             {
                 throw new ArgumentOutOfRangeException(nameof(second), second, "Position must be within the board bounds.");
+            }
+
+            TileType firstType = board.GetTile(first);
+            TileType secondType = board.GetTile(second);
+            if (Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y) != 1
+                || TileRules.IsEmpty(firstType) || TileRules.IsEmpty(secondType))
+            {
+                return new SwapAnalysis(SwapKind.Invalid, first, second);
+            }
+
+            if (TileRules.IsSpecial(firstType) || TileRules.IsSpecial(secondType))
+            {
+                var activations = new List<SpecialActivation>(2);
+                foreach (GridPosition position in new[] { first, second })
+                {
+                    TileType type = board.GetTile(position);
+                    if (!TileRules.IsSpecial(type)) continue;
+
+                    // Positions are read after the swap; only a Light Ball uses its normal partner's color.
+                    TileType partner = position == first ? secondType : firstType;
+                    TileType? color = type == TileType.LightBall && TileRules.IsNormalMatchItem(partner)
+                        ? partner : (TileType?)null;
+                    activations.Add(new SpecialActivation(position, color));
+                }
+                return new SwapAnalysis(SwapKind.SpecialSwap, first, second, activations);
             }
 
             // A match elsewhere on the board is not enough; it must contain a swapped cell.

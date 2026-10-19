@@ -9,7 +9,7 @@ namespace Match3.Core
         SpecialSwap
     }
 
-    // Facts about an already-applied swap. Special activation behavior is introduced in later steps.
+    // Facts about an already-applied swap, including special requests for the shared resolution loop.
     public sealed class SwapAnalysis
     {
         public SwapKind Kind { get; }
