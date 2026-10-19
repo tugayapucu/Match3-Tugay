@@ -458,8 +458,7 @@ namespace Match3.Presentation.Tests
             var oldVertical = boardView.GetTileView(new GridPosition(1, 0));
             var blue = boardView.GetTileView(new GridPosition(0, 1));
             var green = boardView.GetTileView(new GridPosition(2, 1));
-            var move = DirectActivationMove(new GridPosition(0, 0), new GridPosition(1, 0),
-                new SpecialActivation(new GridPosition(0, 0)));
+            var move = SwapValidator.Analyze(board, new GridPosition(0, 0), new GridPosition(1, 0));
             int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(1, 0, 2, 3, 5), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
@@ -489,7 +488,7 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var survivor = boardView.GetTileView(new GridPosition(1, 0));
             int callbacks = 0;
-            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+            var move = SwapValidator.Analyze(board, first, second);
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(1, 2), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
@@ -515,7 +514,7 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var oldRocket = boardView.GetTileView(second);
             int callbacks = 0;
-            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+            var move = SwapValidator.Analyze(board, first, second);
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(1, 2, 2, 3, 1, 3, 5), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
@@ -543,7 +542,7 @@ namespace Match3.Presentation.Tests
             board.TrySwapAdjacent(first, second);
             boardView.Render(board);
             int callbacks = 0;
-            var move = DirectActivationMove(first, second, new SpecialActivation(second));
+            var move = SwapValidator.Analyze(board, first, second);
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(0, 0, 1, 2, 3), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
@@ -562,16 +561,16 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Runner_OnlySpecialRemoved_StillRefillsAndReportsAnEmptyColorResult()
+        public IEnumerator Runner_OnlySpecialsRemoved_StillRefillsAndReportsAnEmptyColorResult()
         {
-            var board = CreateBoard("H");
+            var board = CreateBoard("HV");
             boardView.Render(board);
             var origin = new GridPosition(0, 0);
-            var move = DirectActivationMove(origin, origin, new SpecialActivation(origin));
+            var move = SwapValidator.Analyze(board, origin, new GridPosition(1, 0));
             int callbacks = 0;
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
+                new ScriptedRandom(1, 2), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedTiles, Is.Empty);
@@ -579,6 +578,7 @@ namespace Match3.Presentation.Tests
 
             Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(board.GetTile(origin), Is.EqualTo(TileType.Green));
+            Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.Blue));
             AssertViewsMatchBoard(board);
         }
 
@@ -591,8 +591,7 @@ namespace Match3.Presentation.Tests
             {
                 var board = CreateBoard("RGB", "BGG", "HVT");
                 boardView.Render(board);
-                var move = DirectActivationMove(new GridPosition(0, 0), new GridPosition(1, 0),
-                    new SpecialActivation(new GridPosition(0, 0)));
+                var move = SwapValidator.Analyze(board, new GridPosition(0, 0), new GridPosition(1, 0));
                 ResolutionResult result = null;
                 yield return new BoardResolutionRunner(board, boardView, FullPalette,
                     new System.Random(53), 0f, 0f, new System.Random(2)).ResolveUntilStable(move, r => result = r);
@@ -627,7 +626,7 @@ namespace Match3.Presentation.Tests
             var survivor = boardView.GetTileView(new GridPosition(3, 0));
             int callbacks = 0;
             var origin = new GridPosition(0, 0);
-            var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+            var move = SwapValidator.Analyze(board, origin, new GridPosition(1, 0));
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
                 new ScriptedRandom(0, 1, 3), 0.05f, 0.05f, new ScriptedRandom(0))
@@ -650,8 +649,7 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var survivor = boardView.GetTileView(new GridPosition(3, 0));
             var origin = new GridPosition(0, 0);
-            var move = DirectActivationMove(origin, new GridPosition(1, 0),
-                new SpecialActivation(origin, TileType.Red));
+            var move = SwapValidator.Analyze(board, origin, new GridPosition(1, 0));
             int callbacks = 0;
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
@@ -673,7 +671,7 @@ namespace Match3.Presentation.Tests
             var board = CreateBoard("RGB", "GFL", "HVT");
             boardView.Render(board);
             var origin = new GridPosition(0, 0);
-            var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+            var move = SwapValidator.Analyze(board, origin, new GridPosition(1, 0));
             int callbacks = 0;
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
@@ -701,7 +699,7 @@ namespace Match3.Presentation.Tests
                 var board = CreateBoard("RGBYOPGB", "HFVTLRGB");
                 boardView.Render(board);
                 var origin = new GridPosition(0, 0);
-                var move = DirectActivationMove(origin, new GridPosition(1, 0), new SpecialActivation(origin));
+                var move = SwapValidator.Analyze(board, origin, new GridPosition(1, 0));
                 int callbacks = 0;
                 ResolutionResult result = null;
                 yield return new BoardResolutionRunner(board, boardView, FullPalette,
@@ -721,15 +719,6 @@ namespace Match3.Presentation.Tests
                 previousColors = result.ClearedTiles;
                 AssertViewsMatchBoard(board);
             }
-        }
-
-        // Inject the approved passive contract for direct activation tests; mouse classification comes in Step 6.
-        private static SwapAnalysis DirectActivationMove(
-            GridPosition first, GridPosition second, params SpecialActivation[] activations)
-        {
-            return (SwapAnalysis)Activator.CreateInstance(typeof(SwapAnalysis),
-                BindingFlags.Instance | BindingFlags.NonPublic, null,
-                new object[] { SwapKind.SpecialSwap, first, second, activations }, null);
         }
 
         [UnityTest]
