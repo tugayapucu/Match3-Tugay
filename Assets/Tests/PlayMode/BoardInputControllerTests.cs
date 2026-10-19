@@ -823,6 +823,76 @@ namespace Match3.Presentation.Tests
             Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(4), "Five activated specials give no color bonus.");
         }
 
+        [UnityTest]
+        public IEnumerator SpecialSwap_LightBallUsesNormalPartnerColor()
+        {
+            UseLevel(4, TileType.Red, 9);
+            SetBoard(new ScriptedRandom(2, 3, 4), "RLRGB");
+
+            yield return VerifyValidMove(new GridPosition(1, 0), new GridPosition(0, 0), 1, false, "BYPGB");
+
+            AssertLevel(3, 200, 2, LevelStatus.Playing);
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_LightBallWithSpecialPartner_UsesMostCommonFrozenColor()
+        {
+            UseLevel(4, TileType.Red, 9);
+            SetBoard(new ScriptedRandom(1, 2, 3, 0, 1, 3), "RRG", "BYR", "LVO");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, true,
+                "YGY", "BRG", "GYO");
+
+            AssertLevel(3, 400, 3, LevelStatus.Playing);
+            Assert.That(reportedResults[0].CountOf(TileType.Blue), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_SurvivingPartnerPattern_UsesFirstScanAnchorAndCostsOneMove()
+        {
+            UseLevel(3, TileType.Red, 10);
+            SetBoard(new ScriptedRandom(1, 2, 2, 3, 1, 3, 5), "RRHR", "GBRY");
+
+            yield return VerifyValidMove(new GridPosition(2, 1), new GridPosition(2, 0), 1, true,
+                "BYGO", "GBHY");
+
+            AssertLevel(2, 700, 4, LevelStatus.Playing);
+            Assert.That(board.GetTile(new GridPosition(2, 0)), Is.EqualTo(TileType.HorizontalRocket),
+                "The first selected cell wins the surviving pattern, then its new Rocket falls into the old blast row.");
+        }
+
+        [UnityTest]
+        public IEnumerator SpecialSwap_CascadeExpiresPlayerAnchor_AndWinsOnlyAfterWholeMove()
+        {
+            UseLevel(1, TileType.Red, 4);
+            SetBoard(new ScriptedRandom(0, 0, 1, 2, 3), "RH", "GR");
+
+            yield return VerifyValidMove(new GridPosition(1, 1), new GridPosition(1, 0), 2, true, "GY", "FB");
+
+            AssertLevel(0, 500, 4, LevelStatus.Won);
+            Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Propeller),
+                "A cascade must use the default square anchor, not the old second selection at (1,0).");
+            AssertLevelOver();
+        }
+
+        [TestCase(0, 0)]
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        public void SpecialSelection_SameDiagonalOrDistantClick_DoesNotActivate(int x, int y)
+        {
+            SetBoard(new System.Random(1), "RGB", "BYR", "FGO");
+            var first = new GridPosition(0, 0);
+            var before = ReadTiles();
+            Click(first);
+            Click(new GridPosition(x, y));
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(busyChanges, Is.Empty);
+        }
+
         // Plays one valid move and follows it to the end. Checks that the Board changes first, that input stays
         // locked and clicks are ignored through every stage, that exactly `expectedRounds` resolution rounds
         // happen (each round empties cells, then refills them), and the exact final stable board.
