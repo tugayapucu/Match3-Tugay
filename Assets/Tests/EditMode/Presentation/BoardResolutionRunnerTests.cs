@@ -32,10 +32,18 @@ namespace Match3.Presentation.Tests
             var board = new Board(3, 3);
             var random = new System.Random(1);
 
-            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(null, boardView, Palette, random, 0f, 0f));
-            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, null, Palette, random, 0f, 0f));
-            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, boardView, null, random, 0f, 0f));
-            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, boardView, Palette, null, 0f, 0f));
+            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(null, boardView, Palette, random, 0f, 0f, new System.Random(2)));
+            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, null, Palette, random, 0f, 0f, new System.Random(2)));
+            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, boardView, null, random, 0f, 0f, new System.Random(2)));
+            Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(board, boardView, Palette, null, 0f, 0f, new System.Random(2)));
+        }
+
+        [Test]
+        public void Constructor_NullTargetingStream_ThrowsBeforeAnyMove()
+        {
+            var error = Assert.Throws<ArgumentNullException>(() => new BoardResolutionRunner(
+                new Board(3, 3), boardView, Palette, new System.Random(1), 0f, 0f, null));
+            Assert.That(error.ParamName, Is.EqualTo("targetingRandom"));
         }
 
         [TestCase(-1f)]
@@ -47,9 +55,9 @@ namespace Match3.Presentation.Tests
             var random = new System.Random(1);
 
             var fall = Assert.Throws<ArgumentOutOfRangeException>(
-                () => new BoardResolutionRunner(board, boardView, Palette, random, duration, 0f));
+                () => new BoardResolutionRunner(board, boardView, Palette, random, duration, 0f, new System.Random(2)));
             var refill = Assert.Throws<ArgumentOutOfRangeException>(
-                () => new BoardResolutionRunner(board, boardView, Palette, random, 0f, duration));
+                () => new BoardResolutionRunner(board, boardView, Palette, random, 0f, duration, new System.Random(2)));
 
             Assert.That(fall.ParamName, Is.EqualTo("fallDuration"));
             Assert.That(refill.ParamName, Is.EqualTo("refillDuration"));
@@ -62,7 +70,7 @@ namespace Match3.Presentation.Tests
             board.SetTile(new GridPosition(0, 0), TileType.Red);
             board.SetTile(new GridPosition(1, 0), TileType.Green);
             board.SetTile(new GridPosition(2, 0), TileType.Blue);
-            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f, new System.Random(2));
             int callbacks = 0;
             ResolutionResult result = null;
 
@@ -79,7 +87,7 @@ namespace Match3.Presentation.Tests
         public void ResolveUntilStable_NullCallback_ThrowsBeforeAnyWork()
         {
             var board = new Board(3, 3);
-            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f, new System.Random(2));
 
             // Thrown on the call itself, not later when the coroutine is first stepped.
             Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(null));
@@ -92,7 +100,7 @@ namespace Match3.Presentation.Tests
             var first = new GridPosition(0, 0);
             var second = new GridPosition(1, 0);
             var invalid = SwapValidator.Analyze(board, first, second);
-            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f);
+            var runner = new BoardResolutionRunner(board, boardView, Palette, new System.Random(1), 0f, 0f, new System.Random(2));
 
             Assert.Throws<ArgumentNullException>(() => runner.ResolveUntilStable(null, r => { }));
             Assert.Throws<ArgumentException>(() => runner.ResolveUntilStable(invalid, r => { }));

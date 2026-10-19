@@ -1051,7 +1051,7 @@ namespace Match3.Presentation.Tests
 
         private BoardResolutionRunner CreateRunner(System.Random refillRandom)
         {
-            return new BoardResolutionRunner(board, boardView, Palette, refillRandom, ResolutionDuration, ResolutionDuration);
+            return new BoardResolutionRunner(board, boardView, Palette, refillRandom, ResolutionDuration, ResolutionDuration, new System.Random(2));
         }
 
         // The tile layout described by text rows (rows[0] is the top row), for comparing with ReadTiles().

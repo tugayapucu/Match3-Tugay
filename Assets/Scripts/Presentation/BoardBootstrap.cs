@@ -99,10 +99,11 @@ namespace Match3.Presentation
             // Build and validate the new session first, so a bad setting fails before the current level is touched.
             var newProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
             var newBoard = BoardGenerator.Generate(width, height, palette, seed);
-            // Refills use their own seeded System.Random, so a whole game is reproducible from `seed`.
-            // A fresh one per level, so a restarted level also refills exactly like the first time.
+            // Recreate both independent streams per session: targeting draws must never advance refill.
+            var refillRandom = new System.Random(seed);
+            var targetingRandom = new System.Random(unchecked(seed ^ 0x5EED1234));
             var resolution = new BoardResolutionRunner(
-                newBoard, boardView, palette, new System.Random(seed), fallDuration, refillDuration);
+                newBoard, boardView, palette, refillRandom, fallDuration, refillDuration, targetingRandom);
 
             levelProgress = newProgress;
             board = newBoard;

@@ -222,7 +222,7 @@ namespace Match3.Presentation.Tests
             };
             // Refill order is column by column, bottom to top: (0,2) (1,1)(1,2) (2,0)(2,1)(2,2) (3,1)(3,2) (4,2).
             var runner = new BoardResolutionRunner(
-                board, boardView, fullPalette, new ScriptedRandom(0, 2, 3, 1, 0, 5, 1, 4, 1), 0.05f, 0.05f);
+                board, boardView, fullPalette, new ScriptedRandom(0, 2, 3, 1, 0, 5, 1, 4, 1), 0.05f, 0.05f, new System.Random(2));
 
             ResolutionResult result = null;
             yield return runner.ResolveUntilStable(r => result = r);
@@ -365,7 +365,7 @@ namespace Match3.Presentation.Tests
             var survivor = boardView.GetTileView(new GridPosition(0, 1));
             int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1, 2, 1, 2), 0.05f, 0.05f).ResolveUntilStable(result =>
+                new ScriptedRandom(1, 2, 1, 2), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(5));
@@ -385,7 +385,7 @@ namespace Match3.Presentation.Tests
             var survivor = boardView.GetTileView(new GridPosition(4, 0));
             int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1, 2, 3, 2, 0, 3), 0f, 0f).ResolveUntilStable(result =>
+                new ScriptedRandom(1, 2, 3, 2, 0, 3), 0f, 0f, new System.Random(2)).ResolveUntilStable(result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(8));
@@ -406,7 +406,7 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var move = SwapValidator.Analyze(board, new GridPosition(0, 1), new GridPosition(1, 1));
             var runner = new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(0, 0, 2, 1, 1, 3), 0.05f, 0.05f);
+                new ScriptedRandom(0, 0, 2, 1, 1, 3), 0.05f, 0.05f, new System.Random(2));
             int callbacks = 0;
 
             yield return runner.ResolveUntilStable(move, result =>
@@ -430,7 +430,7 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var consumedView = boardView.GetTileView(finalCell);
             int callbacks = 0;
-            yield return new BoardResolutionRunner(board, boardView, FullPalette, random, 0.05f, 0.05f)
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, random, 0.05f, 0.05f, new System.Random(2))
                 .ResolveUntilStable(result =>
                 {
                     callbacks++;
@@ -462,7 +462,7 @@ namespace Match3.Presentation.Tests
                 new SpecialActivation(new GridPosition(0, 0)));
             int callbacks = 0;
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1, 0, 2, 3, 5), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(1, 0, 2, 3, 5), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(3));
@@ -492,7 +492,7 @@ namespace Match3.Presentation.Tests
             var move = DirectActivationMove(first, second, new SpecialActivation(second));
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1, 2), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(1, 2), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(1));
@@ -518,7 +518,7 @@ namespace Match3.Presentation.Tests
             var move = DirectActivationMove(first, second, new SpecialActivation(second));
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1, 2, 2, 3, 1, 3, 5), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(1, 2, 2, 3, 1, 3, 5), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(7));
@@ -546,7 +546,7 @@ namespace Match3.Presentation.Tests
             var move = DirectActivationMove(first, second, new SpecialActivation(second));
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(0, 0, 1, 2, 3), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(0, 0, 1, 2, 3), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedCount, Is.EqualTo(5));
@@ -571,7 +571,7 @@ namespace Match3.Presentation.Tests
             int callbacks = 0;
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(1), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(1), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedTiles, Is.Empty);
@@ -595,7 +595,7 @@ namespace Match3.Presentation.Tests
                     new SpecialActivation(new GridPosition(0, 0)));
                 ResolutionResult result = null;
                 yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                    new System.Random(53), 0f, 0f).ResolveUntilStable(move, r => result = r);
+                    new System.Random(53), 0f, 0f, new System.Random(2)).ResolveUntilStable(move, r => result = r);
 
                 Assert.That(result, Is.Not.Null);
                 Assert.That(result.ClearedCount, Is.GreaterThanOrEqualTo(6));
@@ -655,7 +655,7 @@ namespace Match3.Presentation.Tests
             int callbacks = 0;
 
             yield return new BoardResolutionRunner(board, boardView, FullPalette,
-                new ScriptedRandom(2, 3, 4), 0.05f, 0.05f).ResolveUntilStable(move, result =>
+                new ScriptedRandom(2, 3, 4), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result =>
                 {
                     callbacks++;
                     Assert.That(result.ClearedTiles, Is.EquivalentTo(new[] { TileType.Red, TileType.Red }));
@@ -741,7 +741,7 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "GRG");
             boardView.Render(board);
-            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f)
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f, new System.Random(2))
                 .ResolveUntilStable(r => firstResult.AddRange(r.ClearedTiles));
             var firstBoard = ReadTiles(board);
 
@@ -751,7 +751,7 @@ namespace Match3.Presentation.Tests
                 "GPO",
                 "GRG");
             boardView.Render(board);
-            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f)
+            yield return new BoardResolutionRunner(board, boardView, FullPalette, new System.Random(5), 0f, 0f, new System.Random(2))
                 .ResolveUntilStable(r => secondResult.AddRange(r.ClearedTiles));
 
             Assert.That(firstResult, Is.Not.Empty);
@@ -766,7 +766,7 @@ namespace Match3.Presentation.Tests
             Board board, System.Random refillRandom, TileType[] expectedCleared, params string[] finalRows)
         {
             boardView.Render(board);
-            var runner = new BoardResolutionRunner(board, boardView, FullPalette, refillRandom, 0.05f, 0.05f);
+            var runner = new BoardResolutionRunner(board, boardView, FullPalette, refillRandom, 0.05f, 0.05f, new System.Random(2));
             int callbacks = 0;
             ResolutionResult result = null;
 

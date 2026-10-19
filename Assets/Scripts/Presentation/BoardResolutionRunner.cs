@@ -22,7 +22,7 @@ namespace Match3.Presentation
         // The palette itself is validated by Core (generation at startup and Refill on use).
         public BoardResolutionRunner(
             Board board, BoardView boardView, IReadOnlyList<TileType> palette, Random random,
-            float fallDuration, float refillDuration, Random targetingRandom = null)
+            float fallDuration, float refillDuration, Random targetingRandom)
         {
             if (board == null)
             {
@@ -42,6 +42,11 @@ namespace Match3.Presentation
             if (random == null)
             {
                 throw new ArgumentNullException(nameof(random));
+            }
+
+            if (targetingRandom == null)
+            {
+                throw new ArgumentNullException(nameof(targetingRandom));
             }
 
             if (ReferenceEquals(random, targetingRandom))
