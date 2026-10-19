@@ -35,6 +35,28 @@ namespace Match3.Core.Tests
             Assert.That(SwapValidator.IsValidResult(board, first, second), Is.True);
         }
 
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.Propeller)]
+        [TestCase(TileType.LightBall)]
+        public void SelectingNormalFirst_ActivatesSpecialAtTheFirstCellAfterSwap(TileType special)
+        {
+            var board = TestBoards.Create("RR");
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            board.SetTile(second, special);
+            board.TrySwapAdjacent(first, second);
+
+            var analysis = SwapValidator.Analyze(board, first, second);
+
+            Assert.That(analysis.Kind, Is.EqualTo(SwapKind.SpecialSwap));
+            Assert.That(analysis.InitialActivations.Count, Is.EqualTo(1));
+            Assert.That(analysis.InitialActivations[0].Position, Is.EqualTo(first));
+            Assert.That(analysis.InitialActivations[0].TargetColor,
+                Is.EqualTo(special == TileType.LightBall ? TileType.Red : (TileType?)null));
+        }
+
         [TestCase("HL")]
         [TestCase("LL")]
         [TestCase("FT")]

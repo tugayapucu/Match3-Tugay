@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Match3.Core;
@@ -328,6 +329,100 @@ namespace Match3.Presentation.Tests
             Assert.That(CurrentBoard(), Is.SameAs(board));
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             AssertViewsMatchBoard();
+        }
+
+        [UnityTest]
+        public IEnumerator RestartLevel_ReplaysPropellerTargetsAndRefillAcrossTwoPlayerMoves()
+        {
+            var colors = new[] { TileType.Red, TileType.Green, TileType.Blue,
+                TileType.Yellow, TileType.Purple, TileType.Orange };
+            Set("palette", colors);
+            Set("seed", 42);
+            Set("startingMoveCount", 5);
+            Set("goalTarget", 1000);
+            yield return StartBootstrap();
+            var previousBoards = new List<TileType[,]>();
+            var previousScores = new List<int>();
+            var first = new GridPosition(1, 1);
+            var second = new GridPosition(2, 1);
+
+            for (int session = 0; session < 2; session++)
+            {
+                if (session > 0)
+                {
+                    bootstrap.RestartLevel();
+                    yield return null;
+                    Assert.That(bootstrap.LevelProgress.Score, Is.Zero);
+                }
+                var expectedTargeting = new System.Random(unchecked(42 ^ 0x5EED1234));
+                for (int move = 0; move < 2; move++)
+                {
+                    var board = CurrentBoard();
+                    // Install a controlled earned-special fixture, keeping the production session's RNGs.
+                    for (int y = 0; y < Size; y++)
+                        for (int x = 0; x < Size; x++)
+                            board.SetTile(new GridPosition(x, y), colors[(x + 2 * y) % colors.Length]);
+                    board.SetTile(first, TileType.Propeller);
+                    boardView.Render(board);
+                    yield return null; // Finish destroying the previous fixture's views.
+
+                    var candidates = new List<GridPosition>();
+                    var outsideViews = new List<TileView>();
+                    for (int y = 0; y < Size; y++)
+                        for (int x = 0; x < Size; x++)
+                            if (Math.Abs(x - second.X) + Math.Abs(y - second.Y) > 1)
+                            {
+                                var cell = new GridPosition(x, y);
+                                candidates.Add(cell);
+                                outsideViews.Add(boardView.GetTileView(cell));
+                            }
+                    GridPosition expectedTarget = candidates[expectedTargeting.Next(candidates.Count)];
+                    Click(first);
+                    Click(second);
+                    Assert.That(controller.IsInputLocked, Is.True);
+                    Assert.Throws<InvalidOperationException>(() => bootstrap.RestartLevel());
+
+                    // During the first fall, only the remote target outside takeoff has lost its old view.
+                    bool observedTarget = false;
+                    float deadline = Time.realtimeSinceStartup + 10f;
+                    while (controller.IsInputLocked)
+                    {
+                        Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
+                        Assert.That(hud.Restart.interactable, Is.False);
+                        if (!observedTarget)
+                        {
+                            int removedOutside = 0;
+                            for (int i = 0; i < outsideViews.Count; i++)
+                                if (outsideViews[i] == null)
+                                {
+                                    removedOutside++;
+                                    Assert.That(candidates[i], Is.EqualTo(expectedTarget));
+                                }
+                            Assert.That(removedOutside, Is.LessThanOrEqualTo(1));
+                            observedTarget = removedOutside == 1;
+                        }
+                        yield return null;
+                    }
+
+                    Assert.That(observedTarget, Is.True, "Observe the actual target before later cascades can remove other views.");
+                    Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(4 - move));
+                    Assert.That(hud.Restart.interactable, Is.True);
+                    Assert.That(controller.SelectedPosition, Is.Null);
+                    Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+                    Assert.That(ReadTiles(), Has.No.Member(TileType.Empty));
+                    AssertViewsMatchBoard();
+                    if (session == 0)
+                    {
+                        previousBoards.Add(ReadTiles());
+                        previousScores.Add(bootstrap.LevelProgress.Score);
+                    }
+                    else
+                    {
+                        Assert.That(ReadTiles(), Is.EqualTo(previousBoards[move]), "Refill must replay too.");
+                        Assert.That(bootstrap.LevelProgress.Score, Is.EqualTo(previousScores[move]));
+                    }
+                }
+            }
         }
 
         private IEnumerator StartBootstrap()
