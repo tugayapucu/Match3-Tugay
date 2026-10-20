@@ -124,6 +124,8 @@ namespace Match3.Presentation
                 {
                     // Plan the complete chain on the stable Board before removing anything.
                     var plan = SpecialEffects.Plan(board, move.InitialActivations, targetingRandom);
+                    // Show the supplied chain while its views still exist; input remains locked by the caller.
+                    yield return boardView.AnimateSpecialActivations(plan);
                     AddNormalClears(cleared, BoardResolution.ClearCells(board, plan.RemovedPositions));
                     boardView.RemoveViews(plan.RemovedPositions);
                     removedByEffects = plan.RemovedPositions.Count > 0;

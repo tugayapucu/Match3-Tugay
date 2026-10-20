@@ -777,6 +777,51 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator SpecialSwap_ActivationPulse_HoldsInputAndKeepsModelUntilClearThenReportsOnce()
+        {
+            UseLevel(4, TileType.Red, 9);
+            SetBoard(new ScriptedRandom(0, 1, 2, 3), "HRGB");
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var special = boardView.GetTileView(first);
+            var label = special.GetComponentInChildren<TMPro.TMP_Text>(true);
+            Vector3 scale = special.transform.localScale;
+            Vector2 extraClick = ScreenPosition(new GridPosition(3, 0));
+            Click(first);
+            Click(second);
+
+            bool sawPulse = false;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
+                if (special != null && Vector3.Distance(special.transform.localScale, scale) > 0.001f)
+                {
+                    sawPulse = true;
+                    Assert.That(board.GetTile(second), Is.EqualTo(TileType.HorizontalRocket));
+                    Assert.That(boardView.GetTileView(second), Is.SameAs(special));
+                    Assert.That(label.gameObject.activeInHierarchy, Is.True);
+                    Assert.That(label.text, Is.EqualTo("<->"));
+                    Assert.That(reportedResults, Is.Empty);
+                    AssertLevel(4, 0, 0, LevelStatus.Playing);
+                    controller.HandlePointerDown(extraClick);
+                    Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                    Assert.That(busyChanges, Is.EqualTo(new[] { "busy" }));
+                }
+                yield return null;
+            }
+
+            yield return null;
+            Assert.That(sawPulse, Is.True);
+            Assert.That(special == null && label == null, Is.True, "The whole activated view, including its symbol, is removed.");
+            AssertLevel(3, 300, 1, LevelStatus.Playing);
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            Assert.That(ReadTiles(), Is.EqualTo(Tiles("RGBY")));
+            AssertStable();
+        }
+
+        [UnityTest]
         public IEnumerator SpecialSwap_RocketUsesNewRow_WinsOnLastMoveAndCleansUp()
         {
             UseLevel(1, TileType.Yellow, 1);
