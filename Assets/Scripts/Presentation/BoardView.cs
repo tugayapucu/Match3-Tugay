@@ -14,6 +14,7 @@ namespace Match3.Presentation
         [SerializeField] private Transform tileRoot;
         // Distance between cell centers in the root's local space.
         [SerializeField] private float tileSpacing = 1f;
+        [SerializeField] private float specialActivationDuration = 0.12f;
 
         // Find a visual by cell address and track only our own clones for cleanup.
         private readonly Dictionary<GridPosition, TileView> tileViews = new Dictionary<GridPosition, TileView>();
@@ -112,6 +113,29 @@ namespace Match3.Presentation
             tileViews[second] = firstView;
             firstView.SetGridPosition(second);
             secondView.SetGridPosition(first);
+        }
+
+        // Core supplies the whole activation chain. This facade only resolves views for the animation helper.
+        public IEnumerator AnimateSpecialActivations(SpecialEffectPlan plan)
+        {
+            if (plan == null)
+            {
+                throw new ArgumentNullException(nameof(plan));
+            }
+            ValidateDuration(specialActivationDuration);
+
+            var views = new TileView[plan.Effects.Count];
+            for (int i = 0; i < views.Length; i++)
+            {
+                var effect = plan.Effects[i];
+                var view = GetTileView(effect.Origin);
+                if (view.Type != effect.Type)
+                {
+                    throw new InvalidOperationException("The activation view must match the planned special.");
+                }
+                views[i] = view;
+            }
+            return SpecialActivationAnimation.Animate(views, specialActivationDuration);
         }
 
         // Clear visuals: Core has already set these cells to Empty, so their views disappear immediately.
