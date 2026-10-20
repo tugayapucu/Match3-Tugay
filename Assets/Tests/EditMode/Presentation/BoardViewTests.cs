@@ -19,6 +19,11 @@ namespace Match3.Presentation.Tests
             tileTemplate = new GameObject("TileTemplate");
             tileTemplate.SetActive(false);
             var template = tileTemplate.AddComponent<TileView>();
+            var labelObject = new GameObject("SpecialLabel");
+            labelObject.transform.SetParent(tileTemplate.transform, false);
+            var label = labelObject.AddComponent<TMPro.TextMeshPro>();
+            typeof(TileView).GetField("specialLabel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(template, label);
 
             boardObject = new GameObject("Board");
             boardView = boardObject.AddComponent<BoardView>();

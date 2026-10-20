@@ -1,14 +1,17 @@
 using System;
 using Match3.Core;
+using TMPro;
 using UnityEngine;
 
 namespace Match3.Presentation
 {
-    // The visual for one board cell. Shows a TileType as a coloured sprite; holds no game rules.
+    // The visual for one board cell. Shows color and a special's symbol; holds no game rules.
     // RequireComponent makes Unity add a SpriteRenderer automatically, so GetComponent below cannot miss.
     [RequireComponent(typeof(SpriteRenderer))]
     public sealed class TileView : MonoBehaviour
     {
+        [SerializeField] private TMP_Text specialLabel;
+
         // Cached to avoid repeated GetComponent calls.
         private SpriteRenderer spriteRenderer;
 
@@ -33,6 +36,11 @@ namespace Match3.Presentation
         {
             // Look up the colour first so an invalid type throws before any state changes.
             Color color = GetColor(tileType);
+            bool isSpecial = TileRules.IsSpecial(tileType);
+            if (isSpecial && specialLabel == null)
+            {
+                throw new InvalidOperationException("Assign a special label before displaying a special tile.");
+            }
             // Lazy cache: Initialize can run before Awake when the prefab is inactive.
             if (spriteRenderer == null)
             {
@@ -43,6 +51,15 @@ namespace Match3.Presentation
             spriteRenderer.color = color;
             // Empty cells keep their GameObject but draw nothing.
             spriteRenderer.enabled = tileType != TileType.Empty;
+
+            if (specialLabel != null)
+            {
+                specialLabel.text = GetSymbol(tileType);
+                // Rotate only the symbol; the tile and its picking collider keep their orientation.
+                specialLabel.transform.localRotation = Quaternion.Euler(0f, 0f,
+                    tileType == TileType.VerticalRocket ? 90f : 0f);
+                specialLabel.gameObject.SetActive(isSpecial);
+            }
         }
 
         // BoardView decides where tiles go; the tile just applies it.
@@ -55,6 +72,19 @@ namespace Match3.Presentation
         public void SetGridPosition(GridPosition position)
         {
             Position = position;
+        }
+
+        private static string GetSymbol(TileType tileType)
+        {
+            switch (tileType)
+            {
+                case TileType.HorizontalRocket:
+                case TileType.VerticalRocket: return "<->";
+                case TileType.Propeller: return "P";
+                case TileType.TNT: return "TNT";
+                case TileType.LightBall: return "LB";
+                default: return string.Empty;
+            }
         }
 
         // TileType -> colour mapping lives here, not in Core, because colour is a presentation detail.
@@ -76,7 +106,7 @@ namespace Match3.Presentation
                     return new Color(0.6f, 0.2f, 0.8f);
                 case TileType.Orange:
                     return new Color(1f, 0.5f, 0f);
-                // Temporary special appearance; distinct icons and orientation arrive in Step 8.
+                // A white background keeps the dark special symbols readable.
                 case TileType.HorizontalRocket:
                 case TileType.VerticalRocket:
                 case TileType.Propeller:
