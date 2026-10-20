@@ -112,8 +112,13 @@ namespace Match3.Core
                 throw new ArgumentException("The target must be a normal color.", nameof(targetColor));
             }
 
-            var cells = new List<GridPosition>();
             TileType type = board.GetTile(origin);
+            if (targetColor.HasValue && type != TileType.LightBall)
+            {
+                throw new ArgumentException("Only Light Ball activations may specify a target color.", nameof(targetColor));
+            }
+
+            var cells = new List<GridPosition>();
             switch (type)
             {
                 case TileType.HorizontalRocket:

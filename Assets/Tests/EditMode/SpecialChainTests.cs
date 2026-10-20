@@ -26,9 +26,47 @@ namespace Match3.Core.Tests
         [Test]
         public void Plan_ExactDuplicateTargets_StillCollapseToOneActivation()
         {
-            var board = TestBoards.Create("HR");
+            var board = TestBoards.Create("LR");
             var request = new SpecialActivation(new GridPosition(0, 0), TileType.Red);
             Assert.That(SpecialEffects.Plan(board, new[] { request, request }).Effects.Count, Is.EqualTo(1));
+        }
+
+        [TestCase(TileType.HorizontalRocket)]
+        [TestCase(TileType.VerticalRocket)]
+        [TestCase(TileType.TNT)]
+        [TestCase(TileType.Propeller)]
+        public void TargetColor_OnNonLightBall_IsRejectedByFootprintAndPlan(TileType special)
+        {
+            var board = TestBoards.Create("RG");
+            var origin = new GridPosition(0, 0);
+            board.SetTile(origin, special);
+            var before = Snapshot(board);
+            var random = new Random(42);
+            var request = new SpecialActivation(origin, TileType.Red);
+
+            var footprintError = Assert.Throws<ArgumentException>(() =>
+                SpecialEffects.GetFootprint(board, origin, TileType.Red));
+            var planError = Assert.Throws<ArgumentException>(() =>
+                SpecialEffects.Plan(board, new[] { request }, random));
+
+            Assert.That(footprintError.ParamName, Is.EqualTo("targetColor"));
+            Assert.That(planError.ParamName, Is.EqualTo("targetColor"));
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+            Assert.That(random.Next(), Is.EqualTo(new Random(42).Next()), "Reject before a targeting draw.");
+        }
+
+        [Test]
+        public void TargetColor_OnLightBall_AcceptsNormalColorAndClearsOnlyThatColor()
+        {
+            var board = TestBoards.Create("LRG");
+            var origin = new GridPosition(0, 0);
+            var expected = new[] { origin, new GridPosition(1, 0) };
+
+            Assert.That(SpecialEffects.GetFootprint(board, origin, TileType.Red), Is.EqualTo(expected));
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin, TileType.Red) });
+            Assert.That(plan.RemovedPositions, Is.EqualTo(expected));
+            Assert.That(plan.Effects.Count, Is.EqualTo(1));
+            Assert.That(board.GetTile(origin), Is.EqualTo(TileType.LightBall));
         }
 
         [TestCase("RGB/BGG/HVR", 2, 5)]
