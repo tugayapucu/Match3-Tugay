@@ -105,6 +105,48 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator AnimateFalls_SpecialsKeepTheirSymbolObjectsAndOrientation()
+        {
+            var board = CreateBoard("VTL", "HFB", "...");
+            boardView.Render(board);
+            boardView.RemoveViews(new[] { new GridPosition(0, 0), new GridPosition(1, 0), new GridPosition(2, 0) });
+            var symbols = new Dictionary<TileView, TMPro.TMP_Text>();
+            var rotations = new Dictionary<TileView, Quaternion>();
+            for (int y = 1; y < 3; y++)
+                for (int x = 0; x < 3; x++)
+                {
+                    var view = boardView.GetTileView(new GridPosition(x, y));
+                    symbols.Add(view, view.GetComponentInChildren<TMPro.TMP_Text>(true));
+                    rotations.Add(view, symbols[view].transform.localRotation);
+                }
+
+            var moves = BoardResolution.ApplyGravity(board);
+            yield return boardView.AnimateFalls(moves, 0.05f);
+
+            foreach (var pair in symbols)
+            {
+                var view = pair.Key;
+                var label = pair.Value;
+                Assert.That(boardView.GetTileView(view.Position), Is.SameAs(view));
+                Assert.That(view.GetComponentInChildren<TMPro.TMP_Text>(true), Is.SameAs(label));
+                Assert.That(label.transform.localRotation, Is.EqualTo(rotations[view]));
+                Assert.That(label.gameObject.activeSelf, Is.EqualTo(TileRules.IsSpecial(view.Type)));
+                if (TileRules.IsSpecial(view.Type))
+                {
+                    Assert.That(label.text, Is.Not.Empty);
+                }
+            }
+            AssertViewsMatchBoardWhereShown(board);
+            Assert.That(CountActiveViews(), Is.EqualTo(6));
+            for (int x = 0; x < 3; x++)
+            {
+                var empty = new GridPosition(x, 2);
+                Assert.That(board.GetTile(empty), Is.EqualTo(TileType.Empty));
+                Assert.Throws<ArgumentOutOfRangeException>(() => boardView.GetTileView(empty));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator RemoveViews_MatchedCells_AreRemovedAndOtherViewsSurvive()
         {
             // Column 0 has R R R from the bottom: a real match.
@@ -504,6 +546,9 @@ namespace Match3.Presentation.Tests
             Assert.That(consumedView == null, Is.True, "The consumed normal visual was removed.");
             Assert.That(board.GetTile(finalCell), Is.EqualTo(type));
             Assert.That(boardView.GetTileView(finalCell).Type, Is.EqualTo(type));
+            var symbol = boardView.GetTileView(finalCell).GetComponentInChildren<TMPro.TMP_Text>(true);
+            Assert.That(symbol.gameObject.activeInHierarchy, Is.True);
+            Assert.That(symbol.text, Is.Not.Empty);
             Assert.That(CountActiveViews(), Is.EqualTo(board.Width * board.Height));
             Assert.That(MatchFinder.FindMatches(board), Is.Empty);
             AssertViewsMatchBoard(board);
