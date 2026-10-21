@@ -16,14 +16,8 @@ namespace Match3.Presentation.Tests
         [SetUp]
         public void SetUp()
         {
-            tileTemplate = new GameObject("TileTemplate");
-            tileTemplate.SetActive(false);
-            var template = tileTemplate.AddComponent<TileView>();
-            var labelObject = new GameObject("SpecialLabel");
-            labelObject.transform.SetParent(tileTemplate.transform, false);
-            var label = labelObject.AddComponent<TMPro.TextMeshPro>();
-            typeof(TileView).GetField("specialLabel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .SetValue(template, label);
+            var template = TestTiles.CreateTemplate("TileTemplate");
+            tileTemplate = template.gameObject;
 
             boardObject = new GameObject("SwapTestBoard");
             boardObject.transform.position = new Vector3(4f, -2f, 0f);
