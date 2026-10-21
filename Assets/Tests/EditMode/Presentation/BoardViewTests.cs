@@ -54,9 +54,6 @@ namespace Match3.Presentation.Tests
             Assert.That(oldView == null, Is.True);
             Assert.That(special.Type, Is.EqualTo(TileType.TNT));
             Assert.That(special.GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(TileType.TNT)));
-            var symbol = special.GetComponentInChildren<TMPro.TMP_Text>(true);
-            Assert.That(symbol.gameObject.activeInHierarchy, Is.True);
-            Assert.That(symbol.text, Is.EqualTo("TNT"));
             Assert.That(special.Position, Is.EqualTo(anchor));
             Assert.That(special.transform.localPosition, Is.EqualTo(new Vector3(1.5f, 0f, 0f)));
             Assert.That(special.gameObject.activeSelf, Is.True);

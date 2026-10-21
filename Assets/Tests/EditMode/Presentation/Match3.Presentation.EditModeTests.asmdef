@@ -3,8 +3,7 @@
     "rootNamespace": "Match3.Presentation.Tests",
     "references": [
         "Match3.Core",
-        "Match3.Presentation",
-        "Unity.TextMeshPro"
+        "Match3.Presentation"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

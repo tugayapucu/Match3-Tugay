@@ -57,10 +57,6 @@ namespace Match3.Presentation.Tests
                 typeof(TileView).GetField(slot.Value, Fields).SetValue(view, SpriteFor(slot.Key));
             }
 
-            var labelObject = new GameObject("SpecialLabel");
-            labelObject.transform.SetParent(root.transform, false);
-            var label = labelObject.AddComponent<TMPro.TextMeshPro>();
-            typeof(TileView).GetField("specialLabel", Fields).SetValue(view, label);
             return view;
         }
     }

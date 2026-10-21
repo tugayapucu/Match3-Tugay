@@ -780,7 +780,6 @@ namespace Match3.Presentation.Tests
             var first = new GridPosition(0, 0);
             var second = new GridPosition(1, 0);
             var special = boardView.GetTileView(first);
-            var label = special.GetComponentInChildren<TMPro.TMP_Text>(true);
             Vector3 scale = special.transform.localScale;
             Vector2 extraClick = ScreenPosition(new GridPosition(3, 0));
             Click(first);
@@ -796,8 +795,8 @@ namespace Match3.Presentation.Tests
                     sawPulse = true;
                     Assert.That(board.GetTile(second), Is.EqualTo(TileType.HorizontalRocket));
                     Assert.That(boardView.GetTileView(second), Is.SameAs(special));
-                    Assert.That(label.gameObject.activeInHierarchy, Is.True);
-                    Assert.That(label.text, Is.EqualTo("<->"));
+                    Assert.That(special.GetComponent<SpriteRenderer>().sprite,
+                        Is.SameAs(TestTiles.SpriteFor(TileType.HorizontalRocket)));
                     Assert.That(reportedResults, Is.Empty);
                     AssertLevel(4, 0, 0, LevelStatus.Playing);
                     controller.HandlePointerDown(extraClick);
@@ -809,7 +808,7 @@ namespace Match3.Presentation.Tests
 
             yield return null;
             Assert.That(sawPulse, Is.True);
-            Assert.That(special == null && label == null, Is.True, "The whole activated view, including its symbol, is removed.");
+            Assert.That(special == null, Is.True, "The activated view is removed.");
             AssertLevel(3, 300, 1, LevelStatus.Playing);
             Assert.That(reportedResults.Count, Is.EqualTo(1));
             Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));

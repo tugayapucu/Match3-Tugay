@@ -99,36 +99,30 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator AnimateFalls_SpecialsKeepTheirSymbolObjectsAndOrientation()
+        public IEnumerator AnimateFalls_SpecialsKeepTheirSpritesAndOrientation()
         {
             var board = CreateBoard("VTL", "HFB", "...");
             boardView.Render(board);
             boardView.RemoveViews(new[] { new GridPosition(0, 0), new GridPosition(1, 0), new GridPosition(2, 0) });
-            var symbols = new Dictionary<TileView, TMPro.TMP_Text>();
-            var rotations = new Dictionary<TileView, Quaternion>();
+            var types = new Dictionary<TileView, TileType>();
             for (int y = 1; y < 3; y++)
                 for (int x = 0; x < 3; x++)
                 {
                     var view = boardView.GetTileView(new GridPosition(x, y));
-                    symbols.Add(view, view.GetComponentInChildren<TMPro.TMP_Text>(true));
-                    rotations.Add(view, symbols[view].transform.localRotation);
+                    types.Add(view, view.Type);
                 }
 
             var moves = BoardResolution.ApplyGravity(board);
             yield return boardView.AnimateFalls(moves, 0.05f);
 
-            foreach (var pair in symbols)
+            foreach (var pair in types)
             {
                 var view = pair.Key;
-                var label = pair.Value;
                 Assert.That(boardView.GetTileView(view.Position), Is.SameAs(view));
-                Assert.That(view.GetComponentInChildren<TMPro.TMP_Text>(true), Is.SameAs(label));
-                Assert.That(label.transform.localRotation, Is.EqualTo(rotations[view]));
-                Assert.That(label.gameObject.activeSelf, Is.EqualTo(TileRules.IsSpecial(view.Type)));
-                if (TileRules.IsSpecial(view.Type))
-                {
-                    Assert.That(label.text, Is.Not.Empty);
-                }
+                Assert.That(view.Type, Is.EqualTo(pair.Value));
+                // Falling never swaps art: each view keeps its type's sprite, and orientation stays in the sprite.
+                Assert.That(view.GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(pair.Value)));
+                Assert.That(view.transform.localRotation, Is.EqualTo(Quaternion.identity));
             }
             AssertViewsMatchBoardWhereShown(board);
             Assert.That(CountActiveViews(), Is.EqualTo(6));
@@ -541,9 +535,6 @@ namespace Match3.Presentation.Tests
             Assert.That(board.GetTile(finalCell), Is.EqualTo(type));
             Assert.That(boardView.GetTileView(finalCell).Type, Is.EqualTo(type));
             Assert.That(boardView.GetTileView(finalCell).GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(type)));
-            var symbol = boardView.GetTileView(finalCell).GetComponentInChildren<TMPro.TMP_Text>(true);
-            Assert.That(symbol.gameObject.activeInHierarchy, Is.True);
-            Assert.That(symbol.text, Is.Not.Empty);
             Assert.That(CountActiveViews(), Is.EqualTo(board.Width * board.Height));
             Assert.That(MatchFinder.FindMatches(board), Is.Empty);
             AssertViewsMatchBoard(board);
