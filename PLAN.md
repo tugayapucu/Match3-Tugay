@@ -946,9 +946,16 @@ Add a small scale/fade effect when matched tiles are removed.
 
 ### Special tile feedback
 
-```text
-Add simple visual feedback for Rocket, Bomb and Color Bomb activation.
-```
+Backlog carried over from Phase 10 Step 8: specials currently pulse on activation;
+the following feedback should make the affected cells and remote targets clear.
+
+- [ ] Propeller flight / remote-target feedback
+- [ ] Rocket line feedback
+- [ ] TNT area feedback
+- [ ] Light Ball color-clear feedback
+
+Keep these presentation-only: visualize Core's planned effects without changing
+gameplay rules or targeting decisions.
 
 ### UI polish
 
