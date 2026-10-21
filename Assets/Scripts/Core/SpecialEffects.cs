@@ -32,6 +32,11 @@ namespace Match3.Core
                 }
                 requestedColors[activation.Position] = activation.TargetColor;
             }
+            // Reject malformed initial requests before any Propeller can consume targeting randomness.
+            foreach (SpecialActivation activation in initial)
+            {
+                ValidateActivation(board, activation.Position, activation.TargetColor);
+            }
             initial.Sort((first, second) => ComparePositions(first.Position, second.Position));
             var queue = new Queue<SpecialActivation>();
             // Keep entries after dequeue: the set covers both queued and already-processed specials.
@@ -102,22 +107,7 @@ namespace Match3.Core
                 throw new ArgumentNullException(nameof(board));
             }
 
-            if (!board.IsInBounds(origin))
-            {
-                throw new ArgumentOutOfRangeException(nameof(origin), origin, "Activation must be within the board.");
-            }
-
-            if (targetColor.HasValue && !TileRules.IsNormalMatchItem(targetColor.Value))
-            {
-                throw new ArgumentException("The target must be a normal color.", nameof(targetColor));
-            }
-
-            TileType type = board.GetTile(origin);
-            if (targetColor.HasValue && type != TileType.LightBall)
-            {
-                throw new ArgumentException("Only Light Ball activations may specify a target color.", nameof(targetColor));
-            }
-
+            TileType type = ValidateActivation(board, origin, targetColor);
             var cells = new List<GridPosition>();
             switch (type)
             {
@@ -184,6 +174,31 @@ namespace Match3.Core
             }
 
             return cells.AsReadOnly();
+        }
+
+        private static TileType ValidateActivation(Board board, GridPosition origin, TileType? targetColor)
+        {
+            if (!board.IsInBounds(origin))
+            {
+                throw new ArgumentOutOfRangeException(nameof(origin), origin, "Activation must be within the board.");
+            }
+
+            if (targetColor.HasValue && !TileRules.IsNormalMatchItem(targetColor.Value))
+            {
+                throw new ArgumentException("The target must be a normal color.", nameof(targetColor));
+            }
+
+            TileType type = board.GetTile(origin);
+            if (targetColor.HasValue && type != TileType.LightBall)
+            {
+                throw new ArgumentException("Only Light Ball activations may specify a target color.", nameof(targetColor));
+            }
+            if (!TileRules.IsSpecial(type))
+            {
+                throw new ArgumentException("Activation requires a special at the origin.", nameof(origin));
+            }
+
+            return type;
         }
 
         private static GridPosition? FindRemoteTarget(Board board, IReadOnlyList<GridPosition> local,

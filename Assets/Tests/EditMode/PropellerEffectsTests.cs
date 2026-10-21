@@ -118,6 +118,59 @@ namespace Match3.Core.Tests
             Assert.That(random.Calls, Is.Zero);
         }
 
+        [TestCase(TileType.HorizontalRocket, TileType.Red)]
+        [TestCase(TileType.VerticalRocket, TileType.Red)]
+        [TestCase(TileType.TNT, TileType.Red)]
+        [TestCase(TileType.Propeller, TileType.Red)]
+        [TestCase(TileType.Red, null)]
+        [TestCase(TileType.Empty, null)]
+        [TestCase((TileType)99, null)]
+        public void MalformedLaterInitialRequest_IsRejectedBeforeAnEarlierPropellerDraws(
+            TileType type, TileType? targetColor)
+        {
+            var board = TestBoards.Create("RGBY", "GBHR", "FBRG");
+            var later = new GridPosition(2, 1);
+            board.SetTile(later, type);
+            var before = Snapshot(board);
+            var random = new IndexRandom(0);
+
+            // Reverse the input order: the Propeller at (0, 0) still sorts before (2, 1).
+            Assert.Throws<ArgumentException>(() => SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(later, targetColor),
+                new SpecialActivation(new GridPosition(0, 0))
+            }, random));
+
+            Assert.That(random.Calls, Is.Zero, "Reject all malformed initial requests before targeting starts.");
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void OutOfBoundsLaterInitialRequest_IsRejectedBeforeAnEarlierPropellerDraws()
+        {
+            var board = TestBoards.Create("RGBY", "GBHR", "FBRG");
+            var before = Snapshot(board);
+            var random = new IndexRandom(0);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpecialEffects.Plan(board, new[]
+            {
+                new SpecialActivation(new GridPosition(4, 1)),
+                new SpecialActivation(new GridPosition(0, 0))
+            }, random));
+
+            Assert.That(random.Calls, Is.Zero);
+            Assert.That(Snapshot(board), Is.EqualTo(before));
+        }
+
+        private static TileType[,] Snapshot(Board board)
+        {
+            var snapshot = new TileType[board.Width, board.Height];
+            for (int y = 0; y < board.Height; y++)
+                for (int x = 0; x < board.Width; x++)
+                    snapshot[x, y] = board.GetTile(new GridPosition(x, y));
+            return snapshot;
+        }
+
         private sealed class IndexRandom : Random
         {
             private readonly int index;
