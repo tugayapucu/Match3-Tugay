@@ -107,6 +107,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d80ce66920dc44943a71cfb324c70a5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.TileView
+  redSprite: {fileID: 21300000, guid: 0bb7ff5fdd2c81548b8b5c44ca7a25e8, type: 3}
+  greenSprite: {fileID: 21300000, guid: e84b6dd113ca07b469c32bab702691d5, type: 3}
+  blueSprite: {fileID: 21300000, guid: d4853dff1d7791744b7de9a07e0b11b3, type: 3}
+  yellowSprite: {fileID: 21300000, guid: 86b3b18f8d22ff44ea505f47f1a54b59, type: 3}
+  purpleSprite: {fileID: 21300000, guid: 8bbd790c374271a49a45a2c9ed0b1c70, type: 3}
+  orangeSprite: {fileID: 21300000, guid: 032415d0552c3c741a228256602ac2bd, type: 3}
+  horizontalRocketSprite: {fileID: 21300000, guid: 58905aabcc8dc63488acc3841fdcb635, type: 3}
+  verticalRocketSprite: {fileID: 21300000, guid: bdfc092a7f2a25540b1011b0cf48278d, type: 3}
+  propellerSprite: {fileID: 21300000, guid: cf28995e776818a478797b2846e7967c, type: 3}
+  tntSprite: {fileID: 21300000, guid: a10adc1b5b334414fb13b034a1dbfa61, type: 3}
+  lightBallSprite: {fileID: 21300000, guid: 3f38f2fecd4dd22489887ef43cc6a0d1, type: 3}
   specialLabel: {fileID: 2405506483506811442}
 --- !u!61 &9215939455167755459
 BoxCollider2D:

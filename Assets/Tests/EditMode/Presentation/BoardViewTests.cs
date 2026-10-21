@@ -53,6 +53,7 @@ namespace Match3.Presentation.Tests
             var special = boardView.GetTileView(anchor);
             Assert.That(oldView == null, Is.True);
             Assert.That(special.Type, Is.EqualTo(TileType.TNT));
+            Assert.That(special.GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(TileType.TNT)));
             var symbol = special.GetComponentInChildren<TMPro.TMP_Text>(true);
             Assert.That(symbol.gameObject.activeInHierarchy, Is.True);
             Assert.That(symbol.text, Is.EqualTo("TNT"));

@@ -167,10 +167,12 @@ namespace Match3.Presentation.Tests
         [Test]
         public void HandlePointerDown_ForeignTileWithValidAddress_IsIgnored()
         {
-            foreignObject = new GameObject("ForeignTile");
+            // A fully wired tile that belongs to no BoardView: its address alone must not make it selectable.
+            var foreignView = TestTiles.CreateTemplate("ForeignTile");
+            foreignObject = foreignView.gameObject;
             foreignObject.transform.position = new Vector3(98f, 100f, 0f);
-            var foreignView = foreignObject.AddComponent<TileView>();
             foreignView.Initialize(new GridPosition(0, 0), TileType.Red);
+            foreignObject.SetActive(true);
             foreignObject.AddComponent<BoxCollider2D>().size = Vector2.one;
             Physics2D.SyncTransforms();
 

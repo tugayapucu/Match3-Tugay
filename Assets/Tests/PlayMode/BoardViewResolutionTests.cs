@@ -540,6 +540,7 @@ namespace Match3.Presentation.Tests
             Assert.That(consumedView == null, Is.True, "The consumed normal visual was removed.");
             Assert.That(board.GetTile(finalCell), Is.EqualTo(type));
             Assert.That(boardView.GetTileView(finalCell).Type, Is.EqualTo(type));
+            Assert.That(boardView.GetTileView(finalCell).GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(type)));
             var symbol = boardView.GetTileView(finalCell).GetComponentInChildren<TMPro.TMP_Text>(true);
             Assert.That(symbol.gameObject.activeInHierarchy, Is.True);
             Assert.That(symbol.text, Is.Not.Empty);

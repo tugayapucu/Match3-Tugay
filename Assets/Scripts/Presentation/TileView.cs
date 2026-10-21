@@ -5,11 +5,25 @@ using UnityEngine;
 
 namespace Match3.Presentation
 {
-    // The visual for one board cell. Shows color and a special's symbol; holds no game rules.
+    // The visual for one board cell. Shows the TileType's pre-colored sprite; holds no game rules.
     // RequireComponent makes Unity add a SpriteRenderer automatically, so GetComponent below cannot miss.
     [RequireComponent(typeof(SpriteRenderer))]
     public sealed class TileView : MonoBehaviour
     {
+        // One production sprite per visible TileType, assigned on Tile.prefab. Field names follow the Core
+        // TileType names; the art itself uses the Prismatic Energy names (e.g. Rocket → Beam Crystal).
+        [SerializeField] private Sprite redSprite;
+        [SerializeField] private Sprite greenSprite;
+        [SerializeField] private Sprite blueSprite;
+        [SerializeField] private Sprite yellowSprite;
+        [SerializeField] private Sprite purpleSprite;
+        [SerializeField] private Sprite orangeSprite;
+        [SerializeField] private Sprite horizontalRocketSprite;
+        [SerializeField] private Sprite verticalRocketSprite;
+        [SerializeField] private Sprite propellerSprite;
+        [SerializeField] private Sprite tntSprite;
+        [SerializeField] private Sprite lightBallSprite;
+
         [SerializeField] private TMP_Text specialLabel;
 
         // Cached to avoid repeated GetComponent calls.
@@ -34,8 +48,13 @@ namespace Match3.Presentation
 
         public void SetTileType(TileType tileType)
         {
-            // Look up the colour first so an invalid type throws before any state changes.
-            Color color = GetColor(tileType);
+            // Look up the sprite first so an invalid type or an unassigned sprite throws before any state changes.
+            Sprite sprite = GetSprite(tileType);
+            if (tileType != TileType.Empty && sprite == null)
+            {
+                throw new InvalidOperationException($"Assign the {tileType} sprite before displaying that tile.");
+            }
+
             bool isSpecial = TileRules.IsSpecial(tileType);
             if (isSpecial && specialLabel == null)
             {
@@ -48,7 +67,9 @@ namespace Match3.Presentation
             }
 
             Type = tileType;
-            spriteRenderer.color = color;
+            spriteRenderer.sprite = sprite;
+            // The art is already colored, so it rests untinted; animations may tint briefly and restore white.
+            spriteRenderer.color = Color.white;
             // Empty cells keep their GameObject but draw nothing.
             spriteRenderer.enabled = tileType != TileType.Empty;
 
@@ -87,32 +108,24 @@ namespace Match3.Presentation
             }
         }
 
-        // TileType -> colour mapping lives here, not in Core, because colour is a presentation detail.
-        private static Color GetColor(TileType tileType)
+        // TileType -> sprite mapping lives here, not in Core, because appearance is a presentation detail.
+        // Empty has no sprite: its cell keeps the view hidden.
+        private Sprite GetSprite(TileType tileType)
         {
             switch (tileType)
             {
-                case TileType.Empty:
-                    return Color.clear;
-                case TileType.Red:
-                    return Color.red;
-                case TileType.Green:
-                    return Color.green;
-                case TileType.Blue:
-                    return Color.blue;
-                case TileType.Yellow:
-                    return Color.yellow;
-                case TileType.Purple:
-                    return new Color(0.6f, 0.2f, 0.8f);
-                case TileType.Orange:
-                    return new Color(1f, 0.5f, 0f);
-                // A white background keeps the dark special symbols readable.
-                case TileType.HorizontalRocket:
-                case TileType.VerticalRocket:
-                case TileType.Propeller:
-                case TileType.TNT:
-                case TileType.LightBall:
-                    return Color.white;
+                case TileType.Empty: return null;
+                case TileType.Red: return redSprite;
+                case TileType.Green: return greenSprite;
+                case TileType.Blue: return blueSprite;
+                case TileType.Yellow: return yellowSprite;
+                case TileType.Purple: return purpleSprite;
+                case TileType.Orange: return orangeSprite;
+                case TileType.HorizontalRocket: return horizontalRocketSprite;
+                case TileType.VerticalRocket: return verticalRocketSprite;
+                case TileType.Propeller: return propellerSprite;
+                case TileType.TNT: return tntSprite;
+                case TileType.LightBall: return lightBallSprite;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tileType), tileType, "Unknown tile type.");
             }
