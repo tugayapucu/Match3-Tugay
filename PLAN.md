@@ -919,58 +919,264 @@ Add tests for:
 
 # 17. Phase 11 — Polish
 
-Add improvements incrementally.
+The goal of Phase 11 is to improve visual readability, feedback, and presentation without changing gameplay rules or deterministic logical behavior.
 
-Possible tasks:
+The project remains primarily an engineering / gameplay-programming / agentic-development portfolio piece, so art production should stay focused and modest.
 
-### Swap animation
+## 1. Visual Identity Pass
 
-```text
-Improve tile swapping with simple easing.
+Phase 10 intentionally used temporary text markers for specials:
 
-Do not change gameplay rules.
-```
+- `<->`
+- `P`
+- `TNT`
+- `LB`
 
-### Falling animation
+Phase 11 should replace these placeholders with an original, coherent visual language.
 
-```text
-Animate gravity-driven tile movement while preserving deterministic
-logical board behavior.
-```
+Approved working direction:
 
-### Clear feedback
+**Prismatic Energy**
 
-```text
-Add a small scale/fade effect when matched tiles are removed.
-```
+Player-facing concepts:
 
-### Special tile feedback
+- HorizontalRocket / VerticalRocket → Beam Crystal
+- Propeller → Wisp
+- TNT → Nova Gem
+- LightBall → Spectrum Core
 
-Backlog carried over from Phase 10 Step 8: specials currently pulse on activation;
-the following feedback should make the affected cells and remote targets clear.
+These names are presentation/design vocabulary only for now.
+Do not rename Core enums, gameplay classes, tests, or domain terminology unless a future player-facing UI actually requires a name mapping.
 
-- [ ] Propeller flight / remote-target feedback
-- [ ] Rocket line feedback
-- [ ] TNT area feedback
-- [ ] Light Ball color-clear feedback
+Keep the existing Core identifiers unchanged:
 
-Keep these presentation-only: visualize Core's planned effects without changing
-gameplay rules or targeting decisions.
+- HorizontalRocket
+- VerticalRocket
+- Propeller
+- TNT
+- LightBall
 
-### UI polish
+### Normal tile visual language
 
-Add:
+Normal collectible tiles should:
+
+- share the same outer gemstone silhouette;
+- remain primarily distinguished by color;
+- optionally use subtle inner symbols/patterns as a secondary readability/accessibility cue;
+- remain visually simpler than specials.
+
+Normal colors remain:
+
+- Red
+- Green
+- Blue
+- Yellow
+- Purple
+- Orange
+
+Do not make each normal color use a completely different outer silhouette unless real board-size testing proves it necessary.
+
+### Special visual language
+
+Specials should:
+
+- have clearly different silhouettes from normal tiles and from each other;
+- remain recognizable in grayscale;
+- remain readable around 32–64 px;
+- communicate their gameplay role through shape;
+- use a consistent outline/material/lighting language.
+
+Working concepts:
+
+Beam Crystal
+
+- elongated double-ended crystal;
+- horizontal and vertical orientation;
+- shape suggests a line clear.
+
+Wisp
+
+- compact luminous core with a strong simple silhouette;
+- may include a small cross/plus cue for its local effect;
+- should support a clear flight animation toward the remote target.
+
+Nova Gem
+
+- compact central gem with square/corner framing;
+- visual language should suggest a square area effect rather than a circular explosion.
+
+Spectrum Core
+
+- circular segmented core;
+- limited number of bold segments so it remains readable at small size;
+- should visually support highlighting one selected color rather than implying that every color is always cleared.
+
+Avoid resting special colors that can easily be confused with normal Blue/Purple/other collectible colors.
+Colorful activation glow is fine.
+Spectrum Core is the intentional exception because multicolor is part of its gameplay identity.
+
+Do not copy Royal Match:
+
+- sprites;
+- silhouettes;
+- UI;
+- colors;
+- animation timing;
+- effects;
+- other art assets.
+
+The final presentation should study established Match-3 gameplay conventions without visually imitating Royal Match.
+
+Before final production integration, evaluate the visual family:
+
+- next to all six normal tile colors;
+- at approximately 32 px, 48 px, and 64 px;
+- in grayscale;
+- in an 8x8 board-like layout.
+
+A concept sheet and production-oriented PNG assets may be prepared outside the repo first.
+Actual asset import belongs to the later Phase 11 execution plan.
+
+## 2. Swap Animation Polish
+
+Improve swapping with simple easing.
+
+Requirements:
+
+- Presentation-only.
+- Logical Board state remains authoritative.
+- Do not change valid/invalid swap rules.
+- Do not introduce a general animation framework without a concrete need.
+
+## 3. Falling Animation Polish
+
+Improve gravity-driven tile movement with simple easing.
+
+Requirements:
+
+- preserve deterministic Board behavior;
+- existing TileView identity rules remain intact;
+- animation must only visualize Core-provided moves.
+
+## 4. Clear Feedback
+
+Add small visual feedback when normal matched tiles are removed.
+
+Possible presentation techniques:
+
+- scale;
+- fade;
+- brief flash.
+
+Keep it small and readable.
+Do not move scoring, matching, or removal decisions into Presentation.
+
+## 5. Special Tile Effect Feedback
+
+Backlog carried over from Phase 10.
+
+Phase 10 currently gives specials a simple activation pulse.
+Phase 11 should make their actual affected cells and targets understandable.
+
+Beam Crystal / Rocket:
+
+- visualize the affected row or column;
+- use the actual effect plan supplied by Core.
+
+Wisp / Propeller:
+
+- visualize the local activation;
+- animate toward `RemoteTarget` already chosen by Core;
+- Presentation must never choose or modify the target.
+
+Nova Gem / TNT:
+
+- visualize the bounds-clipped affected square area;
+- presentation should communicate the 5x5-style footprint clearly.
+
+Spectrum Core / Light Ball:
+
+- visualize the selected or fallback color;
+- show the relationship between Spectrum Core and the tiles that will be cleared.
+
+All effect feedback is presentation-only.
+
+Core remains responsible for:
+
+- footprint;
+- targeting;
+- chain order;
+- activation eligibility;
+- scoring facts;
+- Board mutations.
+
+Presentation only visualizes those facts.
+
+Do not add explicit special-combination bonuses in Phase 11.
+Phase 10 Option A remains unchanged.
+
+## 6. UI Polish
+
+Existing functional systems already include:
 
 - Moves
 - Goal progress
 - Score
-- Win panel
-- Lose panel
+- Win state
+- Lose state
 - Restart
 
-Do not spend large amounts of time creating art.
+Phase 11 should polish their presentation and layout rather than reimplement their gameplay logic.
 
-The project is primarily an engineering / agentic-development portfolio piece.
+Possible work:
+
+- cleaner HUD hierarchy;
+- better spacing/alignment;
+- clearer goal display;
+- simple Win panel;
+- simple Lose panel;
+- consistent Restart presentation.
+
+Do not spend large amounts of time producing custom UI art.
+
+## Phase 11 Architecture Constraints
+
+Preserve:
+
+- Core remains Unity-independent.
+- Presentation contains no gameplay special rules.
+- Board remains authoritative.
+- Animation never becomes authoritative state.
+- Input remains locked through the complete resolution sequence.
+- Board/View consistency remains required after resolution.
+- LevelProgress remains independent from special gameplay logic.
+- Existing deterministic RNG behavior must not be altered by polish work.
+
+Avoid without a concrete need:
+
+- generic animation framework;
+- Strategy hierarchy for visual effects;
+- per-special gameplay MonoBehaviours;
+- Factory singleton;
+- global event bus;
+- object pooling;
+- new packages only for visual convenience.
+
+Prefer small focused presentation helpers when an existing class gains a genuinely separate responsibility.
+
+## Suggested Order
+
+Use this as guidance rather than a rigid dependency graph:
+
+Visual Identity Pass
+→ asset integration/readability validation
+→ Swap animation polish
+→ Falling animation polish
+→ Clear feedback
+→ Special tile effect feedback
+→ UI polish
+
+The detailed implementation sequence will be defined in `Docs/Phases/PHASE11_EXECUTION.md` when Phase 11 execution begins.
 
 ---
 
