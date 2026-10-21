@@ -2153,7 +2153,29 @@ STOP before Step 10.
 
 Close Phase 10 with a full regression pass.
 
+The approved follow-up scope includes the small Core contract fix below before final validation, plus the known-issue documentation review. This does not authorize new special behavior or a broader refactor.
+
 Do not start Phase 11.
+
+## Approved Pre-Validation Fix — Initial Activation Requests
+
+Before queue processing or any targeting RNG draw, `SpecialEffects.Plan` must validate every initial `SpecialActivation`:
+
+- its position is in bounds;
+- its Board cell contains a special;
+- `TargetColor`, when present, is a normal collectible color;
+- only `LightBall` may have a non-null `TargetColor`;
+- duplicate positions with conflicting `TargetColor` are rejected; exact duplicates may collapse.
+
+Share the request checks with `GetFootprint` so both Core entry points enforce the same contract. Keep chain-generated activation behavior unchanged; those requests already come from known special cells.
+
+The guarantee is limited to malformed **initial** requests failing before any targeting RNG draw or Board mutation. Do not introduce RNG rollback or claim atomicity for arbitrary later planning failures.
+
+### Regression Test
+
+Use a counting `Random`. Place a valid Propeller earlier in the planner's Y-then-X processing order and a malformed initial activation later in that same order, regardless of their order in the supplied list.
+
+Assert that the call throws, the targeting draw count is zero, and the Board is unchanged. Cover out-of-bounds positions, non-special cells, and target colors supplied to non-Light-Ball specials. Preserve the existing normal-color, duplicate-request, and valid-Light-Ball coverage.
 
 ## Run
 
@@ -2267,9 +2289,15 @@ I should be able to explain:
 
 ## Commit
 
-Only if validation requires a real fix.
+Keep the Core fix and its regression tests in one small commit:
 
-No empty commit.
+```text
+Validate special activations before planning
+```
+
+Commit known-issue documentation updates separately and logically.
+
+Do not create an empty validation commit.
 
 STOP and report:
 
@@ -2284,6 +2312,31 @@ deferred work
 ```
 
 Do not start Phase 11.
+
+## Completion Record
+
+Step 10 and Phase 10 are complete. This record describes the validation performed at completion, rather than a live assertion about future repository or Editor state.
+
+| Check | Result |
+| --- | --- |
+| Initial-request regression | Eight new cases failed against the old planner with one unwanted draw, then passed after the fix; zero draws and unchanged Board verified |
+| EditMode | 516 / 516 passed |
+| PlayMode | 107 / 107 passed |
+| Compilation | Successful; no script compilation failure |
+| Phase 2–9 regressions and approved special rules | Passed; Core / Presentation boundaries and Option A confirmed |
+| Final SampleScene smoke check | One valid move, two cascade rounds, moves 20 → 19, score 0 → 600; all 64 views aligned; input and Restart recovered |
+| Final Editor state | SampleScene open, one scene loaded, stopped, not paused, original settings restored, no unsaved changes |
+| Final Console | Zero errors or warnings after the fresh scene smoke check |
+| Git after implementation and known-issue commits | Clean; local `main` two commits ahead of `origin/main`; no push performed |
+
+During validation, the Console also recorded the expected Purple negative-test exception, an FMOD audio-output initialization error, and an MCP reconnect warning. These were recorded before clearing the Console; none recurred in the final scene smoke check. The precise cause of the FMOD error was not established.
+
+Completed commits:
+
+- `a6618cb` — `Validate special activations before planning`: `SpecialEffects.cs` and `PropellerEffectsTests.cs`.
+- `531ec7e` — `Update known issues after Phase 10 validation`: `DeadBoard.md`, `LockedAfterException.md`, `RefillSeedReuse.md`, and `WatchList.md`.
+
+`SelectionFeedback`, `MobileLayoutAndPicking`, and `MissingReadme` were reviewed and remain deferred. No legal-move search, shuffle, exception-recovery redesign, refill-seed policy change, or additional presentation extraction was implemented. Explicit combination bonuses remain deferred under Option A; Phase 11 effect feedback remains in its backlog. Phase 11 was not started.
 
 ---
 
@@ -2303,6 +2356,10 @@ MissingReadme
 
 Important Phase 10-specific notes:
 
+## DeadBoard
+
+A special with an occupied orthogonally adjacent neighbor provides a valid special swap. Normal-only dead boards remain possible; Restart is the manual way out. Do not add legal-move search or shuffle in this phase.
+
 ## LockedAfterException
 
 Special callbacks/effect sequencing create more places where an exception could leave input locked.
@@ -2317,9 +2374,9 @@ Keep the existing refill-seed reuse policy unchanged. Propeller has its own dete
 
 ## BoardView WatchList
 
-If special presentation makes `BoardView` substantially larger, that is real evidence for extracting an animation/presentation helper.
+`BoardView` is now about 430 lines and includes special presentation. `SpecialActivationAnimation` has already been extracted as a small helper.
 
-Do not extract preemptively.
+Keep `BoardView` as the cohesive visual-board facade. Extract more only if additional presentation responsibilities accumulate; do not refactor based on line count alone.
 
 ---
 
