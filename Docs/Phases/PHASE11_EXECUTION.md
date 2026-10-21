@@ -379,6 +379,22 @@ This is primarily a runtime-validation step.
 - Blue/Purple are not confused with resting specials;
 - an 8×8 board remains visually readable.
 
+### Explicit comparisons (recorded at Step 1 asset intake)
+
+These are readability risks noticed at intake, not confirmed defects:
+
+- Yellow vs Orange normal tiles;
+- Nova Gem vs Red;
+- Beam Crystal vs Red / Orange;
+- Wisp vs Yellow;
+- Spectrum Core vs all normal collectible colors;
+- grayscale readability;
+- sprite-edge shimmer during swap/fall motion.
+
+If the runtime review confirms a problem, prefer correcting the source PNG rather than compensating in gameplay or presentation code.
+
+The 250–253 alpha in gem bodies and the near-transparent Wisp pixels are not blockers unless Unity rendering reveals an actual visual artifact.
+
 ### Minification check
 
 The initial import contract keeps `Mip Maps: off`. Do not enable mip maps preemptively.
