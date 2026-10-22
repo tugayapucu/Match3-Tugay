@@ -942,7 +942,9 @@ namespace Match3.Presentation.Tests
         // locked and clicks are ignored through every stage, that exactly `expectedRounds` resolution rounds
         // happen (each round empties cells, then refills them), and the exact final stable board.
         // Intermediate stages are recognised by state, never by frame counts:
-        //   Empty cells present → the Board is already collapsed; while tiles fall their visuals lag behind.
+        //   More registered views than Board tiles → clear animation: cleared cells still show their old views,
+        //     and the Board is already cleared but not collapsed yet.
+        //   Empty cells otherwise → the Board is already collapsed; while tiles fall their visuals lag behind.
         //   after a round started, no Empty but still locked → refill: Board full, new visuals not yet registered.
         // `expectFalls` is false when every cleared column was emptied from the top, so no surviving tile falls.
         private IEnumerator VerifyValidMove(
@@ -987,9 +989,14 @@ namespace Match3.Presentation.Tests
                     rounds++;
                 }
 
-                if (hasEmpty)
+                if (RegisteredViewCount() > OccupiedCellCount())
                 {
-                    // Core cleared and collapsed in the same step, so no hole can sit below a tile.
+                    // Clear animation: Core already cleared these cells; collapse is checked once the views are removed.
+                    AssertClearingViewsAreAheadOfTheBoard();
+                }
+                else if (hasEmpty)
+                {
+                    // The cleared views are gone, and Core collapsed in that same step: no hole sits below a tile.
                     AssertBoardCollapsed();
                     sawFallCatchingUp |= SomeTileVisualLagsBehind();
                 }
@@ -1068,6 +1075,75 @@ namespace Match3.Presentation.Tests
             first = default;
             second = default;
             return false;
+        }
+
+        // Clear animation: nothing has fallen yet, so every view still sits at its own cell. Any view whose type no
+        // longer matches the Board is a consumed tile, and Board-first means its cell is already Empty or the new special.
+        private void AssertClearingViewsAreAheadOfTheBoard()
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var position = new GridPosition(x, y);
+                    if (!TryGetRegisteredView(position, out var view) || view.Type == board.GetTile(position))
+                    {
+                        continue;
+                    }
+
+                    TileType logical = board.GetTile(position);
+                    Assert.That(logical == TileType.Empty || TileRules.IsSpecial(logical), Is.True,
+                        $"A clearing view at {position} must already be cleared in the Board.");
+                }
+            }
+        }
+
+        private int RegisteredViewCount()
+        {
+            int count = 0;
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    if (TryGetRegisteredView(new GridPosition(x, y), out _))
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private int OccupiedCellCount()
+        {
+            int count = 0;
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    if (board.GetTile(new GridPosition(x, y)) != TileType.Empty)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private bool TryGetRegisteredView(GridPosition position, out TileView view)
+        {
+            try
+            {
+                view = boardView.GetTileView(position);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                view = null;
+                return false;
+            }
         }
 
         // In every column, no Empty cell sits below a tile: gravity has been applied.
