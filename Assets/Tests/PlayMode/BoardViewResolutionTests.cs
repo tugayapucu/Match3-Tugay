@@ -364,6 +364,9 @@ namespace Match3.Presentation.Tests
                     Vector3 start = CellWorld(spawn.Position.X, spawn.Position.Y + perColumn[spawn.Position.X]);
                     Vector3 expected = Vector3.Lerp(start, CellWorld(spawn.Position.X, spawn.Position.Y), eased);
                     Assert.That(Vector3.Distance(created[spawn.Position].transform.position, expected), Is.LessThan(1e-4f));
+                    // Still falling into place: the cell has no registered view until landing.
+                    Assert.Throws<ArgumentOutOfRangeException>(() => boardView.GetTileView(spawn.Position),
+                        "A refill view must not be registered before it lands.");
                 }
 
                 yield return null;
