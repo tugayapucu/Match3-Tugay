@@ -145,6 +145,13 @@ namespace Match3.Presentation
                 // Each pair: Core changes the Board first, then BoardView catches up.
                 AddNormalClears(cleared, BoardResolution.ClearCells(board, analysis.MatchedPositions));
                 BoardResolution.PlaceSpecials(board, creations);
+                if (analysis.MatchedPositions.Count > 0)
+                {
+                    // The Board is already ahead (cleared, specials placed); the old views shrink and fade first.
+                    // Visual delay only: input stays locked by the caller, and nothing is scored until the move ends.
+                    yield return boardView.AnimateClearViews(analysis.MatchedPositions);
+                }
+
                 boardView.RemoveViews(analysis.MatchedPositions);
                 boardView.PlaceSpecialViews(creations);
 

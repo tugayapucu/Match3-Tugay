@@ -188,6 +188,57 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Runner_MatchedViewsClearVisiblyAfterTheBoard_ThenTheSpecialAppearsAtItsAnchor()
+        {
+            // Four Reds: Core clears them and places the Rocket at (1,0) before any view changes.
+            var board = CreateBoard("RRRR");
+            boardView.Render(board);
+            var consumed = new[]
+            {
+                boardView.GetTileView(new GridPosition(0, 0)), boardView.GetTileView(new GridPosition(1, 0)),
+                boardView.GetTileView(new GridPosition(2, 0)), boardView.GetTileView(new GridPosition(3, 0))
+            };
+            Vector3 startScale = consumed[1].transform.localScale;
+            int callbacks = 0;
+            var runner = new BoardResolutionRunner(board, boardView, FullPalette,
+                new ScriptedRandom(1, 2, 1), 0.05f, 0.05f, new System.Random(2));
+            boardView.StartCoroutine(runner.ResolveUntilStable(result => callbacks++));
+
+            bool sawClearing = false;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (callbacks == 0)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Resolution did not finish.");
+                // Removed views are deactivated at once and destroyed at frame end, so require it to be still shown.
+                if (consumed[1] != null && consumed[1].gameObject.activeSelf && consumed[1].transform.localScale.x < startScale.x - 1e-4f)
+                {
+                    // Board-first: already cleared and the Rocket already placed, while the old Red still shrinks there.
+                    sawClearing = true;
+                    Assert.That(board.GetTile(new GridPosition(1, 0)), Is.EqualTo(TileType.HorizontalRocket));
+                    Assert.That(board.GetTile(new GridPosition(0, 0)), Is.EqualTo(TileType.Empty));
+                    Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(consumed[1]));
+                    Assert.That(consumed[1].Type, Is.EqualTo(TileType.Red));
+                }
+
+                yield return null;
+            }
+
+            yield return null;
+            Assert.That(sawClearing, Is.True, "The matched views should be seen shrinking before removal.");
+            Assert.That(callbacks, Is.EqualTo(1));
+            foreach (var view in consumed)
+            {
+                Assert.That(view == null, Is.True, "Every consumed view is destroyed after its animation.");
+            }
+
+            var rocket = boardView.GetTileView(new GridPosition(1, 0));
+            Assert.That(rocket.Type, Is.EqualTo(TileType.HorizontalRocket));
+            Assert.That(rocket.transform.localScale, Is.EqualTo(startScale), "The new special appears at full size.");
+            Assert.That(rocket.GetComponent<SpriteRenderer>().color, Is.EqualTo(Color.white));
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
         public IEnumerator AnimateFalls_SpecialsKeepTheirSpritesAndOrientation()
         {
             var board = CreateBoard("VTL", "HFB", "...");
