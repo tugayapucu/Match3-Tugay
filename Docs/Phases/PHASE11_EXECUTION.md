@@ -369,7 +369,7 @@ This is primarily a runtime-validation step.
 - all six normal colors together;
 - all four special families;
 - both Beam Crystal orientations;
-- small / medium / normal board presentation sizes;
+- small / medium / normal board presentation sizes: one board cell at approximately 32 px, 48 px and 64 px on screen;
 - normal tiles remain easy to scan by color;
 - special silhouettes remain distinct;
 - Wisp remains readable at actual board size;
@@ -389,7 +389,8 @@ These are readability risks noticed at intake, not confirmed defects:
 - Wisp vs Yellow;
 - Spectrum Core vs all normal collectible colors;
 - grayscale readability;
-- sprite-edge shimmer during swap/fall motion.
+- sprite-edge shimmer during swap/fall motion;
+- Green gem size/centering vs the other normal gems (its shape is about 394 px wide starting at x = 77; the others are about 430 px wide starting at x = 41), noticed during Step 2.
 
 If the runtime review confirms a problem, prefer correcting the source PNG rather than compensating in gameplay or presentation code.
 
