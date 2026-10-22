@@ -44,9 +44,9 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator AnimateSpecialEffects_BeamCrystalRow_LightsOnlyItsVisibleRow_ThenRestoresWithoutChangingBoard()
+        public IEnumerator AnimateSpecialEffects_BeamCrystalRow_PopsOnlyItsVisibleRow_ThenRestoresWithoutChangingBoard()
         {
-            // The hole at (3,1) is inside the row footprint but shows nothing, so it must not be lit.
+            // The hole at (3,1) is inside the row footprint but shows nothing, so it must not pop.
             var board = CreateBoard(
                 "RGBR",
                 "GHB.",
@@ -65,19 +65,27 @@ namespace Match3.Presentation.Tests
 
             var animation = boardView.AnimateSpecialEffects(plan);
             Assert.That(animation.MoveNext(), Is.True);
-            AssertLitExactly(board, originView, ViewsAt(new GridPosition(0, 1), new GridPosition(2, 1)), colors, scales);
+            AssertPoppedExactly(board, originView, ViewsAt(new GridPosition(0, 1), new GridPosition(2, 1)), colors, scales);
+            // Core's footprint contains the origin too; it gets only its own pop, never the two multiplied (1.2 × 1.1).
+            Assert.That(originView.transform.localScale.x, Is.EqualTo(scales[originView].x * 1.2f).Within(1e-5f));
             // Visual only: the Board and the lookup are untouched.
             Assert.That(ReadTiles(board), Is.EqualTo(before));
             Assert.That(boardView.GetTileView(origin), Is.SameAs(originView));
-            yield return animation;
+            do
+            {
+                // Scale only: no frame changes any view's RGB or alpha.
+                AssertColorsUnchanged(board, colors);
+                yield return null;
+            }
+            while (animation.MoveNext());
 
-            AssertLitExactly(board, null, new TileView[0], colors, scales);
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
             Assert.That(ReadTiles(board), Is.EqualTo(before));
             AssertViewsMatchBoard(board);
         }
 
         [Test]
-        public void AnimateSpecialEffects_BeamCrystalColumn_LightsOnlyItsColumn()
+        public void AnimateSpecialEffects_BeamCrystalColumn_PopsOnlyItsColumn()
         {
             var board = CreateBoard(
                 "RGB",
@@ -90,12 +98,12 @@ namespace Match3.Presentation.Tests
             var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
-            AssertLitExactly(board, boardView.GetTileView(origin),
+            AssertPoppedExactly(board, boardView.GetTileView(origin),
                 ViewsAt(new GridPosition(1, 0), new GridPosition(1, 2)), colors, scales);
         }
 
         [Test]
-        public void AnimateSpecialEffects_NovaGem_LightsItsAreaClippedByTheBoard()
+        public void AnimateSpecialEffects_NovaGem_PopsItsAreaClippedByTheBoard()
         {
             CheckNovaArea(new GridPosition(3, 3), 24); // Centre: the full 5×5 area.
             CheckNovaArea(new GridPosition(0, 3), 14); // Edge: 3 columns × 5 rows.
@@ -119,11 +127,12 @@ namespace Match3.Presentation.Tests
             var novaView = boardView.GetTileView(nova);
             var overlap = boardView.GetTileView(new GridPosition(3, 2));
             var novaOnly = boardView.GetTileView(new GridPosition(3, 0));
-            // The same tint on a cell in both footprints and a cell only in the area: during the area phase they
-            // must match, so the overlap cannot carry anything left over from the row phase.
-            var tint = new Color(0.3f, 0.6f, 0.9f, 1f);
-            overlap.GetComponent<SpriteRenderer>().color = tint;
-            novaOnly.GetComponent<SpriteRenderer>().color = tint;
+            // The same starting size on a cell in both footprints and a cell only in the area: during the area phase
+            // they must match, so the overlap cannot carry any growth left over from the row phase.
+            var shared = new Vector3(0.8f, 0.8f, 1f);
+            overlap.transform.localScale = shared;
+            novaOnly.transform.localScale = shared;
+            overlap.GetComponent<SpriteRenderer>().color = new Color(0.3f, 0.6f, 0.9f, 0.5f);
             var colors = SnapshotColors(board);
             var scales = SnapshotScales(board);
             var before = ReadTiles(board);
@@ -134,36 +143,39 @@ namespace Match3.Presentation.Tests
 
             var animation = boardView.AnimateSpecialEffects(plan);
             Assert.That(animation.MoveNext(), Is.True);
-            // Row phase: the Nova Gem is lit as part of the row but does not pulse yet; its area is untouched.
-            var rowLit = new List<TileView>();
+            // Row phase: the Nova Gem pops as part of the row (footprint size, not origin size); its area is untouched.
+            var row = new List<TileView>();
             for (int x = 1; x < board.Width; x++)
             {
-                rowLit.Add(boardView.GetTileView(new GridPosition(x, 2)));
+                row.Add(boardView.GetTileView(new GridPosition(x, 2)));
             }
 
-            AssertLitExactly(board, beamView, rowLit, colors, scales);
+            AssertPoppedExactly(board, beamView, row, colors, scales);
 
+            // The area phase starts when the Nova Gem takes its own, stronger origin pop.
             int frames = 0;
-            while (novaView.transform.localScale == scales[novaView])
+            while (Vector3.Distance(novaView.transform.localScale, scales[novaView] * 1.2f) > 1e-5f)
             {
-                AssertColor(novaOnly.GetComponent<SpriteRenderer>().color, colors[novaOnly], "Area-only cell in the row phase");
+                Assert.That(novaOnly.transform.localScale, Is.EqualTo(scales[novaOnly]), "Area-only cell in the row phase.");
+                AssertColorsUnchanged(board, colors);
                 yield return null;
                 Assert.That(animation.MoveNext(), Is.True, "The area phase must follow the row phase.");
                 Assert.That(++frames, Is.LessThan(1000));
             }
 
-            // Area phase, first frame: the whole row (Beam Crystal included) is back, and the area is lit.
-            AssertLitExactly(board, novaView, ViewsInNovaArea(board, nova), colors, scales);
+            // Area phase, first frame: the whole row (Beam Crystal included) is back, and the area pops.
+            AssertPoppedExactly(board, novaView, ViewsInNovaArea(board, nova), colors, scales);
             yield return null;
             if (animation.MoveNext())
             {
-                // Mid-fade, both tinted cells are at the same point between their tint and gold.
-                AssertColor(overlap.GetComponent<SpriteRenderer>().color, novaOnly.GetComponent<SpriteRenderer>().color,
-                    "Overlap cell in the area phase");
+                // Mid-settle, both cells that started at the same size are still the same size.
+                Assert.That(Vector3.Distance(overlap.transform.localScale, novaOnly.transform.localScale), Is.LessThan(1e-5f),
+                    "Overlap cell in the area phase.");
+                AssertColorsUnchanged(board, colors);
                 yield return animation;
             }
 
-            AssertLitExactly(board, null, new TileView[0], colors, scales);
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
             Assert.That(ReadTiles(board), Is.EqualTo(before));
         }
 
@@ -186,7 +198,7 @@ namespace Match3.Presentation.Tests
             var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(1, 0)) });
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.False);
-            AssertLitExactly(board, null, new TileView[0], colors, scales);
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
         }
 
         [Test]
@@ -367,7 +379,7 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Runner_BeamCrystalSwap_LightsItsRowOnTheUnchangedBoard_BeforeClearing()
+        public IEnumerator Runner_BeamCrystalSwap_PopsItsRowOnTheUnchangedBoard_BeforeClearing()
         {
             // Already swapped: the Beam Crystal sits at (1,0), so Core's footprint is the bottom row.
             var board = CreateBoard(
@@ -377,23 +389,33 @@ namespace Match3.Presentation.Tests
             boardView.Render(board);
             var rowViews = ViewsAt(new GridPosition(0, 0), new GridPosition(2, 0));
             var above = boardView.GetTileView(new GridPosition(0, 1));
+            // Every rendered view starts at the template's size.
+            Vector3 startScale = above.transform.localScale;
             var before = ReadTiles(board);
             var move = SwapValidator.Analyze(board, new GridPosition(0, 0), new GridPosition(1, 0));
             int callbacks = 0;
             boardView.StartCoroutine(new BoardResolutionRunner(board, boardView, FullPalette,
                 new System.Random(7), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result => callbacks++));
 
-            bool sawRowLit = false;
+            bool sawRowPop = false;
             float deadline = Time.realtimeSinceStartup + 5f;
             while (callbacks == 0)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Resolution did not finish.");
-                if (rowViews[0] != null && rowViews[0].gameObject.activeSelf && IsGoldTinted(rowViews[0]))
+                // Growing is the effect feedback; the later clear only shrinks.
+                if (rowViews[0] != null && rowViews[0].gameObject.activeSelf
+                    && rowViews[0].transform.localScale.x > startScale.x + 1e-4f)
                 {
                     // The feedback runs on the stable Board: nothing is cleared until it ends.
-                    sawRowLit = true;
-                    Assert.That(IsGoldTinted(rowViews[1]), Is.True, "The whole visible row is lit together.");
-                    Assert.That(IsGoldTinted(above), Is.False, "Cells outside the footprint stay as they are.");
+                    sawRowPop = true;
+                    Assert.That(rowViews[1].transform.localScale.x, Is.GreaterThan(startScale.x + 1e-4f),
+                        "The whole visible row pops together.");
+                    Assert.That(above.transform.localScale, Is.EqualTo(startScale), "Cells outside the footprint stay as they are.");
+                    foreach (var view in new[] { rowViews[0], rowViews[1], above })
+                    {
+                        AssertColor(view.GetComponent<SpriteRenderer>().color, Color.white, "the row and the cell above");
+                    }
+
                     Assert.That(ReadTiles(board), Is.EqualTo(before));
                 }
 
@@ -401,7 +423,7 @@ namespace Match3.Presentation.Tests
             }
 
             yield return null;
-            Assert.That(sawRowLit, Is.True, "The Beam Crystal's row should be seen lit before it clears.");
+            Assert.That(sawRowPop, Is.True, "The Beam Crystal's row should be seen popping before it clears.");
             Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(rowViews[0] == null && rowViews[1] == null, Is.True, "The cleared row views are destroyed.");
             AssertViewsMatchBoard(board);
@@ -1562,9 +1584,7 @@ namespace Match3.Presentation.Tests
             return boardObject.GetComponentsInChildren<TileView>().Length;
         }
 
-        private static readonly Color FeedbackGold = new Color(1f, 0.8f, 0.2f);
-
-        private void CheckNovaArea(GridPosition origin, int expectedLit)
+        private void CheckNovaArea(GridPosition origin, int expectedPopped)
         {
             var board = new Board(7, 7);
             for (int y = 0; y < board.Height; y++)
@@ -1581,10 +1601,10 @@ namespace Match3.Presentation.Tests
             var scales = SnapshotScales(board);
             var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
             var expected = ViewsInNovaArea(board, origin);
-            Assert.That(expected.Count, Is.EqualTo(expectedLit));
+            Assert.That(expected.Count, Is.EqualTo(expectedPopped));
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
-            AssertLitExactly(board, boardView.GetTileView(origin), expected, colors, scales);
+            AssertPoppedExactly(board, boardView.GetTileView(origin), expected, colors, scales);
         }
 
         // Core does give Wisp and Spectrum Core wider footprints; Step 7a still pulses only the special itself.
@@ -1597,7 +1617,7 @@ namespace Match3.Presentation.Tests
             Assert.That(plan.Effects[0].Footprint.Count, Is.GreaterThan(1));
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
-            AssertLitExactly(board, boardView.GetTileView(origin), new TileView[0], colors, scales);
+            AssertPoppedExactly(board, boardView.GetTileView(origin), new TileView[0], colors, scales);
         }
 
         // An independent statement of the Nova Gem's area: visible views within two cells, the origin excluded.
@@ -1627,26 +1647,27 @@ namespace Match3.Presentation.Tests
             return views;
         }
 
-        // At full strength the origin grows and turns gold, the lit views turn gold, and every other view is untouched.
-        // With no origin and nothing lit, it checks that every view is back to its snapshot.
-        private void AssertLitExactly(Board board, TileView origin, ICollection<TileView> lit,
+        // At full strength the origin is at 1.2x and the popped views at 1.1x their snapshot; every other view keeps
+        // its size, and no view's color changes. With no origin and nothing popped, every view is back to its snapshot.
+        private void AssertPoppedExactly(Board board, TileView origin, ICollection<TileView> popped,
             Dictionary<TileView, Color> colors, Dictionary<TileView, Vector3> scales)
         {
+            AssertColorsUnchanged(board, colors);
             foreach (var view in AllViews(board))
             {
-                string where = $"({view.Position.X},{view.Position.Y})";
                 bool isOrigin = origin != null && view == origin;
-                AssertColor(view.GetComponent<SpriteRenderer>().color,
-                    isOrigin || lit.Contains(view) ? FeedbackGold : colors[view], where);
-                Vector3 expectedScale = isOrigin ? scales[view] * 1.15f : scales[view];
-                Assert.That(Vector3.Distance(view.transform.localScale, expectedScale), Is.LessThan(1e-5f), $"Scale at {where}.");
+                float growth = isOrigin ? 1.2f : popped.Contains(view) ? 1.1f : 1f;
+                Assert.That(Vector3.Distance(view.transform.localScale, scales[view] * growth), Is.LessThan(1e-5f),
+                    $"Scale at ({view.Position.X},{view.Position.Y}).");
             }
         }
 
-        // Gold lowers blue; a white tile that only fades keeps its RGB, so this tells the feedback from the clear.
-        private static bool IsGoldTinted(TileView view)
+        private void AssertColorsUnchanged(Board board, Dictionary<TileView, Color> colors)
         {
-            return view.GetComponent<SpriteRenderer>().color.b < 1f - 1e-4f;
+            foreach (var view in AllViews(board))
+            {
+                AssertColor(view.GetComponent<SpriteRenderer>().color, colors[view], $"({view.Position.X},{view.Position.Y})");
+            }
         }
 
         private static void AssertColor(Color actual, Color expected, string where)

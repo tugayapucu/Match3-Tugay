@@ -118,7 +118,7 @@ namespace Match3.Presentation
         }
 
         // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal and Nova Gem
-        // light the visible views their Core Footprint addresses (holes are skipped; the footprint is never recomputed);
+        // pop the visible views their Core Footprint addresses (holes are skipped; the footprint is never recomputed);
         // other specials keep the simple pulse until their own feedback. Everything is checked before anything changes.
         public IEnumerator AnimateSpecialEffects(SpecialEffectPlan plan)
         {
@@ -144,7 +144,7 @@ namespace Match3.Presentation
                 {
                     foreach (var position in effect.Footprint)
                     {
-                        // A hole has no view (cleared) or a hidden Empty view (initial render); neither is lit.
+                        // A hole has no view (cleared) or a hidden Empty view (initial render); neither pops.
                         if (position != effect.Origin && tileViews.TryGetValue(position, out var view) && view != null
                             && view.Type != TileType.Empty)
                         {

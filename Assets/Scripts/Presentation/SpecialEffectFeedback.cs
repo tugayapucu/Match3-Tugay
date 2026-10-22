@@ -9,6 +9,7 @@ namespace Match3.Presentation
     internal static class SpecialEffectFeedback
     {
         // One effect to show. An empty Highlighted array means "pulse the special only" (Wisp / Spectrum Core until 7b).
+        // The origin is never in Highlighted, so it gets only its own, stronger pop.
         internal sealed class Step
         {
             public readonly TileView Origin;
@@ -21,9 +22,10 @@ namespace Match3.Presentation
             }
         }
 
-        // The same gold as the Phase 10 activation pulse, so the visual language stays consistent.
-        private static readonly Color Gold = new Color(1f, 0.8f, 0.2f);
-        private const float OriginGrowth = 0.15f;
+        // Scale only: a renderer color multiplies the pre-colored artwork, so a tint would darken some gems and
+        // shift their hue. Growing reads the same on every color and leaves RGB and alpha untouched.
+        private const float OriginGrowth = 0.2f;
+        private const float FootprintGrowth = 0.1f;
 
         // BoardView validates the duration and resolves every view before calling this helper.
         public static IEnumerator Animate(Step[] steps, float durationPerStep)
@@ -33,17 +35,15 @@ namespace Match3.Presentation
                 yield break;
             }
 
-            // Snapshot every involved view once, before any change: overlapping footprints never stack tint,
-            // and every effect animates from (and restores to) the original appearance.
-            var colors = new Dictionary<TileView, Color>();
+            // Snapshot every involved view once, before any change: overlapping footprints never stack growth,
+            // and every effect animates from (and restores to) the original size.
             var scales = new Dictionary<TileView, Vector3>();
-            var renderers = new Dictionary<TileView, SpriteRenderer>();
             foreach (var step in steps)
             {
-                Remember(step.Origin, colors, scales, renderers);
+                Remember(step.Origin, scales);
                 foreach (var view in step.Highlighted)
                 {
-                    Remember(view, colors, scales, renderers);
+                    Remember(view, scales);
                 }
             }
 
@@ -52,47 +52,33 @@ namespace Match3.Presentation
                 float elapsed = 0f;
                 while (elapsed < durationPerStep)
                 {
-                    // Start fully lit, then settle; even a one-frame effect is visible.
+                    // Start fully grown, then settle; even a one-frame effect is visible.
                     float strength = 1f - elapsed / durationPerStep;
                     foreach (var view in step.Highlighted)
                     {
-                        renderers[view].color = Color.Lerp(colors[view], Gold, strength);
+                        view.transform.localScale = scales[view] * (1f + FootprintGrowth * strength);
                     }
 
-                    renderers[step.Origin].color = Color.Lerp(colors[step.Origin], Gold, strength);
                     step.Origin.transform.localScale = scales[step.Origin] * (1f + OriginGrowth * strength);
                     yield return null;
                     elapsed += Time.deltaTime;
                 }
 
                 // Restore this effect's views before the next effect starts from the snapshot.
-                Restore(step.Origin, colors, scales, renderers);
+                step.Origin.transform.localScale = scales[step.Origin];
                 foreach (var view in step.Highlighted)
                 {
-                    Restore(view, colors, scales, renderers);
+                    view.transform.localScale = scales[view];
                 }
             }
         }
 
-        private static void Remember(TileView view, Dictionary<TileView, Color> colors,
-            Dictionary<TileView, Vector3> scales, Dictionary<TileView, SpriteRenderer> renderers)
+        private static void Remember(TileView view, Dictionary<TileView, Vector3> scales)
         {
-            if (renderers.ContainsKey(view))
+            if (!scales.ContainsKey(view))
             {
-                return;
+                scales.Add(view, view.transform.localScale);
             }
-
-            var renderer = view.GetComponent<SpriteRenderer>();
-            renderers.Add(view, renderer);
-            colors.Add(view, renderer.color);
-            scales.Add(view, view.transform.localScale);
-        }
-
-        private static void Restore(TileView view, Dictionary<TileView, Color> colors,
-            Dictionary<TileView, Vector3> scales, Dictionary<TileView, SpriteRenderer> renderers)
-        {
-            renderers[view].color = colors[view];
-            view.transform.localScale = scales[view];
         }
     }
 }
