@@ -180,10 +180,34 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void AnimateSpecialEffects_WispAndSpectrumCore_KeepTheSimpleOriginPulse()
+        public void AnimateSpecialEffects_Wisp_KeepsTheSimpleOriginPulse()
         {
             CheckOriginOnlyPulse(CreateBoard("RFR"), new GridPosition(1, 0));
-            CheckOriginOnlyPulse(CreateBoard("RLR"), new GridPosition(1, 0));
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_SpectrumCore_PopsEveryVisibleViewItsFootprintAddresses()
+        {
+            // Swapped with a Blue: Core targets every Blue. Other colors and the unrelated Beam Crystal stay still.
+            var board = CreateBoard(
+                "BRGB",
+                "GLBR",
+                "RBGH");
+            boardView.Render(board);
+            var origin = new GridPosition(1, 1);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin, TileType.Blue) });
+            Assert.That(plan.Effects.Count, Is.EqualTo(1));
+            // An independent statement of the target cells: every Blue view on the board.
+            var blues = AllViews(board).FindAll(view => view.Type == TileType.Blue);
+            Assert.That(blues.Count, Is.EqualTo(4));
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
+            // The origin is in its own footprint too; AssertPoppedExactly requires 1.2x, never 1.2 x 1.1.
+            AssertPoppedExactly(board, boardView.GetTileView(origin), blues, colors, scales);
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
         }
 
         [Test]
@@ -1607,7 +1631,7 @@ namespace Match3.Presentation.Tests
             AssertPoppedExactly(board, boardView.GetTileView(origin), expected, colors, scales);
         }
 
-        // Core does give Wisp and Spectrum Core wider footprints; Step 7a still pulses only the special itself.
+        // Core does give Wisp a wider footprint; until its flight feedback, only the special itself pulses.
         private void CheckOriginOnlyPulse(Board board, GridPosition origin)
         {
             boardView.Render(board);

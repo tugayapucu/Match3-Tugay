@@ -117,9 +117,10 @@ namespace Match3.Presentation
             secondView.SetGridPosition(first);
         }
 
-        // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal and Nova Gem
-        // pop the visible views their Core Footprint addresses (holes are skipped; the footprint is never recomputed);
-        // other specials keep the simple pulse until their own feedback. Everything is checked before anything changes.
+        // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal, Nova Gem
+        // and Spectrum Core pop the visible views their Core Footprint addresses (holes are skipped; the footprint and
+        // Spectrum Core's color are never recomputed); Wisp keeps the simple pulse until its own feedback.
+        // Everything is checked before anything changes.
         public IEnumerator AnimateSpecialEffects(SpecialEffectPlan plan)
         {
             if (plan == null)
@@ -159,10 +160,10 @@ namespace Match3.Presentation
             return SpecialEffectFeedback.Animate(steps, specialActivationDuration);
         }
 
-        // Step 7a covers the line and area specials; Wisp and Spectrum Core feedback arrives in Step 7b.
+        // Wisp's footprint also holds its remote target, which needs its own flight feedback.
         private static bool ShowsFootprint(TileType type)
         {
-            return type == TileType.HorizontalRocket || type == TileType.VerticalRocket || type == TileType.TNT;
+            return type != TileType.Propeller;
         }
 
         // Core has already cleared these cells; their old views shrink and fade, then RemoveViews destroys them.
