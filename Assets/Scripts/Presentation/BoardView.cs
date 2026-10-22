@@ -96,8 +96,8 @@ namespace Match3.Presentation
             float elapsed = 0f;
             while (elapsed < duration)
             {
-                // Both visuals use the same progress so they travel together.
-                float progress = elapsed / duration;
+                // Both visuals use the same eased progress so they travel together, starting and settling gently.
+                float progress = TileEasing.EaseInOut(elapsed / duration);
                 firstView.SetWorldPosition(Vector3.Lerp(firstStart, firstDestination, progress));
                 secondView.SetWorldPosition(Vector3.Lerp(secondStart, secondDestination, progress));
                 yield return null;

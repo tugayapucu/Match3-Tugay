@@ -104,5 +104,72 @@ namespace Match3.Presentation.Tests
             Assert.That(untouchedView.Type, Is.EqualTo(board.GetTile(untouched)));
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(3));
         }
+
+        [UnityTest]
+        public IEnumerator AnimateSwap_PositionsFollowTheEaseInOutCurveEveryFrame()
+        {
+            var board = new Board(2, 1);
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            board.SetTile(first, TileType.Red);
+            board.SetTile(second, TileType.Blue);
+            boardView.Render(board);
+            var firstView = boardView.GetTileView(first);
+            var secondView = boardView.GetTileView(second);
+            Vector3 firstStart = firstView.transform.position;
+            Vector3 secondStart = secondView.transform.position;
+            const float duration = 0.5f;
+
+            var animation = boardView.AnimateSwap(first, second, duration);
+            Assert.That(animation.MoveNext(), Is.True);
+            Assert.That(firstView.transform.position, Is.EqualTo(firstStart));
+
+            // Drive the routine by hand once per frame and mirror its clock: on resume it adds this frame's deltaTime.
+            float elapsed = 0f;
+            int intermediateFrames = 0;
+            while (true)
+            {
+                yield return null;
+                elapsed += Time.deltaTime;
+                if (!animation.MoveNext())
+                {
+                    break;
+                }
+
+                float eased = TileEasing.EaseInOut(elapsed / duration);
+                Assert.That(Vector3.Distance(firstView.transform.position, Vector3.Lerp(firstStart, secondStart, eased)), Is.LessThan(1e-4f));
+                Assert.That(Vector3.Distance(secondView.transform.position, Vector3.Lerp(secondStart, firstStart, eased)), Is.LessThan(1e-4f));
+                // The lookup still describes the original cells until the movement completes.
+                Assert.That(boardView.GetTileView(first), Is.SameAs(firstView));
+                intermediateFrames++;
+            }
+
+            Assert.That(intermediateFrames, Is.GreaterThan(0), "At least one in-between frame was checked.");
+            Assert.That(firstView.transform.position, Is.EqualTo(secondStart));
+            Assert.That(secondView.transform.position, Is.EqualTo(firstStart));
+            Assert.That(boardView.GetTileView(first), Is.SameAs(secondView));
+        }
+
+        [Test]
+        public void AnimateSwap_ZeroDuration_SnapsAndSwapsTheLookupImmediately()
+        {
+            var board = new Board(2, 1);
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            board.SetTile(first, TileType.Red);
+            board.SetTile(second, TileType.Blue);
+            boardView.Render(board);
+            var firstView = boardView.GetTileView(first);
+            var secondView = boardView.GetTileView(second);
+            Vector3 firstStart = firstView.transform.position;
+            Vector3 secondStart = secondView.transform.position;
+
+            Assert.That(boardView.AnimateSwap(first, second, 0f).MoveNext(), Is.False, "No frames to wait for.");
+
+            Assert.That(firstView.transform.position, Is.EqualTo(secondStart));
+            Assert.That(secondView.transform.position, Is.EqualTo(firstStart));
+            Assert.That(boardView.GetTileView(first), Is.SameAs(secondView));
+            Assert.That(boardView.GetTileView(second), Is.SameAs(firstView));
+        }
     }
 }
