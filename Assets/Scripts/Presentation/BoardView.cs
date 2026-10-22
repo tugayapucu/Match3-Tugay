@@ -353,13 +353,14 @@ namespace Match3.Presentation
             }
         }
 
-        // Moves all views with the same progress, then snaps them exactly onto their destinations.
+        // Moves all views with the same eased progress (the swap curve), then snaps them exactly onto their destinations.
+        // Every view finishes together, so a tile with farther to go simply moves faster.
         private static IEnumerator MoveTogether(TileView[] views, Vector3[] starts, Vector3[] destinations, float duration)
         {
             float elapsed = 0f;
             while (elapsed < duration)
             {
-                float progress = elapsed / duration;
+                float progress = TileEasing.EaseInOut(elapsed / duration);
                 for (int i = 0; i < views.Length; i++)
                 {
                     views[i].SetWorldPosition(Vector3.Lerp(starts[i], destinations[i], progress));

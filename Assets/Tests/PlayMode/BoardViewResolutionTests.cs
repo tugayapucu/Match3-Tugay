@@ -272,6 +272,130 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator AnimateFalls_FollowsTheEaseInOutCurve_AndEveryTileLandsTogether()
+        {
+            // Column 0: R falls two cells. Column 1: Y and G fall one cell each. Same duration for all.
+            var board = CreateBoard(
+                "RY",
+                ".G",
+                "..");
+            boardView.Render(board);
+            boardView.RemoveViews(new[] { new GridPosition(0, 1), new GridPosition(0, 0), new GridPosition(1, 0) });
+            var moves = BoardResolution.ApplyGravity(board);
+            var views = new TileView[moves.Count];
+            for (int i = 0; i < moves.Count; i++)
+            {
+                views[i] = boardView.GetTileView(moves[i].From);
+            }
+
+            const float duration = 0.5f;
+            var animation = boardView.AnimateFalls(moves, duration);
+            Assert.That(animation.MoveNext(), Is.True);
+            AssertEasedPositions(views, moves, 0f);
+
+            // Drive by hand and mirror the routine's clock: on resume it adds this frame's deltaTime.
+            float elapsed = 0f;
+            int intermediateFrames = 0;
+            while (true)
+            {
+                yield return null;
+                elapsed += Time.deltaTime;
+                if (!animation.MoveNext())
+                {
+                    break;
+                }
+
+                AssertEasedPositions(views, moves, TileEasing.EaseInOut(elapsed / duration));
+                intermediateFrames++;
+            }
+
+            Assert.That(intermediateFrames, Is.GreaterThan(0), "At least one in-between frame was checked.");
+            for (int i = 0; i < moves.Count; i++)
+            {
+                Assert.That(views[i].transform.position, Is.EqualTo(CellWorld(moves[i].To.X, moves[i].To.Y)));
+                Assert.That(boardView.GetTileView(moves[i].To), Is.SameAs(views[i]));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator AnimateRefill_FollowsTheEaseInOutCurve_FromAboveEachColumn()
+        {
+            // Column 0 receives two new tiles, column 1 one: each starts that many cells above its target.
+            var board = CreateBoard(
+                "..",
+                ".G",
+                "RB");
+            boardView.Render(board);
+            boardView.RemoveViews(new[] { new GridPosition(0, 2), new GridPosition(0, 1), new GridPosition(1, 2) });
+            var spawns = BoardResolution.Refill(board, Palette, new System.Random(5));
+            Assert.That(spawns.Count, Is.EqualTo(3));
+            var perColumn = new Dictionary<int, int>();
+            foreach (TileSpawn spawn in spawns)
+            {
+                perColumn.TryGetValue(spawn.Position.X, out int count);
+                perColumn[spawn.Position.X] = count + 1;
+            }
+
+            const float duration = 0.5f;
+            var animation = boardView.AnimateRefill(spawns, duration);
+            Assert.That(animation.MoveNext(), Is.True);
+            // New views exist from the first step but stay out of the lookup until they land.
+            var created = new Dictionary<GridPosition, TileView>();
+            foreach (var view in boardObject.GetComponentsInChildren<TileView>())
+            {
+                bool registered;
+                try { registered = boardView.GetTileView(view.Position) == view; }
+                catch (ArgumentOutOfRangeException) { registered = false; }
+                if (!registered)
+                {
+                    created.Add(view.Position, view);
+                }
+            }
+
+            Assert.That(created.Count, Is.EqualTo(3));
+
+            float elapsed = 0f;
+            float eased = 0f;
+            int intermediateFrames = 0;
+            while (true)
+            {
+                foreach (TileSpawn spawn in spawns)
+                {
+                    Vector3 start = CellWorld(spawn.Position.X, spawn.Position.Y + perColumn[spawn.Position.X]);
+                    Vector3 expected = Vector3.Lerp(start, CellWorld(spawn.Position.X, spawn.Position.Y), eased);
+                    Assert.That(Vector3.Distance(created[spawn.Position].transform.position, expected), Is.LessThan(1e-4f));
+                }
+
+                yield return null;
+                elapsed += Time.deltaTime;
+                if (!animation.MoveNext())
+                {
+                    break;
+                }
+
+                eased = TileEasing.EaseInOut(elapsed / duration);
+                intermediateFrames++;
+            }
+
+            Assert.That(intermediateFrames, Is.GreaterThan(0), "At least one in-between frame was checked.");
+            foreach (TileSpawn spawn in spawns)
+            {
+                Assert.That(created[spawn.Position].transform.position, Is.EqualTo(CellWorld(spawn.Position.X, spawn.Position.Y)));
+                Assert.That(boardView.GetTileView(spawn.Position), Is.SameAs(created[spawn.Position]));
+            }
+        }
+
+        // Each view sits at the same eased fraction of its own path, so all tiles land together.
+        private void AssertEasedPositions(TileView[] views, IReadOnlyList<TileMove> moves, float eased)
+        {
+            for (int i = 0; i < moves.Count; i++)
+            {
+                Vector3 expected = Vector3.Lerp(CellWorld(moves[i].From.X, moves[i].From.Y), CellWorld(moves[i].To.X, moves[i].To.Y), eased);
+                Assert.That(Vector3.Distance(views[i].transform.position, expected), Is.LessThan(1e-4f));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator FullRound_ClearFallRefill_LeavesBoardAndViewsInAgreement()
         {
             var board = CreateBoard(
