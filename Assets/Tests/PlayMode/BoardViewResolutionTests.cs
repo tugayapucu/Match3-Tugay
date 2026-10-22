@@ -99,6 +99,95 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator AnimateClearViews_ShrinksAndFadesFromEachViewsOwnState_ThenEndsInvisible()
+        {
+            var board = CreateBoard("RGB");
+            boardView.Render(board);
+            var first = boardView.GetTileView(new GridPosition(0, 0));
+            var second = boardView.GetTileView(new GridPosition(1, 0));
+            var untouched = boardView.GetTileView(new GridPosition(2, 0));
+            // Deliberately different starting states: the animation must use each view's own values.
+            first.transform.localScale = new Vector3(0.7f, 0.8f, 1f);
+            second.transform.localScale = new Vector3(1.1f, 0.9f, 1f);
+            second.GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.5f);
+            var views = new[] { first, second };
+            var startScales = new[] { first.transform.localScale, second.transform.localScale };
+            var startColors = new[] { first.GetComponent<SpriteRenderer>().color, second.GetComponent<SpriteRenderer>().color };
+            Vector3 untouchedScale = untouched.transform.localScale;
+            var before = ReadTiles(board);
+            const float duration = 0.1f;
+
+            var animation = boardView.AnimateClearViews(new[] { new GridPosition(0, 0), new GridPosition(1, 0) });
+            float elapsed = 0f;
+            bool more = animation.MoveNext();
+            int frames = 0;
+            while (more)
+            {
+                float remaining = 1f - TileEasing.EaseInOut(elapsed / duration);
+                for (int i = 0; i < views.Length; i++)
+                {
+                    Assert.That(Vector3.Distance(views[i].transform.localScale, startScales[i] * remaining), Is.LessThan(1e-5f));
+                    Color c = views[i].GetComponent<SpriteRenderer>().color;
+                    Assert.That(new Color(c.r, c.g, c.b), Is.EqualTo(new Color(startColors[i].r, startColors[i].g, startColors[i].b)), "RGB is kept.");
+                    Assert.That(c.a, Is.EqualTo(startColors[i].a * remaining).Within(1e-5f));
+                }
+
+                // Visual only: the lookup and Board are untouched, and so is every other view.
+                Assert.That(boardView.GetTileView(new GridPosition(0, 0)), Is.SameAs(first));
+                Assert.That(untouched.transform.localScale, Is.EqualTo(untouchedScale));
+                frames++;
+                yield return null;
+                elapsed += Time.deltaTime;
+                more = animation.MoveNext();
+            }
+
+            Assert.That(frames, Is.GreaterThan(0));
+            foreach (var view in views)
+            {
+                Assert.That(view.transform.localScale, Is.EqualTo(Vector3.zero));
+                Assert.That(view.GetComponent<SpriteRenderer>().color.a, Is.Zero);
+            }
+
+            Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(second), "Removal is RemoveViews' job.");
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void AnimateClearViews_ZeroDuration_ChangesNothingAndFinishesImmediately()
+        {
+            var board = CreateBoard("RG");
+            boardView.Render(board);
+            typeof(BoardView).GetField("clearDuration", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(boardView, 0f);
+            var view = boardView.GetTileView(new GridPosition(0, 0));
+            Vector3 scale = view.transform.localScale;
+            Color color = view.GetComponent<SpriteRenderer>().color;
+
+            Assert.That(boardView.AnimateClearViews(new[] { new GridPosition(0, 0) }).MoveNext(), Is.False);
+
+            Assert.That(view.transform.localScale, Is.EqualTo(scale));
+            Assert.That(view.GetComponent<SpriteRenderer>().color, Is.EqualTo(color));
+        }
+
+        [Test]
+        public void AnimateClearViews_InvalidRequest_ThrowsBeforeAnyVisualChange()
+        {
+            var board = CreateBoard("RG");
+            boardView.Render(board);
+            boardView.RemoveViews(new[] { new GridPosition(1, 0) });
+            var view = boardView.GetTileView(new GridPosition(0, 0));
+            Vector3 scale = view.transform.localScale;
+
+            Assert.Throws<ArgumentNullException>(() => boardView.AnimateClearViews(null));
+            // (1,0) has no view: the whole request is rejected, so (0,0) is never touched either.
+            Assert.Throws<ArgumentOutOfRangeException>(() => boardView.AnimateClearViews(
+                new[] { new GridPosition(0, 0), new GridPosition(1, 0) }));
+            typeof(BoardView).GetField("clearDuration", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(boardView, -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => boardView.AnimateClearViews(new[] { new GridPosition(0, 0) }));
+
+            Assert.That(view.transform.localScale, Is.EqualTo(scale));
+        }
+
+        [UnityTest]
         public IEnumerator AnimateFalls_SpecialsKeepTheirSpritesAndOrientation()
         {
             var board = CreateBoard("VTL", "HFB", "...");

@@ -15,6 +15,8 @@ namespace Match3.Presentation
         // Distance between cell centers in the root's local space.
         [SerializeField] private float tileSpacing = 1f;
         [SerializeField] private float specialActivationDuration = 0.12f;
+        // Seconds matched views take to shrink and fade before they are removed; 0 removes them instantly.
+        [SerializeField] private float clearDuration = 0.1f;
 
         // Find a visual by cell address and track only our own clones for cleanup.
         private readonly Dictionary<GridPosition, TileView> tileViews = new Dictionary<GridPosition, TileView>();
@@ -136,6 +138,29 @@ namespace Match3.Presentation
                 views[i] = view;
             }
             return SpecialActivationAnimation.Animate(views, specialActivationDuration);
+        }
+
+        // Core has already cleared these cells; their old views shrink and fade, then RemoveViews destroys them.
+        // Every position is checked before anything changes; the lookup itself is not touched here.
+        public IEnumerator AnimateClearViews(IReadOnlyCollection<GridPosition> positions)
+        {
+            if (positions == null)
+            {
+                throw new ArgumentNullException(nameof(positions));
+            }
+
+            ValidateDuration(clearDuration);
+
+            // A repeated position names the same view once, matching RemoveViews.
+            var unique = new HashSet<GridPosition>(positions);
+            var views = new TileView[unique.Count];
+            int index = 0;
+            foreach (var position in unique)
+            {
+                views[index++] = GetTileView(position);
+            }
+
+            return ClearAnimation.Animate(views, clearDuration);
         }
 
         // Clear visuals: Core has already set these cells to Empty, so their views disappear immediately.
