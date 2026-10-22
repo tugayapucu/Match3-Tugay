@@ -109,7 +109,9 @@ namespace Match3.Presentation.Tests
             // Deliberately different starting states: the animation must use each view's own values.
             first.transform.localScale = new Vector3(0.7f, 0.8f, 1f);
             second.transform.localScale = new Vector3(1.1f, 0.9f, 1f);
-            second.GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.5f);
+            // Non-white tints: a fade that reset RGB to white (or touched RGB at all) would be caught.
+            first.GetComponent<SpriteRenderer>().color = new Color(0.8f, 0.4f, 0.2f, 1f);
+            second.GetComponent<SpriteRenderer>().color = new Color(0.3f, 0.6f, 0.9f, 0.5f);
             var views = new[] { first, second };
             var startScales = new[] { first.transform.localScale, second.transform.localScale };
             var startColors = new[] { first.GetComponent<SpriteRenderer>().color, second.GetComponent<SpriteRenderer>().color };
@@ -128,7 +130,9 @@ namespace Match3.Presentation.Tests
                 {
                     Assert.That(Vector3.Distance(views[i].transform.localScale, startScales[i] * remaining), Is.LessThan(1e-5f));
                     Color c = views[i].GetComponent<SpriteRenderer>().color;
-                    Assert.That(new Color(c.r, c.g, c.b), Is.EqualTo(new Color(startColors[i].r, startColors[i].g, startColors[i].b)), "RGB is kept.");
+                    Assert.That(c.r, Is.EqualTo(startColors[i].r), "RGB is kept exactly.");
+                    Assert.That(c.g, Is.EqualTo(startColors[i].g), "RGB is kept exactly.");
+                    Assert.That(c.b, Is.EqualTo(startColors[i].b), "RGB is kept exactly.");
                     Assert.That(c.a, Is.EqualTo(startColors[i].a * remaining).Within(1e-5f));
                 }
 
@@ -146,6 +150,13 @@ namespace Match3.Presentation.Tests
             {
                 Assert.That(view.transform.localScale, Is.EqualTo(Vector3.zero));
                 Assert.That(view.GetComponent<SpriteRenderer>().color.a, Is.Zero);
+            }
+
+            for (int i = 0; i < views.Length; i++)
+            {
+                Color end = views[i].GetComponent<SpriteRenderer>().color;
+                Assert.That(new Vector3(end.r, end.g, end.b), Is.EqualTo(new Vector3(startColors[i].r, startColors[i].g, startColors[i].b)),
+                    "Even fully faded, only alpha changed.");
             }
 
             Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(second), "Removal is RemoveViews' job.");
