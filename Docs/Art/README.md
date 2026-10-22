@@ -6,6 +6,13 @@ Custom AI-assisted artwork created specifically for this project from an origina
 
 Imported in Phase 11 Step 1 (2026-10-21) from an asset package prepared outside the repository. Files were copied byte-for-byte (verified by SHA-256); no edits were made during import.
 
+Post-import cleanup (Phase 11, after Step 2): two crops contained visible fragments of neighbouring icons from the source sheet, which showed on the board. Those detached islands were erased (made fully transparent); every other pixel is unchanged, verified by comparison:
+
+- `Normal/Green.png` — one 1,332 px fragment at the bottom-left removed;
+- `Specials/BeamCrystal_V.png` — two fragments (841 px and 72 px) along the top edge removed.
+
+These two files therefore differ from the external staging package; the repository copies are now the source of truth.
+
 ### Runtime sprites
 
 `Assets/Art/Tiles/PrismaticEnergy/`
