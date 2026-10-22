@@ -127,6 +127,12 @@ namespace Match3.Presentation
                     // Show the supplied chain, effect by effect, while its views still exist; input remains locked.
                     yield return boardView.AnimateSpecialEffects(plan);
                     AddNormalClears(cleared, BoardResolution.ClearCells(board, plan.RemovedPositions));
+                    if (plan.RemovedPositions.Count > 0)
+                    {
+                        // Same as matched tiles: the Board is already cleared, the old views shrink and fade first.
+                        yield return boardView.AnimateClearViews(plan.RemovedPositions);
+                    }
+
                     boardView.RemoveViews(plan.RemovedPositions);
                     removedByEffects = plan.RemovedPositions.Count > 0;
                 }

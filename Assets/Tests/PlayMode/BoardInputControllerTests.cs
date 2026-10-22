@@ -786,11 +786,21 @@ namespace Match3.Presentation.Tests
             Click(second);
 
             bool sawPulse = false;
+            bool sawClear = false;
             float deadline = Time.realtimeSinceStartup + 10f;
             while (controller.IsInputLocked)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
-                if (special != null && Vector3.Distance(special.transform.localScale, scale) > 0.001f)
+                bool shown = special != null && special.gameObject.activeSelf;
+                if (shown && special.transform.localScale.x < scale.x - 0.001f)
+                {
+                    // Clear fade: the Board is already cleared, but nothing is reported or unlocked yet.
+                    sawClear = true;
+                    Assert.That(board.GetTile(second), Is.EqualTo(TileType.Empty));
+                    Assert.That(reportedResults, Is.Empty);
+                    AssertLevel(4, 0, 0, LevelStatus.Playing);
+                }
+                else if (shown && special.transform.localScale.x > scale.x + 0.001f)
                 {
                     sawPulse = true;
                     Assert.That(board.GetTile(second), Is.EqualTo(TileType.HorizontalRocket));
@@ -808,6 +818,7 @@ namespace Match3.Presentation.Tests
 
             yield return null;
             Assert.That(sawPulse, Is.True);
+            Assert.That(sawClear, Is.True, "The activated view fades after the pulse.");
             Assert.That(special == null, Is.True, "The activated view is removed.");
             AssertLevel(3, 300, 1, LevelStatus.Playing);
             Assert.That(reportedResults.Count, Is.EqualTo(1));

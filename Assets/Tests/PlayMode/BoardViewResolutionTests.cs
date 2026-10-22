@@ -463,6 +463,52 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Runner_EffectClearedViews_ShrinkAfterTheBoardClears_ThenAreRemoved()
+        {
+            var board = CreateBoard(
+                "RGB",
+                "GBR",
+                "RHG");
+            boardView.Render(board);
+            var red = boardView.GetTileView(new GridPosition(0, 0));
+            var beam = boardView.GetTileView(new GridPosition(1, 0));
+            Vector3 startScale = red.transform.localScale;
+            var move = SwapValidator.Analyze(board, new GridPosition(0, 0), new GridPosition(1, 0));
+            int callbacks = 0;
+            boardView.StartCoroutine(new BoardResolutionRunner(board, boardView, FullPalette,
+                new System.Random(7), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result => callbacks++));
+
+            bool sawShrinking = false;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (callbacks == 0)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Resolution did not finish.");
+                // Removed views are deactivated at once and destroyed at frame end, so require it to be still shown.
+                if (red != null && red.gameObject.activeSelf && red.transform.localScale.x < startScale.x - 1e-4f)
+                {
+                    // Board-first: the whole row is already Empty while its old views (the special too) still shrink.
+                    sawShrinking = true;
+                    for (int x = 0; x < 3; x++)
+                    {
+                        Assert.That(board.GetTile(new GridPosition(x, 0)), Is.EqualTo(TileType.Empty));
+                    }
+
+                    Assert.That(boardView.GetTileView(new GridPosition(0, 0)), Is.SameAs(red));
+                    Assert.That(red.Type, Is.EqualTo(TileType.Red));
+                    Assert.That(beam.transform.localScale.x, Is.LessThan(startScale.x), "The special clears the same way.");
+                }
+
+                yield return null;
+            }
+
+            yield return null;
+            Assert.That(sawShrinking, Is.True, "Effect-cleared views should be seen shrinking before removal.");
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(red == null && beam == null, Is.True, "Every effect-cleared view is destroyed.");
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
         public IEnumerator AnimateFalls_SpecialsKeepTheirSpritesAndOrientation()
         {
             var board = CreateBoard("VTL", "HFB", "...");
