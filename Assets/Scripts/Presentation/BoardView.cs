@@ -140,6 +140,54 @@ namespace Match3.Presentation
             return SpecialActivationAnimation.Animate(views, specialActivationDuration);
         }
 
+        // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal and Nova Gem
+        // light the visible views their Core Footprint addresses (holes are skipped; the footprint is never recomputed);
+        // other specials keep the simple pulse until their own feedback. Everything is checked before anything changes.
+        public IEnumerator AnimateSpecialEffects(SpecialEffectPlan plan)
+        {
+            if (plan == null)
+            {
+                throw new ArgumentNullException(nameof(plan));
+            }
+
+            ValidateDuration(specialActivationDuration);
+
+            var steps = new SpecialEffectFeedback.Step[plan.Effects.Count];
+            for (int i = 0; i < steps.Length; i++)
+            {
+                var effect = plan.Effects[i];
+                var origin = GetTileView(effect.Origin);
+                if (origin.Type != effect.Type)
+                {
+                    throw new InvalidOperationException("The activation view must match the planned special.");
+                }
+
+                var highlighted = new List<TileView>();
+                if (ShowsFootprint(effect.Type))
+                {
+                    foreach (var position in effect.Footprint)
+                    {
+                        // A hole has no view (cleared) or a hidden Empty view (initial render); neither is lit.
+                        if (position != effect.Origin && tileViews.TryGetValue(position, out var view) && view != null
+                            && view.Type != TileType.Empty)
+                        {
+                            highlighted.Add(view);
+                        }
+                    }
+                }
+
+                steps[i] = new SpecialEffectFeedback.Step(origin, highlighted.ToArray());
+            }
+
+            return SpecialEffectFeedback.Animate(steps, specialActivationDuration);
+        }
+
+        // Step 7a covers the line and area specials; Wisp and Spectrum Core feedback arrives in Step 7b.
+        private static bool ShowsFootprint(TileType type)
+        {
+            return type == TileType.HorizontalRocket || type == TileType.VerticalRocket || type == TileType.TNT;
+        }
+
         // Core has already cleared these cells; their old views shrink and fade, then RemoveViews destroys them.
         // Every position is checked before anything changes; the lookup itself is not touched here.
         public IEnumerator AnimateClearViews(IReadOnlyCollection<GridPosition> positions)

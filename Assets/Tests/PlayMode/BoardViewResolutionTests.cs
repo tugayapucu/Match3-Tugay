@@ -99,6 +99,178 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator AnimateSpecialEffects_BeamCrystalRow_LightsOnlyItsVisibleRow_ThenRestoresWithoutChangingBoard()
+        {
+            // The hole at (3,1) is inside the row footprint but shows nothing, so it must not be lit.
+            var board = CreateBoard(
+                "RGBR",
+                "GHB.",
+                "BRGB");
+            boardView.Render(board);
+            var origin = new GridPosition(1, 1);
+            var originView = boardView.GetTileView(origin);
+            // Non-default starting states: the feedback must start from, and return to, each view's own values.
+            originView.transform.localScale = new Vector3(0.7f, 0.8f, 1f);
+            boardView.GetTileView(new GridPosition(0, 1)).GetComponent<SpriteRenderer>().color =
+                new Color(0.3f, 0.6f, 0.9f, 0.5f);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
+
+            var animation = boardView.AnimateSpecialEffects(plan);
+            Assert.That(animation.MoveNext(), Is.True);
+            AssertLitExactly(board, originView, ViewsAt(new GridPosition(0, 1), new GridPosition(2, 1)), colors, scales);
+            // Visual only: the Board and the lookup are untouched.
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+            Assert.That(boardView.GetTileView(origin), Is.SameAs(originView));
+            yield return animation;
+
+            AssertLitExactly(board, null, new TileView[0], colors, scales);
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+            AssertViewsMatchBoard(board);
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_BeamCrystalColumn_LightsOnlyItsColumn()
+        {
+            var board = CreateBoard(
+                "RGB",
+                "BVR",
+                "GRB");
+            boardView.Render(board);
+            var origin = new GridPosition(1, 1);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
+            AssertLitExactly(board, boardView.GetTileView(origin),
+                ViewsAt(new GridPosition(1, 0), new GridPosition(1, 2)), colors, scales);
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_NovaGem_LightsItsAreaClippedByTheBoard()
+        {
+            CheckNovaArea(new GridPosition(3, 3), 24); // Centre: the full 5×5 area.
+            CheckNovaArea(new GridPosition(0, 3), 14); // Edge: 3 columns × 5 rows.
+            CheckNovaArea(new GridPosition(0, 0), 8); // Corner: 3 × 3.
+        }
+
+        [UnityTest]
+        public IEnumerator AnimateSpecialEffects_Chain_ShowsEachEffectInPlanOrder_FromTheOriginalAppearance()
+        {
+            // The Beam Crystal's row reaches the Nova Gem, so Core plans the row first and the 5×5 area second.
+            var board = CreateBoard(
+                "RRRRRRR",
+                "RRRRRRR",
+                "HRRRTRR",
+                "RRRRRRR",
+                "RRRRRRR");
+            boardView.Render(board);
+            var beam = new GridPosition(0, 2);
+            var nova = new GridPosition(4, 2);
+            var beamView = boardView.GetTileView(beam);
+            var novaView = boardView.GetTileView(nova);
+            var overlap = boardView.GetTileView(new GridPosition(3, 2));
+            var novaOnly = boardView.GetTileView(new GridPosition(3, 0));
+            // The same tint on a cell in both footprints and a cell only in the area: during the area phase they
+            // must match, so the overlap cannot carry anything left over from the row phase.
+            var tint = new Color(0.3f, 0.6f, 0.9f, 1f);
+            overlap.GetComponent<SpriteRenderer>().color = tint;
+            novaOnly.GetComponent<SpriteRenderer>().color = tint;
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(beam) });
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].Origin, Is.EqualTo(beam));
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(nova));
+
+            var animation = boardView.AnimateSpecialEffects(plan);
+            Assert.That(animation.MoveNext(), Is.True);
+            // Row phase: the Nova Gem is lit as part of the row but does not pulse yet; its area is untouched.
+            var rowLit = new List<TileView>();
+            for (int x = 1; x < board.Width; x++)
+            {
+                rowLit.Add(boardView.GetTileView(new GridPosition(x, 2)));
+            }
+
+            AssertLitExactly(board, beamView, rowLit, colors, scales);
+
+            int frames = 0;
+            while (novaView.transform.localScale == scales[novaView])
+            {
+                AssertColor(novaOnly.GetComponent<SpriteRenderer>().color, colors[novaOnly], "Area-only cell in the row phase");
+                yield return null;
+                Assert.That(animation.MoveNext(), Is.True, "The area phase must follow the row phase.");
+                Assert.That(++frames, Is.LessThan(1000));
+            }
+
+            // Area phase, first frame: the whole row (Beam Crystal included) is back, and the area is lit.
+            AssertLitExactly(board, novaView, ViewsInNovaArea(board, nova), colors, scales);
+            yield return null;
+            if (animation.MoveNext())
+            {
+                // Mid-fade, both tinted cells are at the same point between their tint and gold.
+                AssertColor(overlap.GetComponent<SpriteRenderer>().color, novaOnly.GetComponent<SpriteRenderer>().color,
+                    "Overlap cell in the area phase");
+                yield return animation;
+            }
+
+            AssertLitExactly(board, null, new TileView[0], colors, scales);
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_WispAndSpectrumCore_KeepTheSimpleOriginPulse()
+        {
+            CheckOriginOnlyPulse(CreateBoard("RFR"), new GridPosition(1, 0));
+            CheckOriginOnlyPulse(CreateBoard("RLR"), new GridPosition(1, 0));
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_ZeroDuration_ChangesNothing()
+        {
+            var board = CreateBoard("RHR");
+            boardView.Render(board);
+            typeof(BoardView).GetField("specialActivationDuration", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(boardView, 0f);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(1, 0)) });
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.False);
+            AssertLitExactly(board, null, new TileView[0], colors, scales);
+        }
+
+        [Test]
+        public void AnimateSpecialEffects_RejectsBadInput_WhenCalled_BeforeAnyViewChanges()
+        {
+            // H's row reaches T, so the plan has two effects; only the second one's view is made wrong.
+            var board = CreateBoard("HRT");
+            boardView.Render(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(0, 0)) });
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+
+            Assert.Throws<ArgumentNullException>(() => boardView.AnimateSpecialEffects(null));
+            boardView.GetTileView(new GridPosition(2, 0)).SetTileType(TileType.Red);
+            Assert.Throws<InvalidOperationException>(() => boardView.AnimateSpecialEffects(plan));
+            boardView.RemoveViews(new[] { new GridPosition(2, 0) });
+            Assert.Throws<ArgumentOutOfRangeException>(() => boardView.AnimateSpecialEffects(plan));
+
+            // Nothing was started, so the first effect's views were never touched.
+            for (int x = 0; x < 2; x++)
+            {
+                var view = boardView.GetTileView(new GridPosition(x, 0));
+                AssertColor(view.GetComponent<SpriteRenderer>().color, colors[view], $"({x},0)");
+                Assert.That(view.transform.localScale, Is.EqualTo(scales[view]));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator AnimateClearViews_ShrinksAndFadesFromEachViewsOwnState_ThenEndsInvisible()
         {
             var board = CreateBoard("RGB");
@@ -1356,6 +1528,132 @@ namespace Match3.Presentation.Tests
         private int CountActiveViews()
         {
             return boardObject.GetComponentsInChildren<TileView>().Length;
+        }
+
+        private static readonly Color FeedbackGold = new Color(1f, 0.8f, 0.2f);
+
+        private void CheckNovaArea(GridPosition origin, int expectedLit)
+        {
+            var board = new Board(7, 7);
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    var position = new GridPosition(x, y);
+                    board.SetTile(position, position == origin ? TileType.TNT : TileType.Red);
+                }
+            }
+
+            boardView.Render(board);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
+            var expected = ViewsInNovaArea(board, origin);
+            Assert.That(expected.Count, Is.EqualTo(expectedLit));
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
+            AssertLitExactly(board, boardView.GetTileView(origin), expected, colors, scales);
+        }
+
+        // Core does give Wisp and Spectrum Core wider footprints; Step 7a still pulses only the special itself.
+        private void CheckOriginOnlyPulse(Board board, GridPosition origin)
+        {
+            boardView.Render(board);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) }, new System.Random(3));
+            Assert.That(plan.Effects[0].Footprint.Count, Is.GreaterThan(1));
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
+            AssertLitExactly(board, boardView.GetTileView(origin), new TileView[0], colors, scales);
+        }
+
+        // An independent statement of the Nova Gem's area: visible views within two cells, the origin excluded.
+        private List<TileView> ViewsInNovaArea(Board board, GridPosition origin)
+        {
+            var views = new List<TileView>();
+            foreach (var view in AllViews(board))
+            {
+                if (view.Position != origin && view.Type != TileType.Empty
+                    && Math.Abs(view.Position.X - origin.X) <= 2 && Math.Abs(view.Position.Y - origin.Y) <= 2)
+                {
+                    views.Add(view);
+                }
+            }
+
+            return views;
+        }
+
+        private List<TileView> ViewsAt(params GridPosition[] positions)
+        {
+            var views = new List<TileView>();
+            foreach (var position in positions)
+            {
+                views.Add(boardView.GetTileView(position));
+            }
+
+            return views;
+        }
+
+        // At full strength the origin grows and turns gold, the lit views turn gold, and every other view is untouched.
+        // With no origin and nothing lit, it checks that every view is back to its snapshot.
+        private void AssertLitExactly(Board board, TileView origin, ICollection<TileView> lit,
+            Dictionary<TileView, Color> colors, Dictionary<TileView, Vector3> scales)
+        {
+            foreach (var view in AllViews(board))
+            {
+                string where = $"({view.Position.X},{view.Position.Y})";
+                bool isOrigin = origin != null && view == origin;
+                AssertColor(view.GetComponent<SpriteRenderer>().color,
+                    isOrigin || lit.Contains(view) ? FeedbackGold : colors[view], where);
+                Vector3 expectedScale = isOrigin ? scales[view] * 1.15f : scales[view];
+                Assert.That(Vector3.Distance(view.transform.localScale, expectedScale), Is.LessThan(1e-5f), $"Scale at {where}.");
+            }
+        }
+
+        private static void AssertColor(Color actual, Color expected, string where)
+        {
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(1e-5f), $"Red at {where}.");
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(1e-5f), $"Green at {where}.");
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(1e-5f), $"Blue at {where}.");
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(1e-5f), $"Alpha at {where}.");
+        }
+
+        // Only for freshly rendered boards, where every cell (Empty included) has a view.
+        private List<TileView> AllViews(Board board)
+        {
+            var views = new List<TileView>();
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    views.Add(boardView.GetTileView(new GridPosition(x, y)));
+                }
+            }
+
+            return views;
+        }
+
+        private Dictionary<TileView, Color> SnapshotColors(Board board)
+        {
+            var colors = new Dictionary<TileView, Color>();
+            foreach (var view in AllViews(board))
+            {
+                colors.Add(view, view.GetComponent<SpriteRenderer>().color);
+            }
+
+            return colors;
+        }
+
+        private Dictionary<TileView, Vector3> SnapshotScales(Board board)
+        {
+            var scales = new Dictionary<TileView, Vector3>();
+            foreach (var view in AllViews(board))
+            {
+                scales.Add(view, view.transform.localScale);
+            }
+
+            return scales;
         }
 
         private static TileType[,] ReadTiles(Board board)
