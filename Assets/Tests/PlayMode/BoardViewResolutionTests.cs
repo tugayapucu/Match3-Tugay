@@ -422,6 +422,47 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Runner_BeamCrystalSwap_LightsItsRowOnTheUnchangedBoard_BeforeClearing()
+        {
+            // Already swapped: the Beam Crystal sits at (1,0), so Core's footprint is the bottom row.
+            var board = CreateBoard(
+                "RGB",
+                "GBR",
+                "RHG");
+            boardView.Render(board);
+            var rowViews = ViewsAt(new GridPosition(0, 0), new GridPosition(2, 0));
+            var above = boardView.GetTileView(new GridPosition(0, 1));
+            var before = ReadTiles(board);
+            var move = SwapValidator.Analyze(board, new GridPosition(0, 0), new GridPosition(1, 0));
+            int callbacks = 0;
+            boardView.StartCoroutine(new BoardResolutionRunner(board, boardView, FullPalette,
+                new System.Random(7), 0.05f, 0.05f, new System.Random(2)).ResolveUntilStable(move, result => callbacks++));
+
+            bool sawRowLit = false;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (callbacks == 0)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "Resolution did not finish.");
+                if (rowViews[0] != null && rowViews[0].gameObject.activeSelf && IsGoldTinted(rowViews[0]))
+                {
+                    // The feedback runs on the stable Board: nothing is cleared until it ends.
+                    sawRowLit = true;
+                    Assert.That(IsGoldTinted(rowViews[1]), Is.True, "The whole visible row is lit together.");
+                    Assert.That(IsGoldTinted(above), Is.False, "Cells outside the footprint stay as they are.");
+                    Assert.That(ReadTiles(board), Is.EqualTo(before));
+                }
+
+                yield return null;
+            }
+
+            yield return null;
+            Assert.That(sawRowLit, Is.True, "The Beam Crystal's row should be seen lit before it clears.");
+            Assert.That(callbacks, Is.EqualTo(1));
+            Assert.That(rowViews[0] == null && rowViews[1] == null, Is.True, "The cleared row views are destroyed.");
+            AssertViewsMatchBoard(board);
+        }
+
+        [UnityTest]
         public IEnumerator AnimateFalls_SpecialsKeepTheirSpritesAndOrientation()
         {
             var board = CreateBoard("VTL", "HFB", "...");
@@ -1609,6 +1650,12 @@ namespace Match3.Presentation.Tests
                 Vector3 expectedScale = isOrigin ? scales[view] * 1.15f : scales[view];
                 Assert.That(Vector3.Distance(view.transform.localScale, expectedScale), Is.LessThan(1e-5f), $"Scale at {where}.");
             }
+        }
+
+        // Gold lowers blue; a white tile that only fades keeps its RGB, so this tells the feedback from the clear.
+        private static bool IsGoldTinted(TileView view)
+        {
+            return view.GetComponent<SpriteRenderer>().color.b < 1f - 1e-4f;
         }
 
         private static void AssertColor(Color actual, Color expected, string where)
