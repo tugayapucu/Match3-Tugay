@@ -117,9 +117,9 @@ namespace Match3.Presentation
             secondView.SetGridPosition(first);
         }
 
-        // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal, Nova Gem
-        // and Spectrum Core pop the visible views their Core Footprint addresses (holes are skipped; the footprint and
-        // Spectrum Core's color are never recomputed); Wisp keeps the simple pulse until its own feedback.
+        // Core supplies the whole chain; effects are shown one at a time in the plan's order. Each special pops the
+        // visible views its Core Footprint addresses (holes are skipped; the footprint, Spectrum Core's color and
+        // Wisp's target are never recomputed). Wisp's RemoteTarget is left out of its local pop.
         // Everything is checked before anything changes.
         public IEnumerator AnimateSpecialEffects(SpecialEffectPlan plan)
         {
@@ -141,16 +141,18 @@ namespace Match3.Presentation
                 }
 
                 var highlighted = new List<TileView>();
-                if (ShowsFootprint(effect.Type))
+                foreach (var position in effect.Footprint)
                 {
-                    foreach (var position in effect.Footprint)
+                    // The origin has its own pop, and Wisp's remote target is not part of the local burst.
+                    if (position == effect.Origin || position == effect.RemoteTarget)
                     {
-                        // A hole has no view (cleared) or a hidden Empty view (initial render); neither pops.
-                        if (position != effect.Origin && tileViews.TryGetValue(position, out var view) && view != null
-                            && view.Type != TileType.Empty)
-                        {
-                            highlighted.Add(view);
-                        }
+                        continue;
+                    }
+
+                    var view = FindVisibleView(position);
+                    if (view != null)
+                    {
+                        highlighted.Add(view);
                     }
                 }
 
@@ -160,10 +162,12 @@ namespace Match3.Presentation
             return SpecialEffectFeedback.Animate(steps, specialActivationDuration);
         }
 
-        // Wisp's footprint also holds its remote target, which needs its own flight feedback.
-        private static bool ShowsFootprint(TileType type)
+        // A hole has no view (cleared) or a hidden Empty view (initial render); neither is shown as affected.
+        private TileView FindVisibleView(GridPosition position)
         {
-            return type != TileType.Propeller;
+            return tileViews.TryGetValue(position, out var view) && view != null && view.Type != TileType.Empty
+                ? view
+                : null;
         }
 
         // Core has already cleared these cells; their old views shrink and fade, then RemoveViews destroys them.

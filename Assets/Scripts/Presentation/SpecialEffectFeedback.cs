@@ -8,8 +8,7 @@ namespace Match3.Presentation
     // or scoring rules: BoardView supplies each effect's own view and the rendered views its Footprint addresses.
     internal static class SpecialEffectFeedback
     {
-        // One effect to show. An empty Highlighted array means "pulse the special only" (Wisp, until its flight feedback).
-        // The origin is never in Highlighted, so it gets only its own, stronger pop.
+        // One effect to show. The origin is never in Highlighted, so it gets only its own, stronger pop.
         internal sealed class Step
         {
             public readonly TileView Origin;

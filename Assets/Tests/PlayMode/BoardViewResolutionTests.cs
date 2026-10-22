@@ -180,9 +180,29 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void AnimateSpecialEffects_Wisp_KeepsTheSimpleOriginPulse()
+        public void AnimateSpecialEffects_WispLocalPhase_PopsItsPlus_WithoutTheRemoteTarget()
         {
-            CheckOriginOnlyPulse(CreateBoard("RFR"), new GridPosition(1, 0));
+            var board = CreateBoard(
+                "RGBY",
+                "GFRB",
+                "BYGR");
+            boardView.Render(board);
+            var origin = new GridPosition(1, 1);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) }, new System.Random(3));
+            var effect = plan.Effects[0];
+            Assert.That(effect.RemoteTarget.HasValue, Is.True);
+            Assert.That(effect.Footprint, Does.Contain(effect.RemoteTarget.Value), "Core lists the target in the footprint.");
+            // An independent statement of the local burst: the four neighbors of the Wisp.
+            var plus = ViewsAt(new GridPosition(1, 0), new GridPosition(0, 1), new GridPosition(2, 1), new GridPosition(1, 2));
+            Assert.That(plus.Contains(boardView.GetTileView(effect.RemoteTarget.Value)), Is.False);
+
+            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
+            // The remote target keeps its size here; AssertPoppedExactly also rules out a compounded origin.
+            AssertPoppedExactly(board, boardView.GetTileView(origin), plus, colors, scales);
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
         }
 
         [Test]
@@ -1629,19 +1649,6 @@ namespace Match3.Presentation.Tests
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
             AssertPoppedExactly(board, boardView.GetTileView(origin), expected, colors, scales);
-        }
-
-        // Core does give Wisp a wider footprint; until its flight feedback, only the special itself pulses.
-        private void CheckOriginOnlyPulse(Board board, GridPosition origin)
-        {
-            boardView.Render(board);
-            var colors = SnapshotColors(board);
-            var scales = SnapshotScales(board);
-            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) }, new System.Random(3));
-            Assert.That(plan.Effects[0].Footprint.Count, Is.GreaterThan(1));
-
-            Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
-            AssertPoppedExactly(board, boardView.GetTileView(origin), new TileView[0], colors, scales);
         }
 
         // An independent statement of the Nova Gem's area: visible views within two cells, the origin excluded.
