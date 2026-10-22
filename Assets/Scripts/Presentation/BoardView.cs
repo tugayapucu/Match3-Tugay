@@ -117,29 +117,6 @@ namespace Match3.Presentation
             secondView.SetGridPosition(first);
         }
 
-        // Core supplies the whole activation chain. This facade only resolves views for the animation helper.
-        public IEnumerator AnimateSpecialActivations(SpecialEffectPlan plan)
-        {
-            if (plan == null)
-            {
-                throw new ArgumentNullException(nameof(plan));
-            }
-            ValidateDuration(specialActivationDuration);
-
-            var views = new TileView[plan.Effects.Count];
-            for (int i = 0; i < views.Length; i++)
-            {
-                var effect = plan.Effects[i];
-                var view = GetTileView(effect.Origin);
-                if (view.Type != effect.Type)
-                {
-                    throw new InvalidOperationException("The activation view must match the planned special.");
-                }
-                views[i] = view;
-            }
-            return SpecialActivationAnimation.Animate(views, specialActivationDuration);
-        }
-
         // Core supplies the whole chain; effects are shown one at a time in the plan's order. Beam Crystal and Nova Gem
         // light the visible views their Core Footprint addresses (holes are skipped; the footprint is never recomputed);
         // other specials keep the simple pulse until their own feedback. Everything is checked before anything changes.

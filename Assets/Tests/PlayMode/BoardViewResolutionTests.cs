@@ -44,61 +44,6 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator AnimateSpecialActivations_PulsesTogetherAndRestoresEachViewWithoutChangingBoard()
-        {
-            var board = CreateBoard("HV");
-            boardView.Render(board);
-            var first = new GridPosition(0, 0);
-            var second = new GridPosition(1, 0);
-            var horizontal = boardView.GetTileView(first);
-            var vertical = boardView.GetTileView(second);
-            horizontal.transform.localScale = new Vector3(0.7f, 0.8f, 1f);
-            vertical.transform.localScale = new Vector3(1.1f, 0.9f, 1f);
-            Vector3 firstScale = horizontal.transform.localScale;
-            Vector3 secondScale = vertical.transform.localScale;
-            horizontal.GetComponent<SpriteRenderer>().color = Color.red;
-            vertical.GetComponent<SpriteRenderer>().color = Color.blue;
-            var before = ReadTiles(board);
-            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(first) });
-
-            var animation = boardView.AnimateSpecialActivations(plan);
-            Assert.That(animation.MoveNext(), Is.True);
-            Assert.That(horizontal.transform.localScale, Is.EqualTo(firstScale * 1.15f));
-            Assert.That(vertical.transform.localScale, Is.EqualTo(secondScale * 1.15f));
-            Assert.That(horizontal.GetComponent<SpriteRenderer>().color, Is.EqualTo(new Color(1f, 0.8f, 0.2f)));
-            Assert.That(vertical.GetComponent<SpriteRenderer>().color, Is.EqualTo(new Color(1f, 0.8f, 0.2f)));
-            Assert.That(ReadTiles(board), Is.EqualTo(before));
-            Assert.That(boardView.GetTileView(first), Is.SameAs(horizontal));
-            Assert.That(boardView.GetTileView(second), Is.SameAs(vertical));
-            yield return animation;
-
-            Assert.That(horizontal.transform.localScale, Is.EqualTo(firstScale));
-            Assert.That(vertical.transform.localScale, Is.EqualTo(secondScale));
-            Assert.That(horizontal.GetComponent<SpriteRenderer>().color, Is.EqualTo(Color.red));
-            Assert.That(vertical.GetComponent<SpriteRenderer>().color, Is.EqualTo(Color.blue));
-            Assert.That(ReadTiles(board), Is.EqualTo(before));
-            AssertViewsMatchBoard(board);
-        }
-
-        [Test]
-        public void AnimateSpecialActivations_ZeroDuration_SettlesImmediately()
-        {
-            var board = CreateBoard("H");
-            boardView.Render(board);
-            typeof(BoardView).GetField("specialActivationDuration", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(boardView, 0f);
-            var origin = new GridPosition(0, 0);
-            var view = boardView.GetTileView(origin);
-            Vector3 scale = view.transform.localScale;
-            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(origin) });
-
-            Assert.That(boardView.AnimateSpecialActivations(plan).MoveNext(), Is.False);
-            Assert.That(view.transform.localScale, Is.EqualTo(scale));
-            Assert.That(view.GetComponent<SpriteRenderer>().color, Is.EqualTo(Color.white));
-            Assert.That(view.Type, Is.EqualTo(TileType.HorizontalRocket));
-        }
-
-        [UnityTest]
         public IEnumerator AnimateSpecialEffects_BeamCrystalRow_LightsOnlyItsVisibleRow_ThenRestoresWithoutChangingBoard()
         {
             // The hole at (3,1) is inside the row footprint but shows nothing, so it must not be lit.
