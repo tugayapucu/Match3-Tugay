@@ -205,6 +205,110 @@ namespace Match3.Presentation.Tests
             Assert.That(ReadTiles(board), Is.EqualTo(before));
         }
 
+        [UnityTest]
+        public IEnumerator AnimateSpecialEffects_Wisp_FliesToCoresRemoteTarget_ThenPopsIt_AndDestroysTheFlyer()
+        {
+            var board = CreateBoard(
+                "RGBY",
+                "GFRB",
+                "BYGR");
+            boardView.Render(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(1, 1)) }, new System.Random(3));
+            Assert.That(plan.Effects[0].RemoteTarget.HasValue, Is.True);
+
+            yield return CheckWispFlight(board, plan);
+        }
+
+        [UnityTest]
+        public IEnumerator AnimateSpecialEffects_Wisp_FollowsWhicheverTargetCoreChose()
+        {
+            // Core's candidates are the seven cells outside the plus, in Y-then-X order: index 0 is (0,0), index 6 is
+            // (3,2). Scripted choices make Core pick each end; the flight must follow Core, never choose by itself.
+            var rows = new[] { "RGBY", "GFRB", "BYGR" };
+            var first = CreateBoard(rows);
+            boardView.Render(first);
+            var firstPlan = SpecialEffects.Plan(first, new[] { new SpecialActivation(new GridPosition(1, 1)) }, new ScriptedRandom(0));
+            Assert.That(firstPlan.Effects[0].RemoteTarget, Is.EqualTo(new GridPosition(0, 0)));
+            yield return CheckWispFlight(first, firstPlan);
+
+            var second = CreateBoard(rows);
+            boardView.Render(second);
+            var secondPlan = SpecialEffects.Plan(second, new[] { new SpecialActivation(new GridPosition(1, 1)) }, new ScriptedRandom(6));
+            Assert.That(secondPlan.Effects[0].RemoteTarget, Is.EqualTo(new GridPosition(3, 2)));
+            yield return CheckWispFlight(second, secondPlan);
+        }
+
+        [UnityTest]
+        public IEnumerator AnimateSpecialEffects_WispWithoutRemoteTarget_NeitherFliesNorInventsATarget()
+        {
+            // The plus covers the whole 3x1 board, so Core finds no remote target.
+            var board = CreateBoard("RFR");
+            boardView.Render(board);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(1, 0)) }, new System.Random(3));
+            Assert.That(plan.Effects[0].RemoteTarget.HasValue, Is.False);
+
+            var animation = boardView.AnimateSpecialEffects(plan);
+            float elapsed = 0f;
+            while (animation.MoveNext())
+            {
+                Assert.That(FindFlyer(), Is.Null);
+                Assert.That(elapsed, Is.LessThan(0.12f), "Only the local burst plays.");
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
+        }
+
+        [UnityTest]
+        public IEnumerator AnimateSpecialEffects_BeamThenWisp_ShowsRowThenBurstThenFlightThenTarget()
+        {
+            // The row reaches the Wisp, so Core plans the Beam Crystal first; its target lies outside row and plus.
+            var board = CreateBoard(
+                "RGBYR",
+                "HRFGB",
+                "BYGRY");
+            boardView.Render(board);
+            var beam = new GridPosition(0, 1);
+            var wisp = new GridPosition(2, 1);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(beam) }, new System.Random(3));
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].Origin, Is.EqualTo(beam));
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(wisp));
+            Assert.That(plan.Effects[1].RemoteTarget.HasValue, Is.True);
+            var beamView = boardView.GetTileView(beam);
+            var wispView = boardView.GetTileView(wisp);
+            var targetView = boardView.GetTileView(plan.Effects[1].RemoteTarget.Value);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+
+            int frame = 0, beamAt = -1, wispAt = -1, flightAt = -1, targetAt = -1;
+            var animation = boardView.AnimateSpecialEffects(plan);
+            while (animation.MoveNext())
+            {
+                // First frame each phase is seen: origin pops are exact at full strength.
+                if (beamAt < 0 && Vector3.Distance(beamView.transform.localScale, scales[beamView] * 1.2f) < 1e-5f) beamAt = frame;
+                if (wispAt < 0 && Vector3.Distance(wispView.transform.localScale, scales[wispView] * 1.2f) < 1e-5f) wispAt = frame;
+                if (flightAt < 0 && FindFlyer() != null) flightAt = frame;
+                if (targetAt < 0 && targetView.transform.localScale.x > scales[targetView].x + 1e-4f) targetAt = frame;
+                AssertColorsUnchanged(board, colors);
+                Assert.That(ReadTiles(board), Is.EqualTo(before));
+                Assert.That(++frame, Is.LessThan(1000));
+                yield return null;
+            }
+
+            Assert.That(beamAt, Is.EqualTo(0), "The Beam Crystal comes first.");
+            Assert.That(wispAt, Is.GreaterThan(beamAt), "Then the Wisp's own burst.");
+            Assert.That(flightAt, Is.GreaterThan(wispAt), "Then its flight.");
+            Assert.That(targetAt, Is.GreaterThan(flightAt), "The target pops only on arrival.");
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
+            yield return null;
+            Assert.That(FindFlyer(), Is.Null);
+        }
+
         [Test]
         public void AnimateSpecialEffects_SpectrumCore_PopsEveryVisibleViewItsFootprintAddresses()
         {
@@ -1649,6 +1753,92 @@ namespace Match3.Presentation.Tests
 
             Assert.That(boardView.AnimateSpecialEffects(plan).MoveNext(), Is.True);
             AssertPoppedExactly(board, boardView.GetTileView(origin), expected, colors, scales);
+        }
+
+        // Drives one Wisp effect frame by frame: the local burst (no flyer yet, target at rest), then the flight (a
+        // picture-only copy eased from the Wisp to Core's RemoteTarget, every real view at rest), then the target's pop.
+        // Afterwards everything is restored and the flyer is gone. The Board never changes.
+        private IEnumerator CheckWispFlight(Board board, SpecialEffectPlan plan)
+        {
+            const float duration = 0.12f;
+            var effect = plan.Effects[0];
+            var originView = boardView.GetTileView(effect.Origin);
+            var targetView = boardView.GetTileView(effect.RemoteTarget.Value);
+            Vector3 start = originView.transform.position;
+            Vector3 end = CellWorld(effect.RemoteTarget.Value.X, effect.RemoteTarget.Value.Y);
+            var colors = SnapshotColors(board);
+            var scales = SnapshotScales(board);
+            var before = ReadTiles(board);
+
+            var animation = boardView.AnimateSpecialEffects(plan);
+            int localFrames = 0, flightFrames = 0, arrivalFrames = 0;
+            float flightElapsed = 0f;
+            GameObject flyer = null;
+            bool more = animation.MoveNext();
+            while (more)
+            {
+                var current = FindFlyer();
+                if (current == null && flightFrames == 0)
+                {
+                    localFrames++;
+                    Assert.That(originView.transform.localScale.x, Is.GreaterThan(scales[originView].x), "Local burst.");
+                    Assert.That(targetView.transform.localScale, Is.EqualTo(scales[targetView]), "The target waits for the flight.");
+                }
+                else if (current != null)
+                {
+                    if (flightFrames == 0)
+                    {
+                        flyer = current;
+                        flightElapsed = 0f;
+                    }
+
+                    flightFrames++;
+                    Assert.That(current, Is.SameAs(flyer), "One flyer for the whole flight.");
+                    Assert.That(flyer.GetComponent<TileView>(), Is.Null, "A picture, not a tile.");
+                    Assert.That(flyer.GetComponent<Collider2D>(), Is.Null, "Never clickable.");
+                    Assert.That(flyer.GetComponent<SpriteRenderer>().sprite,
+                        Is.SameAs(originView.GetComponent<SpriteRenderer>().sprite));
+                    Vector3 expected = Vector3.Lerp(start, end, TileEasing.EaseInOut(flightElapsed / duration));
+                    Assert.That(Vector3.Distance(flyer.transform.position, expected), Is.LessThan(1e-4f), "Eased toward Core's target.");
+                    // The real Wisp stays in place at rest; nothing else pops during the flight.
+                    AssertPoppedExactly(board, null, new TileView[0], colors, scales);
+                }
+                else
+                {
+                    arrivalFrames++;
+                    if (arrivalFrames == 1)
+                    {
+                        AssertPoppedExactly(board, null, new[] { targetView }, colors, scales);
+                    }
+                }
+
+                Assert.That(ReadTiles(board), Is.EqualTo(before));
+                Assert.That(boardView.GetTileView(effect.Origin), Is.SameAs(originView), "The lookup is untouched.");
+                yield return null;
+                flightElapsed += Time.deltaTime;
+                more = animation.MoveNext();
+            }
+
+            Assert.That(localFrames, Is.GreaterThan(0));
+            Assert.That(flightFrames, Is.GreaterThan(0));
+            Assert.That(arrivalFrames, Is.GreaterThan(0));
+            AssertPoppedExactly(board, null, new TileView[0], colors, scales);
+            yield return null;
+            Assert.That(flyer == null, Is.True, "The flyer is destroyed after landing.");
+        }
+
+        // The flight picture: an active sprite under the board that is not a tile.
+        private GameObject FindFlyer()
+        {
+            foreach (var renderer in boardObject.GetComponentsInChildren<SpriteRenderer>())
+            {
+                if (renderer.GetComponent<TileView>() == null)
+                {
+                    return renderer.gameObject;
+                }
+            }
+
+            return null;
         }
 
         // An independent statement of the Nova Gem's area: visible views within two cells, the origin excluded.

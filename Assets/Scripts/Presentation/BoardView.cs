@@ -119,8 +119,9 @@ namespace Match3.Presentation
 
         // Core supplies the whole chain; effects are shown one at a time in the plan's order. Each special pops the
         // visible views its Core Footprint addresses (holes are skipped; the footprint, Spectrum Core's color and
-        // Wisp's target are never recomputed). Wisp's RemoteTarget is left out of its local pop.
-        // Everything is checked before anything changes.
+        // Wisp's target are never recomputed). A Wisp's RemoteTarget is left out of its local pop: a temporary copy
+        // flies there, then the target pops. No RemoteTarget means no flight. Everything is checked before anything
+        // changes.
         public IEnumerator AnimateSpecialEffects(SpecialEffectPlan plan)
         {
             if (plan == null)
@@ -156,7 +157,16 @@ namespace Match3.Presentation
                     }
                 }
 
-                steps[i] = new SpecialEffectFeedback.Step(origin, highlighted.ToArray());
+                // Core's own choice, used as is: Presentation never picks, rerolls or substitutes a target.
+                Vector3? flightEnd = null;
+                TileView target = null;
+                if (effect.RemoteTarget.HasValue)
+                {
+                    flightEnd = GetWorldPosition(effect.RemoteTarget.Value);
+                    target = FindVisibleView(effect.RemoteTarget.Value);
+                }
+
+                steps[i] = new SpecialEffectFeedback.Step(origin, highlighted.ToArray(), flightEnd, target);
             }
 
             return SpecialEffectFeedback.Animate(steps, specialActivationDuration);
