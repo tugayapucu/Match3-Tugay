@@ -15,6 +15,8 @@ These two files therefore differ from the external staging package; the reposito
 
 Step 3 readability fix: `Normal/Green.png` was visibly smaller and off-center on the board. Its visible body (alpha ≥ 128) measured 383 × 379 px centered at (275, 241), while the other five gems have a median of 421 × 420 px centered at (255, 254.5). The green shape was uniformly scaled by about 1.10 (bicubic on premultiplied alpha, so edges get no fringes) and re-centered; it now measures 422 × 418 px at (255.5, 254.5). The canvas stays 512 × 512 and the `.meta` file is unchanged. Invisible alpha-1 specks around the shape were dropped in the same pass.
 
+Beam Crystal thickness fix (after Step 7b): both Beam Crystals read as a thin sliver at board size. Their opaque area (alpha ≥ 128) covered about 20% of the canvas (H 426 × 209 px, V 160 × 409 px), against about 60% for the gems. Each body was stretched 1.45× across its beam only, around the canvas centre (bilinear on premultiplied alpha), so its length is unchanged; `BeamCrystal_V.png` was also moved by whole pixels (−3, −8) to sit centred. They now measure H 426 × 303 px and V 232 × 409 px, centred at (255.5, 255–256), and cover about 29% each, close to the Wisp (28%) and still clearly directional. The outline is about 1.45× thicker across the beam, which is invisible at board size. The canvas, `.meta` files, import settings, prefab, collider and code are unchanged. Checked beside all gems and specials at 32, 48 and 64 px cells, and with the row/column effect feedback at 60 fps.
+
 ### Runtime sprites
 
 `Assets/Art/Tiles/PrismaticEnergy/`
