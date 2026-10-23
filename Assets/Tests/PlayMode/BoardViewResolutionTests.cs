@@ -238,6 +238,21 @@ namespace Match3.Presentation.Tests
             yield return CheckWispFlight(second, secondPlan);
         }
 
+        [Test]
+        public void AnimateSpecialEffects_InvalidFlightDuration_ThrowsWhenCalled()
+        {
+            var board = CreateBoard("RHR");
+            boardView.Render(board);
+            var plan = SpecialEffects.Plan(board, new[] { new SpecialActivation(new GridPosition(1, 0)) });
+            var field = typeof(BoardView).GetField("wispFlightDuration", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            foreach (float invalid in new[] { -0.1f, float.NaN, float.PositiveInfinity })
+            {
+                field.SetValue(boardView, invalid);
+                Assert.Throws<ArgumentOutOfRangeException>(() => boardView.AnimateSpecialEffects(plan), $"{invalid}");
+            }
+        }
+
         [UnityTest]
         public IEnumerator AnimateSpecialEffects_WispWithoutRemoteTarget_NeitherFliesNorInventsATarget()
         {
@@ -1760,7 +1775,7 @@ namespace Match3.Presentation.Tests
         // Afterwards everything is restored and the flyer is gone. The Board never changes.
         private IEnumerator CheckWispFlight(Board board, SpecialEffectPlan plan)
         {
-            const float duration = 0.12f;
+            const float flightDuration = 0.25f;
             var effect = plan.Effects[0];
             var originView = boardView.GetTileView(effect.Origin);
             var targetView = boardView.GetTileView(effect.RemoteTarget.Value);
@@ -1798,7 +1813,9 @@ namespace Match3.Presentation.Tests
                     Assert.That(flyer.GetComponent<Collider2D>(), Is.Null, "Never clickable.");
                     Assert.That(flyer.GetComponent<SpriteRenderer>().sprite,
                         Is.SameAs(originView.GetComponent<SpriteRenderer>().sprite));
-                    Vector3 expected = Vector3.Lerp(start, end, TileEasing.EaseInOut(flightElapsed / duration));
+                    // Launched at the Wisp's popped size, so it is easy to follow.
+                    Assert.That(Vector3.Distance(flyer.transform.localScale, scales[originView] * 1.2f), Is.LessThan(1e-5f));
+                    Vector3 expected = Vector3.Lerp(start, end, TileEasing.EaseInOut(flightElapsed / flightDuration));
                     Assert.That(Vector3.Distance(flyer.transform.position, expected), Is.LessThan(1e-4f), "Eased toward Core's target.");
                     // The real Wisp stays in place at rest; nothing else pops during the flight.
                     AssertPoppedExactly(board, null, new TileView[0], colors, scales);

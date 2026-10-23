@@ -33,9 +33,9 @@ namespace Match3.Presentation
         private const float OriginGrowth = 0.2f;
         private const float FootprintGrowth = 0.1f;
 
-        // BoardView validates the duration and resolves every view before calling this helper.
+        // BoardView validates the durations and resolves every view before calling this helper.
         // One flat iterator (no nested coroutines), so each MoveNext is exactly one frame.
-        public static IEnumerator Animate(Step[] steps, float durationPerStep)
+        public static IEnumerator Animate(Step[] steps, float durationPerStep, float flightDuration)
         {
             if (steps.Length == 0 || durationPerStep <= 0f)
             {
@@ -86,13 +86,13 @@ namespace Match3.Presentation
                     continue;
                 }
 
-                // Flight: a temporary copy of the Wisp's picture travels to Core's RemoteTarget. The real Wisp view,
-                // the Board and the lookup are untouched.
-                GameObject flyer = CreateFlyer(step.Origin, scales[step.Origin]);
+                // Flight: a temporary copy of the Wisp's picture travels to Core's RemoteTarget at the Wisp's popped
+                // size, so it reads as launched. The real Wisp view, the Board and the lookup are untouched.
+                GameObject flyer = CreateFlyer(step.Origin, scales[step.Origin] * (1f + OriginGrowth));
                 Vector3 start = step.Origin.transform.position;
-                for (float elapsed = 0f; elapsed < durationPerStep; elapsed += Time.deltaTime)
+                for (float elapsed = 0f; elapsed < flightDuration; elapsed += Time.deltaTime)
                 {
-                    float progress = TileEasing.EaseInOut(elapsed / durationPerStep);
+                    float progress = TileEasing.EaseInOut(elapsed / flightDuration);
                     flyer.transform.position = Vector3.Lerp(start, step.FlightEnd.Value, progress);
                     yield return null;
                 }
@@ -120,13 +120,13 @@ namespace Match3.Presentation
 
         // Picture only: no TileView, no collider, never registered with BoardView. A sibling of the tiles, so it
         // shares their space and is destroyed with the board if the feedback never finishes.
-        private static GameObject CreateFlyer(TileView origin, Vector3 restScale)
+        private static GameObject CreateFlyer(TileView origin, Vector3 scale)
         {
             var source = origin.GetComponent<SpriteRenderer>();
             var flyer = new GameObject("WispFlight");
             flyer.transform.SetParent(origin.transform.parent, false);
             flyer.transform.localRotation = origin.transform.localRotation;
-            flyer.transform.localScale = restScale;
+            flyer.transform.localScale = scale;
             flyer.transform.position = origin.transform.position;
             var renderer = flyer.AddComponent<SpriteRenderer>();
             renderer.sprite = source.sprite;

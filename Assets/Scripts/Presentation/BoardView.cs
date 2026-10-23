@@ -15,6 +15,8 @@ namespace Match3.Presentation
         // Distance between cell centers in the root's local space.
         [SerializeField] private float tileSpacing = 1f;
         [SerializeField] private float specialActivationDuration = 0.12f;
+        // Seconds the Wisp's copy takes to fly to its remote target; long enough to be seen travelling.
+        [SerializeField] private float wispFlightDuration = 0.25f;
         // Seconds matched views take to shrink and fade before they are removed; 0 removes them instantly.
         [SerializeField] private float clearDuration = 0.1f;
 
@@ -130,6 +132,7 @@ namespace Match3.Presentation
             }
 
             ValidateDuration(specialActivationDuration);
+            ValidateDuration(wispFlightDuration);
 
             var steps = new SpecialEffectFeedback.Step[plan.Effects.Count];
             for (int i = 0; i < steps.Length; i++)
@@ -169,7 +172,7 @@ namespace Match3.Presentation
                 steps[i] = new SpecialEffectFeedback.Step(origin, highlighted.ToArray(), flightEnd, target);
             }
 
-            return SpecialEffectFeedback.Animate(steps, specialActivationDuration);
+            return SpecialEffectFeedback.Animate(steps, specialActivationDuration, wispFlightDuration);
         }
 
         // A hole has no view (cleared) or a hidden Empty view (initial render); neither is shown as affected.
