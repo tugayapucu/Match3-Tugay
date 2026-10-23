@@ -98,7 +98,7 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.Moves.text, Is.EqualTo("7"));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
             Assert.That(hud.Goal.text, Is.EqualTo("0/12"));
-            Assert.That(hud.Status.text, Is.Empty);
+            Assert.That(hud.OutcomePanel.activeSelf, Is.False);
             Assert.That(hud.Restart.interactable, Is.True);
         }
 
@@ -120,6 +120,7 @@ namespace Match3.Presentation.Tests
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The move did not finish.");
                 // Busy: no restart offered, and the HUD still shows the values from before the move.
                 Assert.That(hud.Restart.interactable, Is.False);
+                Assert.That(hud.PlayAgain.interactable, Is.False, "Play Again follows the same busy gate.");
                 Assert.That(hud.Moves.text, Is.EqualTo("5"));
                 yield return null;
             }
@@ -189,7 +190,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
             Assert.That(controller.enabled, Is.False);
-            Assert.That(hud.Status.text, Is.EqualTo("You Win!"));
+            Assert.That(hud.OutcomePanel.activeSelf, Is.True);
+            Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
             Assert.That(hud.Goal.text, Is.EqualTo("3/3"));
         }
 
@@ -204,7 +206,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
             Assert.That(controller.enabled, Is.False);
-            Assert.That(hud.Status.text, Is.EqualTo("Out of Moves"));
+            Assert.That(hud.OutcomePanel.activeSelf, Is.True);
+            Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Out of Moves"));
             Assert.That(hud.Moves.text, Is.EqualTo("0"));
         }
 
@@ -262,6 +265,23 @@ namespace Match3.Presentation.Tests
             yield return null;
 
             AssertFreshLevel(startingTiles, 1);
+        }
+
+        [UnityTest]
+        public IEnumerator PlayAgain_AfterWon_UsesTheSameRestartPath()
+        {
+            Set("startingMoveCount", 2);
+            Set("goalTarget", 3);
+            yield return StartBootstrap();
+            var startingTiles = ReadTiles();
+            ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
+            Assert.That(hud.OutcomePanel.activeSelf, Is.True);
+            Assert.That(hud.PlayAgain.interactable, Is.True, "Settled after the last move: Play Again is offered.");
+
+            hud.PlayAgain.onClick.Invoke();
+            yield return null;
+
+            AssertFreshLevel(startingTiles, 2);
         }
 
         [UnityTest]
@@ -451,7 +471,7 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.Moves.text, Is.EqualTo(startingMoveCount.ToString()));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
             Assert.That(hud.Goal.text, Is.EqualTo($"0/{level.GoalTarget}"));
-            Assert.That(hud.Status.text, Is.Empty);
+            Assert.That(hud.OutcomePanel.activeSelf, Is.False, "A fresh level hides the outcome panel.");
             Assert.That(hud.Restart.interactable, Is.True);
 
             Assert.That(controller.enabled, Is.True);
