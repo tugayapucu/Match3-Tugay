@@ -95,9 +95,9 @@ namespace Match3.Presentation.Tests
             Assert.That(level.GoalProgress, Is.Zero);
             Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(controller.enabled, Is.True);
-            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 7"));
-            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
-            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 0 / 12"));
+            Assert.That(hud.Moves.text, Is.EqualTo("7"));
+            Assert.That(hud.Score.text, Is.EqualTo("0"));
+            Assert.That(hud.Goal.text, Is.EqualTo("0/12"));
             Assert.That(hud.Status.text, Is.Empty);
             Assert.That(hud.Restart.interactable, Is.True);
         }
@@ -120,16 +120,16 @@ namespace Match3.Presentation.Tests
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The move did not finish.");
                 // Busy: no restart offered, and the HUD still shows the values from before the move.
                 Assert.That(hud.Restart.interactable, Is.False);
-                Assert.That(hud.Moves.text, Is.EqualTo("Moves: 5"));
+                Assert.That(hud.Moves.text, Is.EqualTo("5"));
                 yield return null;
             }
 
             var level = bootstrap.LevelProgress;
             Assert.That(hud.Restart.interactable, Is.True);
-            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 4"));
+            Assert.That(hud.Moves.text, Is.EqualTo("4"));
             Assert.That(level.Score, Is.GreaterThan(0));
-            Assert.That(hud.Score.text, Is.EqualTo($"Score: {level.Score}"));
-            Assert.That(hud.Goal.text, Is.EqualTo($"Goal: Red {level.GoalProgress} / 50"));
+            Assert.That(hud.Score.text, Is.EqualTo(level.Score.ToString()));
+            Assert.That(hud.Goal.text, Is.EqualTo($"{level.GoalProgress}/50"));
         }
 
         [UnityTest]
@@ -147,9 +147,9 @@ namespace Match3.Presentation.Tests
             yield return WaitUntilUnlocked();
 
             Assert.That(hud.Restart.interactable, Is.True);
-            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 5"));
-            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
-            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 0 / 50"));
+            Assert.That(hud.Moves.text, Is.EqualTo("5"));
+            Assert.That(hud.Score.text, Is.EqualTo("0"));
+            Assert.That(hud.Goal.text, Is.EqualTo("0/50"));
         }
 
         [UnityTest]
@@ -190,7 +190,7 @@ namespace Match3.Presentation.Tests
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
             Assert.That(controller.enabled, Is.False);
             Assert.That(hud.Status.text, Is.EqualTo("You Win!"));
-            Assert.That(hud.Goal.text, Is.EqualTo("Goal: Red 3 / 3"));
+            Assert.That(hud.Goal.text, Is.EqualTo("3/3"));
         }
 
         [UnityTest]
@@ -205,7 +205,7 @@ namespace Match3.Presentation.Tests
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
             Assert.That(controller.enabled, Is.False);
             Assert.That(hud.Status.text, Is.EqualTo("Out of Moves"));
-            Assert.That(hud.Moves.text, Is.EqualTo("Moves: 0"));
+            Assert.That(hud.Moves.text, Is.EqualTo("0"));
         }
 
         [UnityTest]
@@ -448,9 +448,9 @@ namespace Match3.Presentation.Tests
             Assert.That(level.GoalProgress, Is.Zero);
             Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
 
-            Assert.That(hud.Moves.text, Is.EqualTo($"Moves: {startingMoveCount}"));
-            Assert.That(hud.Score.text, Is.EqualTo("Score: 0"));
-            Assert.That(hud.Goal.text, Is.EqualTo($"Goal: Red 0 / {level.GoalTarget}"));
+            Assert.That(hud.Moves.text, Is.EqualTo(startingMoveCount.ToString()));
+            Assert.That(hud.Score.text, Is.EqualTo("0"));
+            Assert.That(hud.Goal.text, Is.EqualTo($"0/{level.GoalTarget}"));
             Assert.That(hud.Status.text, Is.Empty);
             Assert.That(hud.Restart.interactable, Is.True);
 

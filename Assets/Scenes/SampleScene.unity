@@ -622,7 +622,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 40, y: -160}
+  m_AnchoredPosition: {x: 105, y: -160}
   m_SizeDelta: {x: 600, y: 55}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &598193199
@@ -1196,6 +1196,9 @@ MonoBehaviour:
   tilePrefab: {fileID: 3309412380449636705, guid: 87002534a75404047b03c19c51f9e365, type: 3}
   tileRoot: {fileID: 1255034525}
   tileSpacing: 1
+  specialActivationDuration: 0.12
+  wispFlightDuration: 0.25
+  clearDuration: 0.1
 --- !u!4 &1255034525
 Transform:
   m_ObjectHideFlags: 0
@@ -1257,6 +1260,81 @@ Transform:
   - {fileID: 87030284}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1553525675
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1553525676}
+  - component: {fileID: 1553525678}
+  - component: {fileID: 1553525677}
+  m_Layer: 0
+  m_Name: GoalIcon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1553525676
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1553525675}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1621617755}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 40, y: -160}
+  m_SizeDelta: {x: 55, y: 55}
+  m_Pivot: {x: 0, y: 1}
+--- !u!114 &1553525677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1553525675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1553525678
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1553525675}
+  m_CullTransparentMesh: 1
 --- !u!1 &1598949053
 GameObject:
   m_ObjectHideFlags: 0
@@ -1391,6 +1469,7 @@ RectTransform:
   m_Children:
   - {fileID: 1967568563}
   - {fileID: 210788899}
+  - {fileID: 1553525676}
   - {fileID: 598193198}
   - {fileID: 208875761}
   - {fileID: 955792121}
@@ -1418,6 +1497,13 @@ MonoBehaviour:
   goalText: {fileID: 598193199}
   statusText: {fileID: 208875762}
   restartButton: {fileID: 955792122}
+  goalIcon: {fileID: 1553525677}
+  redGoalSprite: {fileID: 21300000, guid: 0bb7ff5fdd2c81548b8b5c44ca7a25e8, type: 3}
+  greenGoalSprite: {fileID: 21300000, guid: e84b6dd113ca07b469c32bab702691d5, type: 3}
+  blueGoalSprite: {fileID: 21300000, guid: d4853dff1d7791744b7de9a07e0b11b3, type: 3}
+  yellowGoalSprite: {fileID: 21300000, guid: 86b3b18f8d22ff44ea505f47f1a54b59, type: 3}
+  purpleGoalSprite: {fileID: 21300000, guid: 8bbd790c374271a49a45a2c9ed0b1c70, type: 3}
+  orangeGoalSprite: {fileID: 21300000, guid: 032415d0552c3c741a228256602ac2bd, type: 3}
 --- !u!1 &1967568562
 GameObject:
   m_ObjectHideFlags: 0
