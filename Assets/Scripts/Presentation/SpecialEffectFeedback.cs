@@ -16,7 +16,7 @@ namespace Match3.Presentation
             public readonly TileView[] Highlighted;
             // Where the Wisp flies (Core's RemoteTarget), or null for no flight.
             public readonly Vector3? FlightEnd;
-            // The visible view at the RemoteTarget, popped on arrival; null if that cell shows nothing.
+            // The visible view at the RemoteTarget, given the strong pop on landing; null if that cell shows nothing.
             public readonly TileView Target;
 
             public Step(TileView origin, TileView[] highlighted, Vector3? flightEnd = null, TileView target = null)
@@ -97,24 +97,29 @@ namespace Match3.Presentation
                     yield return null;
                 }
 
-                // Hide at once; Destroy itself only happens at the end of the frame.
-                flyer.SetActive(false);
-                Object.Destroy(flyer);
-
-                if (step.Target == null)
-                {
-                    continue;
-                }
-
-                // Arrival: the target pops like the rest of the footprint.
+                // Landing: the copy sits on the target and shrinks into it, while the target takes the strong pop
+                // (the Wisp's actual hit), so the impact is visible.
+                Vector3 flyerScale = flyer.transform.localScale;
+                flyer.transform.position = step.FlightEnd.Value;
                 for (float elapsed = 0f; elapsed < durationPerStep; elapsed += Time.deltaTime)
                 {
                     float strength = 1f - elapsed / durationPerStep;
-                    step.Target.transform.localScale = scales[step.Target] * (1f + FootprintGrowth * strength);
+                    flyer.transform.localScale = flyerScale * strength;
+                    if (step.Target != null)
+                    {
+                        step.Target.transform.localScale = scales[step.Target] * (1f + OriginGrowth * strength);
+                    }
+
                     yield return null;
                 }
 
-                step.Target.transform.localScale = scales[step.Target];
+                // Hide at once; Destroy itself only happens at the end of the frame.
+                flyer.SetActive(false);
+                Object.Destroy(flyer);
+                if (step.Target != null)
+                {
+                    step.Target.transform.localScale = scales[step.Target];
+                }
             }
         }
 

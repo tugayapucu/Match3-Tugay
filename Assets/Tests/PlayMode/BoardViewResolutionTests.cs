@@ -1771,10 +1771,12 @@ namespace Match3.Presentation.Tests
         }
 
         // Drives one Wisp effect frame by frame: the local burst (no flyer yet, target at rest), then the flight (a
-        // picture-only copy eased from the Wisp to Core's RemoteTarget, every real view at rest), then the target's pop.
-        // Afterwards everything is restored and the flyer is gone. The Board never changes.
+        // picture-only copy eased from the Wisp to Core's RemoteTarget, every real view at rest), then the landing (the
+        // copy shrinks into the target while the target takes the strong pop). Afterwards everything is restored and
+        // the flyer is gone. The Board never changes.
         private IEnumerator CheckWispFlight(Board board, SpecialEffectPlan plan)
         {
+            const float duration = 0.12f;
             const float flightDuration = 0.25f;
             var effect = plan.Effects[0];
             var originView = boardView.GetTileView(effect.Origin);
@@ -1786,25 +1788,28 @@ namespace Match3.Presentation.Tests
             var before = ReadTiles(board);
 
             var animation = boardView.AnimateSpecialEffects(plan);
-            int localFrames = 0, flightFrames = 0, arrivalFrames = 0;
-            float flightElapsed = 0f;
+            int localFrames = 0, flightFrames = 0, landingFrames = 0;
+            // Mirrors the current phase's own clock, like the other eased-animation tests.
+            float phaseElapsed = 0f;
             GameObject flyer = null;
             bool more = animation.MoveNext();
             while (more)
             {
                 var current = FindFlyer();
-                if (current == null && flightFrames == 0)
+                bool targetPopped = targetView.transform.localScale.x > scales[targetView].x + 1e-6f;
+                if (current == null)
                 {
+                    Assert.That(flightFrames, Is.EqualTo(0), "The flyer stays visible from take-off until it has landed.");
                     localFrames++;
                     Assert.That(originView.transform.localScale.x, Is.GreaterThan(scales[originView].x), "Local burst.");
                     Assert.That(targetView.transform.localScale, Is.EqualTo(scales[targetView]), "The target waits for the flight.");
                 }
-                else if (current != null)
+                else if (!targetPopped && landingFrames == 0)
                 {
                     if (flightFrames == 0)
                     {
                         flyer = current;
-                        flightElapsed = 0f;
+                        phaseElapsed = 0f;
                     }
 
                     flightFrames++;
@@ -1815,30 +1820,40 @@ namespace Match3.Presentation.Tests
                         Is.SameAs(originView.GetComponent<SpriteRenderer>().sprite));
                     // Launched at the Wisp's popped size, so it is easy to follow.
                     Assert.That(Vector3.Distance(flyer.transform.localScale, scales[originView] * 1.2f), Is.LessThan(1e-5f));
-                    Vector3 expected = Vector3.Lerp(start, end, TileEasing.EaseInOut(flightElapsed / flightDuration));
+                    Vector3 expected = Vector3.Lerp(start, end, TileEasing.EaseInOut(phaseElapsed / flightDuration));
                     Assert.That(Vector3.Distance(flyer.transform.position, expected), Is.LessThan(1e-4f), "Eased toward Core's target.");
                     // The real Wisp stays in place at rest; nothing else pops during the flight.
                     AssertPoppedExactly(board, null, new TileView[0], colors, scales);
                 }
                 else
                 {
-                    arrivalFrames++;
-                    if (arrivalFrames == 1)
+                    if (landingFrames == 0)
                     {
-                        AssertPoppedExactly(board, null, new[] { targetView }, colors, scales);
+                        phaseElapsed = 0f;
+                        // First landing frame: only the target is popped, at the strong (origin-sized) pop.
+                        AssertPoppedExactly(board, targetView, new TileView[0], colors, scales);
                     }
+
+                    landingFrames++;
+                    float strength = 1f - phaseElapsed / duration;
+                    Assert.That(current, Is.SameAs(flyer), "The same copy lands.");
+                    Assert.That(Vector3.Distance(flyer.transform.position, end), Is.LessThan(1e-4f), "Sitting on Core's target.");
+                    Assert.That(Vector3.Distance(flyer.transform.localScale, scales[originView] * 1.2f * strength),
+                        Is.LessThan(1e-4f), "Shrinking into the target.");
+                    Assert.That(Vector3.Distance(targetView.transform.localScale, scales[targetView] * (1f + 0.2f * strength)),
+                        Is.LessThan(1e-4f), "The hit settles back.");
                 }
 
                 Assert.That(ReadTiles(board), Is.EqualTo(before));
                 Assert.That(boardView.GetTileView(effect.Origin), Is.SameAs(originView), "The lookup is untouched.");
                 yield return null;
-                flightElapsed += Time.deltaTime;
+                phaseElapsed += Time.deltaTime;
                 more = animation.MoveNext();
             }
 
             Assert.That(localFrames, Is.GreaterThan(0));
             Assert.That(flightFrames, Is.GreaterThan(0));
-            Assert.That(arrivalFrames, Is.GreaterThan(0));
+            Assert.That(landingFrames, Is.GreaterThan(0));
             AssertPoppedExactly(board, null, new TileView[0], colors, scales);
             yield return null;
             Assert.That(flyer == null, Is.True, "The flyer is destroyed after landing.");
