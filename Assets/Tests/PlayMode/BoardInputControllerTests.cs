@@ -1446,6 +1446,8 @@ namespace Match3.Presentation.Tests
 
         private void SendTouchState(Touchscreen touchscreen, int id, TouchPhase phase, GridPosition position)
         {
+            // A scripted tap can arrive before the next physics step updates a moved tile's collider.
+            Physics2D.SyncTransforms();
             InputSystem.QueueStateEvent(touchscreen, new TouchState
             {
                 touchId = id, phase = phase, position = ScreenPosition(position)

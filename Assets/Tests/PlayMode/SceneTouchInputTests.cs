@@ -89,7 +89,8 @@ namespace Match3.Presentation.Tests
         {
             // Outcome calculation is already tested elsewhere. Supply the same resolved-move facts that
             // the controller reports to Bootstrap, then test the real touchscreen/UI restart path.
-            ReportMove(new ResolutionResult(Enumerable.Repeat(TileType.Red, bootstrap.LevelProgress.GoalTarget)));
+            var progress = bootstrap.LevelProgress;
+            ReportMove(new ResolutionResult(Enumerable.Repeat(progress.GoalTileType, progress.GoalTarget)));
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
             yield return VerifyPlayAgainTouch();
         }
