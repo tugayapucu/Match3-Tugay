@@ -84,11 +84,12 @@ namespace Match3.Presentation
                 return;
             }
 
-            // Only the input source is mouse-specific; touch can reuse HandlePointerDown later.
-            var mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            // Mouse left-click and the touchscreen's primary touch share this press/position pair.
+            // Primary touch stays pressed until all fingers lift, so extra fingers are not new taps.
+            var pointer = Pointer.current;
+            if (pointer != null && pointer.press.wasPressedThisFrame)
             {
-                HandlePointerDown(mouse.position.ReadValue());
+                HandlePointerDown(pointer.position.ReadValue());
             }
         }
 
