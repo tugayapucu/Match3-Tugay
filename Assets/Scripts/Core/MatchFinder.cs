@@ -13,7 +13,7 @@ namespace Match3.Core
             new GridPosition(0, -1), new GridPosition(0, 1)
         };
 
-        // Compatibility API: both callers use the same shape-aware matcher.
+        // Convenience API for callers that need matched cells without the shape and group details.
         public static IReadOnlyCollection<GridPosition> FindMatches(Board board)
         {
             return Analyze(board).MatchedPositions;

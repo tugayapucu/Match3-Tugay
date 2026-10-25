@@ -37,7 +37,7 @@ namespace Match3.Presentation
         // Shows moves, score, goal and outcome, and offers Restart.
         [SerializeField] private LevelHudView levelHud;
 
-        // Kept so later gameplay systems can work on this same authoritative instance.
+        // The current session's authoritative instance, shared by the view, input and resolution runner.
         private Board board;
         private LevelProgress levelProgress;
 

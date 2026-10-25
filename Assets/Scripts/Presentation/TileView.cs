@@ -60,7 +60,7 @@ namespace Match3.Presentation
 
             Type = tileType;
             spriteRenderer.sprite = sprite;
-            // The art is already colored, so it rests untinted; animations may tint briefly and restore white.
+            // The art is already colored; feedback changes scale or alpha without tinting its RGB.
             spriteRenderer.color = Color.white;
             // Empty cells keep their GameObject but draw nothing.
             spriteRenderer.enabled = tileType != TileType.Empty;
