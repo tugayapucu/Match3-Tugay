@@ -15,7 +15,8 @@ namespace Match3.Presentation
         private Vector2Int lastScreenSize;
         private int lastLayoutVersion = -1;
         private float lastCanvasScale;
-        private bool hasFrame;
+        private bool hasLayoutInputs;
+        private bool warnedNoRoom;
 
         private void Awake()
         {
@@ -42,7 +43,7 @@ namespace Match3.Presentation
 
             // SafeAreaLayout updates in Update; its version tells us when the UI edges can have moved.
             float canvasScale = canvas.scaleFactor;
-            if (hasFrame && lastScreenSize == screenSize && lastLayoutVersion == hudLayout.LayoutVersion
+            if (hasLayoutInputs && lastScreenSize == screenSize && lastLayoutVersion == hudLayout.LayoutVersion
                 && Mathf.Approximately(lastCanvasScale, canvasScale))
             {
                 return;
@@ -51,8 +52,24 @@ namespace Match3.Presentation
             Rect safeArea = ScreenRect(hudLayout.SafeAreaRoot);
             Rect topBar = ScreenRect(hudLayout.TopBar);
             Rect restart = ScreenRect(hudLayout.RestartButton);
+            float sideMargin = hudLayout.SideMargin * canvasScale;
+            float controlGap = SafeAreaLayout.BoardControlGap * canvasScale;
+            if (safeArea.xMax - sideMargin <= safeArea.xMin + sideMargin
+                || topBar.yMin - controlGap <= restart.yMax + controlGap)
+            {
+                // Remember failed attempts too; the same unusable layout must not retry every frame.
+                RememberLayoutInputs(screenSize, canvasScale);
+                if (!warnedNoRoom)
+                {
+                    Debug.LogWarning("Board camera fitting paused: the HUD and Restart leave no room. Keeping the current camera until the layout changes.", this);
+                    warnedNoRoom = true;
+                }
+
+                return;
+            }
+
             Rect region = BoardCameraFraming.ContentRegion(safeArea, topBar.yMin, restart.yMax,
-                hudLayout.SideMargin * canvasScale, SafeAreaLayout.BoardControlGap * canvasScale);
+                sideMargin, controlGap);
             // The fixed 8x8 grid starts at BoardRoot (-3.5, -3.5), so its world centre is (0, 0).
             BoardCameraFraming.CalculateCamera(region, screenSize, Vector2.zero,
                 BoardCameraFraming.BoardEnvelopeSize, out Vector2 center, out float size);
@@ -60,10 +77,16 @@ namespace Match3.Presentation
             boardCamera.orthographicSize = size;
             Vector3 position = boardCamera.transform.position;
             boardCamera.transform.position = new Vector3(center.x, center.y, position.z);
+            RememberLayoutInputs(screenSize, canvasScale);
+            warnedNoRoom = false;
+        }
+
+        private void RememberLayoutInputs(Vector2Int screenSize, float canvasScale)
+        {
             lastScreenSize = screenSize;
             lastLayoutVersion = hudLayout.LayoutVersion;
             lastCanvasScale = canvasScale;
-            hasFrame = true;
+            hasLayoutInputs = true;
         }
 
         private Rect ScreenRect(RectTransform rect)

@@ -76,6 +76,43 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator CameraFit_NoRoom_WarnsOnceKeepsCamera_AndRecoversWhenLayoutChanges()
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            float scale = layout.GetComponentInParent<Canvas>().scaleFactor;
+            var screenSize = new Vector2Int(Screen.width, Screen.height);
+            Vector3 previousPosition = inputCamera.transform.position;
+            float previousSize = inputCamera.orthographicSize;
+            layout.enabled = false;
+
+            LogAssert.Expect(LogType.Warning,
+                "Board camera fitting paused: the HUD and Restart leave no room. Keeping the current camera until the layout changes.");
+            layout.ApplyLayout(new Rect(0f, 0f, Screen.width, 200f * scale), screenSize, scale);
+            for (int frame = 0; frame < 4; frame++)
+            {
+                yield return null;
+                Assert.That(inputCamera.transform.position, Is.EqualTo(previousPosition));
+                Assert.That(inputCamera.orthographicSize, Is.EqualTo(previousSize));
+            }
+
+            // Another unusable layout retries without warning again during the same no-room period.
+            layout.ApplyLayout(new Rect(0f, 0f, Screen.width, 220f * scale), screenSize, scale);
+            yield return null;
+            yield return null;
+            Assert.That(inputCamera.transform.position, Is.EqualTo(previousPosition));
+            Assert.That(inputCamera.orthographicSize, Is.EqualTo(previousSize));
+            LogAssert.NoUnexpectedReceived();
+
+            // A changed usable layout must fit again rather than retaining a cached failed attempt.
+            inputCamera.orthographicSize = 77f;
+            inputCamera.transform.position = new Vector3(12f, 13f, previousPosition.z);
+            layout.ApplyLayout(Screen.safeArea, screenSize, scale);
+            yield return null;
+            yield return null;
+            AssertCameraFitAndPicking();
+        }
+
+        [UnityTest]
         public IEnumerator Restart_TouchPreservesSelectionOnPress_ThenRestartsOnRelease()
         {
             var first = new GridPosition(0, 0);

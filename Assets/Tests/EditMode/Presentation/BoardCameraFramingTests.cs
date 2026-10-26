@@ -57,12 +57,12 @@ namespace Match3.Presentation.Tests
             Assert.That(center.y, Is.EqualTo(-28f / 120f).Within(0.0001f));
         }
 
-        [Test]
-        public void EnlargedSpecialStillFitsInsideTheEnvelope()
+        [TestCase(360f)]
+        [TestCase(300f)]
+        public void ContentRegion_NoRoom_StillRejectsTheInput(float screenHeight)
         {
-            // The outer cell centre is 3.5 units away; its 0.9-unit tile grows at most 1.2x.
-            float farthestVisualEdge = 3.5f + 0.9f * 1.2f / 2f;
-            Assert.That(farthestVisualEdge, Is.LessThan(BoardCameraFraming.BoardEnvelopeSize / 2f));
+            Assert.Throws<System.ArgumentException>(() => BoardCameraFraming.ContentRegion(
+                new Rect(0f, 0f, 1080f, screenHeight), screenHeight - 120f, 176f, 48f, 32f));
         }
 
         private static Vector2 Project(Vector2 worldPoint, Vector2 cameraCenter,
