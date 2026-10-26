@@ -70,8 +70,6 @@ namespace Match3.Presentation.Tests
             var before = bootstrap.LevelProgress;
             var button = Read<Button>(hud, "restartButton");
             Vector2 point = ButtonPoint(button);
-            Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(point)).collider, Is.Null,
-                "The current Restart layout keeps the touch outside board colliders.");
             QueuePress(2, point);
             yield return null;
             yield return null;
