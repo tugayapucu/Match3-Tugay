@@ -56,6 +56,26 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator CameraFit_KeepsBoardBetweenControls_AndTilePickingWorks()
+        {
+            yield return null;
+            AssertCameraFitAndPicking();
+        }
+
+        [UnityTest]
+        public IEnumerator CameraFit_UpdatesAfterAnAsymmetricSafeAreaChange()
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            var canvas = layout.GetComponentInParent<Canvas>();
+            layout.enabled = false;
+            layout.ApplyLayout(new Rect(30f, 20f, Screen.width - 70f, Screen.height - 90f),
+                new Vector2Int(Screen.width, Screen.height), canvas.scaleFactor);
+
+            yield return null;
+            AssertCameraFitAndPicking();
+        }
+
+        [UnityTest]
         public IEnumerator Restart_TouchPreservesSelectionOnPress_ThenRestartsOnRelease()
         {
             var first = new GridPosition(0, 0);
@@ -70,6 +90,8 @@ namespace Match3.Presentation.Tests
             var before = bootstrap.LevelProgress;
             var button = Read<Button>(hud, "restartButton");
             Vector2 point = ButtonPoint(button);
+            Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(point)).collider, Is.Null,
+                "Camera fitting must leave Restart clear of board colliders.");
             QueuePress(2, point);
             yield return null;
             yield return null;
@@ -80,6 +102,46 @@ namespace Match3.Presentation.Tests
             yield return null;
             yield return null;
             AssertFreshLevel(before);
+        }
+
+        private void AssertCameraFitAndPicking()
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            var canvas = layout.GetComponentInParent<Canvas>();
+            Rect safe = ScreenRect(layout.SafeAreaRoot);
+            Rect top = ScreenRect(layout.TopBar);
+            Rect restart = ScreenRect(layout.RestartButton);
+            float margin = layout.SideMargin * canvas.scaleFactor;
+            float gap = SafeAreaLayout.BoardControlGap * canvas.scaleFactor;
+
+            Vector3 low = inputCamera.WorldToScreenPoint(new Vector3(-4.1f, -4.1f, 0f));
+            Vector3 high = inputCamera.WorldToScreenPoint(new Vector3(4.1f, 4.1f, 0f));
+            Assert.That(low.x, Is.GreaterThanOrEqualTo(safe.xMin + margin - 0.1f));
+            Assert.That(high.x, Is.LessThanOrEqualTo(safe.xMax - margin + 0.1f));
+            Assert.That(low.y, Is.GreaterThanOrEqualTo(restart.yMax + gap - 0.1f));
+            Assert.That(high.y, Is.LessThanOrEqualTo(top.yMin - gap + 0.1f));
+            Assert.That((low.x + high.x) * 0.5f, Is.EqualTo(safe.center.x).Within(0.1f));
+            Assert.That((low.y + high.y) * 0.5f,
+                Is.EqualTo((restart.yMax + top.yMin) * 0.5f).Within(0.1f));
+
+            var restartCenter = new Vector2(restart.center.x, restart.center.y);
+            Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(restartCenter)).collider, Is.Null);
+            foreach (var cell in new[] { new GridPosition(0, 0), new GridPosition(7, 7) })
+            {
+                TileView view = boardView.GetTileView(cell);
+                Vector2 point = inputCamera.WorldToScreenPoint(view.transform.position);
+                Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(point)).collider,
+                    Is.SameAs(view.GetComponent<Collider2D>()));
+            }
+        }
+
+        private static Rect ScreenRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector2 lower = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+            Vector2 upper = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+            return Rect.MinMaxRect(lower.x, lower.y, upper.x, upper.y);
         }
 
         [UnityTest]

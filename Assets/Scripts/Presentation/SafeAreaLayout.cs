@@ -25,6 +25,7 @@ namespace Match3.Presentation
         public RectTransform RestartButton => restartButton;
         public float SideMargin => sideMargin;
         public const float BoardControlGap = 32f;
+        public int LayoutVersion { get; private set; }
 
         private void Awake()
         {
@@ -94,6 +95,7 @@ namespace Match3.Presentation
             lastScreenSize = screenSize;
             lastScaleFactor = scaleFactor;
             hasLayout = true;
+            LayoutVersion++;
         }
     }
 }
