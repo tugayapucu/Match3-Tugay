@@ -563,7 +563,6 @@ namespace Match3.Presentation.Tests
 
         private void Click(GridPosition position)
         {
-            Physics2D.SyncTransforms();
             controller.HandlePointerDown(inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position));
         }
 

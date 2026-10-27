@@ -456,6 +456,29 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Update_TouchImmediatelyAfterRefill_PicksLandedTileWithoutTestSync()
+        {
+            var touchscreen = CreateTouchscreen();
+            var cell = new GridPosition(0, 0);
+            BoardResolution.ClearCells(board, new[] { cell });
+            boardView.RemoveViews(new[] { cell });
+            var spawns = BoardResolution.Refill(board, Palette, new ScriptedRandom(2));
+
+            // Complete the real refill routine and tap before any intervening physics step.
+            Assert.That(boardView.AnimateRefill(spawns, 0f).MoveNext(), Is.False);
+            InputSystem.QueueStateEvent(touchscreen, new TouchState
+            {
+                touchId = 1, phase = TouchPhase.Began, position = ScreenPosition(cell)
+            });
+            InputSystem.Update();
+            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+
+            Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
+            Assert.That(controller.IsInputLocked, Is.False);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Update_TwoTouchTaps_WithoutAMatch_RollBack()
         {
             var touchscreen = CreateTouchscreen();
@@ -1420,7 +1443,6 @@ namespace Match3.Presentation.Tests
 
         private void Click(GridPosition position)
         {
-            Physics2D.SyncTransforms();
             controller.HandlePointerDown(ScreenPosition(position));
         }
 
@@ -1446,8 +1468,6 @@ namespace Match3.Presentation.Tests
 
         private void SendTouchState(Touchscreen touchscreen, int id, TouchPhase phase, GridPosition position)
         {
-            // A scripted tap can arrive before the next physics step updates a moved tile's collider.
-            Physics2D.SyncTransforms();
             InputSystem.QueueStateEvent(touchscreen, new TouchState
             {
                 touchId = id, phase = phase, position = ScreenPosition(position)

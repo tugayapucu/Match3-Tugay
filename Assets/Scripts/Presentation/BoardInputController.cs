@@ -101,6 +101,8 @@ namespace Match3.Presentation
                 return;
             }
 
+            // A tile may have landed since the last physics step; pick its current transform.
+            Physics2D.SyncTransforms();
             // The ray converts screen pixels into a world-space query against 2D tile colliders.
             Ray ray = inputCamera.ScreenPointToRay(screenPosition);
             RaycastHit2D hit = Physics2D.GetRayIntersection(ray);
