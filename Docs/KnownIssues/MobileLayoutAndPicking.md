@@ -1,9 +1,10 @@
 # Mobile layout and tile picking
 
-Status: Deferred to the Phase 12 mobile pass.
+Status: Layout implemented and picking reviewed in Phase 12 Steps 3–5. Physical-device usability review remains.
 
-- Layout: the 8x8 board is about 8 world units wide and fits landscape. With the fixed orthographic camera (size 5), a portrait phone clips the board at the sides. Needs camera sizing or board scaling per aspect ratio.
-- Picking: tiles are picked with a `Physics2D` raycast, so every tile carries a `BoxCollider2D` (64 colliders). A screen-to-grid calculation using `BoardRoot`'s transform could replace the colliders; `PLAN.md` asks to avoid unnecessary physics.
-- Physics sync timing (Phase 12 Step 1 review): `Physics2D.autoSyncTransforms` is off and the fixed timestep is 20 ms. A scripted tap immediately after refill reproduced a missed selection; the touch-test helper now calls `Physics2D.SyncTransforms()` before picking, matching the existing `Click` helper. During Step 5, measure whether real input between animation completion and the next physics sync can miss or hit stale collider positions, then decide whether a single sync when the board settles is needed. Production picking is unchanged in Step 1.
+- Layout: SafeAreaLayout positions the HUD inside the usable screen area. BoardCameraFitter frames the fixed 8.2×8.2 world envelope between the actual HUD/Restart edges. Portrait camera clipping from the old fixed-size camera is resolved.
+- Picking: retain the 64 BoxCollider2D targets and the shared mouse/primary-touch Physics2D raycast. Each collider is 1×1 locally and 0.9×0.9 in the resting scene, leaving 0.1-unit gaps. Real-scene touch tests confirm that box corners are selectable independently of gem transparency, while gaps and outside-board points are ignored. No measured picking problem justifies replacing this with grid mapping.
+- Physics sync timing: with autoSyncTransforms off, an immediate touchscreen event after a zero-duration refill reproduced a missed pick before another physics step. Step 5 adds Physics2D.SyncTransforms immediately before each permitted pointer raycast, after the disabled/busy guards. This covers movement, initial render and restart without enabling automatic or per-frame synchronization. Click/touch helpers no longer hide this responsibility with their own pre-pick syncs.
+- Decorative effects: the Wisp flyer has no collider or TileView. Scale effects run while board input is locked and restore the tile scale before picking resumes.
 
-These remain open mobile-pass review items.
+At the 1080×1920 reference framing, each cell is 120 pixels wide and its resting collider is 108 pixels wide. Pixel sizes do not establish physical touch comfort across different device densities. Check that comfort and actual device safe areas during the later mobile review; Step 5 used automated touchscreen events in Unity, not a physical phone.
