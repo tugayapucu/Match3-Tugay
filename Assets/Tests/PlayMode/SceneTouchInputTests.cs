@@ -56,19 +56,20 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Picking_BoxCornersAcceptTouch_WhileGapsAndOutsideBoardDoNot()
+        public IEnumerator Picking_CellCornersAcceptTouch_WhileOutsideBoardDoesNot()
         {
             var cell = new GridPosition(0, 0);
             TileView view = boardView.GetTileView(cell);
             int movesBefore = bootstrap.LevelProgress.MovesRemaining;
             int touchId = 1;
-            foreach (Vector3 offset in new[] { new Vector3(0.5f, 0f, 0f), new Vector3(-0.6f, 0f, 0f) })
+            foreach (Vector3 offset in new[]
+                { new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -0.51f, 0f) })
             {
                 Vector2 point = inputCamera.WorldToScreenPoint(view.transform.position + offset);
                 QueuePress(touchId, point);
                 yield return null;
                 yield return null;
-                Assert.That(controller.SelectedPosition, Is.Null, "Gaps and outside-board taps must not pick a tile.");
+                Assert.That(controller.SelectedPosition, Is.Null, "Taps just outside the board must not pick a tile.");
                 QueueRelease(touchId++, point);
                 yield return null;
             }
@@ -77,8 +78,8 @@ namespace Match3.Presentation.Tests
                 { new Vector2(-0.49f, -0.49f), new Vector2(-0.49f, 0.49f),
                     new Vector2(0.49f, -0.49f), new Vector2(0.49f, 0.49f) })
             {
-                // These points are inside the rectangular collider even where the gem image is transparent.
-                Vector3 world = view.transform.TransformPoint(new Vector3(corner.x, corner.y, 0f));
+                // Inset 0.01 units from each cell edge, including transparent corners of the image.
+                Vector3 world = view.transform.position + new Vector3(corner.x, corner.y, 0f);
                 Vector2 point = inputCamera.WorldToScreenPoint(world);
                 QueuePress(touchId, point);
                 yield return null;
@@ -90,6 +91,34 @@ namespace Match3.Presentation.Tests
             }
 
             Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(movesBefore));
+        }
+
+        [UnityTest]
+        public IEnumerator Picking_PointsEitherSideOfSharedBorders_SelectTheirOwnCell()
+        {
+            var offsets = new[]
+            {
+                new Vector3(0.49f, 0f, 0f), new Vector3(0.51f, 0f, 0f),
+                new Vector3(0f, 0.49f, 0f), new Vector3(0f, 0.51f, 0f)
+            };
+            var expected = new[]
+            {
+                new GridPosition(0, 0), new GridPosition(1, 0),
+                new GridPosition(0, 0), new GridPosition(0, 1)
+            };
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                bootstrap.RestartLevel();
+                TileView origin = boardView.GetTileView(new GridPosition(0, 0));
+                Vector2 point = inputCamera.WorldToScreenPoint(origin.transform.position + offsets[i]);
+                QueuePress(i + 1, point);
+                yield return null;
+                yield return null;
+                Assert.That(controller.SelectedPosition, Is.EqualTo(expected[i]));
+                Assert.That(controller.IsInputLocked, Is.False);
+                QueueRelease(i + 1, point);
+                yield return null;
+            }
         }
 
         [UnityTest]

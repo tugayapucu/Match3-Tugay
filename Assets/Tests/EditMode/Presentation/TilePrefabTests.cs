@@ -10,7 +10,7 @@ namespace Match3.Presentation.Tests
         private const string PrefabPath = "Assets/Prefabs/Tile.prefab";
         private const string ArtFolder = "Assets/Art/Tiles/PrismaticEnergy/";
 
-        // The real prefab must show each production PNG imported in Step 1, without changing size or picking.
+        // The real prefab shows each production PNG with one world unit per visual/collider cell.
         [TestCase(TileType.Red, "Normal/Red.png")]
         [TestCase(TileType.Green, "Normal/Green.png")]
         [TestCase(TileType.Blue, "Normal/Blue.png")]
@@ -35,10 +35,10 @@ namespace Match3.Presentation.Tests
                 Assert.That(renderer.sprite, Is.SameAs(expected));
                 Assert.That(renderer.color, Is.EqualTo(Color.white));
                 Assert.That(renderer.enabled, Is.True);
-                // One sprite fills one board cell, exactly like the old square: no root or collider changes.
+                // The image includes transparent padding; its rectangle and collider cover one full cell.
                 Assert.That(expected.bounds.size.x, Is.EqualTo(1f));
                 Assert.That(expected.bounds.size.y, Is.EqualTo(1f));
-                Assert.That(tile.transform.localScale, Is.EqualTo(new Vector3(0.9f, 0.9f, 1f)));
+                Assert.That(tile.transform.localScale, Is.EqualTo(Vector3.one));
                 Assert.That(tile.transform.localRotation, Is.EqualTo(Quaternion.identity));
                 Assert.That(tile.GetComponent<BoxCollider2D>().size, Is.EqualTo(Vector2.one));
                 Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(tile), Is.Zero);
