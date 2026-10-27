@@ -47,6 +47,12 @@ namespace Match3.Presentation
         // Unity calls Start once, before the first frame, after every object's Awake.
         private void Start()
         {
+            // Android ignores vSyncCount; request 60 fps once, leaving Editor/desktop pacing unchanged.
+            if (Application.platform == RuntimePlatform.Android)
+            {
+                Application.targetFrameRate = 60;
+            }
+
             StartLevel();
         }
 
