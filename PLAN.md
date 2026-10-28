@@ -1691,7 +1691,22 @@ Store the artifact outside source control.
 
 ## Play Console bootstrap
 
-- create the app in Play Console;
+Create the app in Play Console. Decide deliberately, because these are needed at creation:
+
+- app name;
+- package name (see Package identity above);
+- default language;
+- app vs game (the initial creation selection, not the store category);
+- free vs paid;
+- required contact email;
+- required initial declarations and Play App Signing acceptance, as applicable.
+
+Pricing constraint: paid → free is allowed, but once an app has been offered for free it cannot later be changed to paid without creating a new app/package. Choose free vs paid before the first public offering.
+
+Store category/tags remain a Phase 21 finalization item unless Phase 13 finds they are required earlier for the chosen testing track.
+
+Then:
+
 - complete the app-content declarations and store-listing minimum the testing tracks require, as verified in Phase 13;
 - provide a privacy policy if required;
 - base Data Safety answers on the inspected AAB, not on assumptions.
@@ -1850,7 +1865,7 @@ UI changes reach closed testers through new testing-track uploads with a higher 
 
 ## Goal
 
-Measure the release candidate on real hardware before optimizing.
+Measure the near-final build on real hardware before optimizing.
 
 Reuse the old performance-review phase here, but ground it in profiling evidence.
 
@@ -1987,13 +2002,14 @@ Phase 17 created the app and completed what the testing tracks required. This ph
 
 ## App setup
 
-Decide and document:
+Phase 17 already decided the app-creation choices (package name, default language, app vs game, free vs paid). Do not re-decide them here.
 
-- final app/game name;
-- default language;
-- app/game category;
-- free/paid status;
-- support/contact details.
+Finalize and document:
+
+- final store category/tags;
+- store-facing name/details, if still being refined;
+- support/contact presentation;
+- final listing assets and copy (see Store listing below).
 
 ## Store listing
 
