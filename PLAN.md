@@ -1,8 +1,10 @@
 # Agentic Match-3 Unity Project Plan
 
-> **Goal:** Build a polished mobile Match-3 prototype in Unity 6 while learning Unity architecture, Match-3 gameplay systems, Git workflows, Codex, Claude Code, and Unity MCP.
+> **Goal:** Build a polished, small mobile Match-3 game in Unity 6 that is understandable as an engineering/learning project and can be taken through a real Google Play release process.
 >
-> This repository is intentionally **AI-assisted / agentic**. The purpose is not to pretend every line was written manually. The purpose is to learn how to specify, supervise, review, test, and understand an AI-built Unity project.
+> This repository is intentionally **AI-assisted / agentic**. The purpose is not to pretend every line was written manually. The purpose is to learn how to specify, supervise, review, test, understand, ship, and maintain an AI-built Unity project.
+>
+> **Roadmap evolution (after Phase 12):** Phases 0-12 achieved the original polished-mobile-prototype goal and produced a validated Android build on a physical device. From Phase 13 onward, the roadmap deliberately shifts from prototype completion to release readiness. The project should remain small and understandable; becoming store-ready does not justify adding ads, IAP, backend, live-ops, or unrelated product scope.
 
 ---
 
@@ -29,6 +31,8 @@ By the end of this project, the game should include:
 - Basic sound / VFX hooks
 - Mobile-friendly input
 - Automated tests for core gameplay logic
+- Android production-build readiness
+- Google Play release readiness for the approved small-game scope
 
 The project should also demonstrate:
 
@@ -990,839 +994,965 @@ Working concepts:
 
 Beam Crystal
 
-- elongated double-ended crystal;
-- horizontal and vertical orientation;
-- shape suggests a line clear.
 
-Wisp
+# 19. Phase 13 — Release Readiness & Product Gap Audit
 
-- compact luminous core with a strong simple silhouette;
-- may include a small cross/plus cue for its local effect;
-- should support a clear flight animation toward the remote target.
+## Goal
 
-Nova Gem
+Determine what is actually missing between the current validated Android prototype and a small game that we are comfortable distributing through Google Play.
 
-- compact central gem with square/corner framing;
-- visual language should suggest a square area effect rather than a circular explosion.
+This is an **audit and prioritization phase first**.
 
-Spectrum Core
+Do not begin fixing issues merely because they are discovered.
 
-- circular segmented core;
-- limited number of bold segments so it remains readable at small size;
-- should visually support highlighting one selected color rather than implying that every color is always cleared.
+The output of this phase should classify every relevant gap as:
 
-Avoid resting special colors that can easily be confused with normal Blue/Purple/other collectible colors.
-Colorful activation glow is fine.
-Spectrum Core is the intentional exception because multicolor is part of its gameplay identity.
+- **MUST FIX BEFORE STORE**
+- **SHOULD FIX BEFORE STORE**
+- **CAN DEFER AFTER RELEASE**
+- **NOT A REAL ISSUE / CLOSE**
 
-Do not copy Royal Match:
+The classification must be justified by player impact, crash/stuck risk, policy/release requirements, maintainability, and evidence from the current repository.
 
-- sprites;
-- silhouettes;
-- UI;
-- colors;
-- animation timing;
-- effects;
-- other art assets.
+## Current baseline
 
-The final presentation should study established Match-3 gameplay conventions without visually imitating Royal Match.
+Phase 12 already established:
 
-Before final production integration, evaluate the visual family:
+- touch-only mobile gameplay;
+- portrait safe-area layout;
+- responsive camera framing;
+- Android 60 FPS target policy;
+- successful IL2CPP + ARM64 development APK;
+- physical Samsung Galaxy S23 validation;
+- deterministic restart behavior;
+- broad EditMode / PlayMode / runtime scenario coverage.
 
-- next to all six normal tile colors;
-- at approximately 32 px, 48 px, and 64 px;
-- in grayscale;
-- in an 8x8 board-like layout.
+Do not repeat those checks without a reason.
 
-A concept sheet and production-oriented PNG assets may be prepared outside the repo first.
-Actual asset import belongs to the later Phase 11 execution plan.
+## Audit inputs
 
-## 2. Swap Animation Polish
+Inspect:
 
-Improve swapping with simple easing.
+- current known-issue documents;
+- current tests and coverage;
+- Android Player settings;
+- build artifacts and validation reports;
+- current UI/presentation;
+- current app lifecycle behavior;
+- current repository documentation;
+- current Google Play requirements.
 
-Requirements:
+At minimum review these existing issues:
 
-- Presentation-only.
-- Logical Board state remains authoritative.
-- Do not change valid/invalid swap rules.
-- Do not introduce a general animation framework without a concrete need.
+- DeadBoard
+- LockedAfterException
+- SelectionFeedback
+- ColourOnlyGems
+- RefillSeedReuse
+- MissingReadme
+- TallScreenComposition
+- OutcomeDimSafeArea
+- MobileLayoutAndPicking remaining limitations
+- FrameRatePolicy remaining limitations
+- WatchList
 
-## 3. Falling Animation Polish
+## Working Google Play facts to verify during execution
 
-Improve gravity-driven tile movement with simple easing.
+Google Play requirements change over time. Re-check official documentation during the phase instead of relying only on this roadmap.
 
-Requirements:
+As of 2026-10-28:
 
-- preserve deterministic Board behavior;
-- existing TileView identity rules remain intact;
-- animation must only visualize Core-provided moves.
+- New mobile apps and app updates submitted to Google Play must target Android 16 / API level 36 or higher.
+- New Google Play apps are published using Android App Bundles (AAB).
+- New apps use Play App Signing; release/upload-key handling must be planned safely.
+- Play Console requires store-listing and app-content declarations such as content rating, target audience, ads declaration, privacy/data-safety information as applicable.
+- If the developer account is subject to Google's new-personal-account production-access testing requirement, production access requires a qualifying closed test. Verify the account-specific requirement in Play Console before planning dates.
 
-## 4. Clear Feedback
+Official references:
 
-Add small visual feedback when normal matched tiles are removed.
+- Target API: https://support.google.com/googleplay/android-developer/answer/11926878
+- Android App Bundle: https://developer.android.com/guide/app-bundle
+- Play App Signing: https://support.google.com/googleplay/android-developer/answer/9842756
+- App-content declarations: https://support.google.com/googleplay/android-developer/answer/9859455
+- Personal-account testing requirement: https://support.google.com/googleplay/android-developer/answer/14151465
+- Store preview assets: https://support.google.com/googleplay/android-developer/answer/9866151
 
-Possible presentation techniques:
+## Likely blocker candidates
 
-- scale;
-- fade;
-- brief flash.
+These are candidates, not pre-approved conclusions:
 
-Keep it small and readable.
-Do not move scoring, matching, or removal decisions into Presentation.
+- a player can reach a dead board with moves remaining;
+- exception recovery can leave the game locked;
+- production release configuration/signing is not yet established;
+- Play-ready AAB has not yet been produced;
+- store/policy declarations are not yet prepared.
 
-## 5. Special Tile Effect Feedback
+The audit may promote or demote other issues.
 
-Backlog carried over from Phase 10.
+## Deliverable
 
-Phase 10 currently gives specials a simple activation pulse.
-Phase 11 should make their actual affected cells and targets understandable.
+Create:
 
-Beam Crystal / Rocket:
+Docs/Phases/PHASE13_RELEASE_READINESS_AUDIT.md
 
-- visualize the affected row or column;
-- use the actual effect plan supplied by Core.
+It should contain:
 
-Wisp / Propeller:
+- current product/release baseline;
+- MUST / SHOULD / DEFER / CLOSE table;
+- evidence for each classification;
+- proposed order of work;
+- risks;
+- explicit non-goals.
 
-- visualize the local activation;
-- animate toward `RemoteTarget` already chosen by Core;
-- Presentation must never choose or modify the target.
+Do not make production changes until the audit is reviewed and approved.
 
-Nova Gem / TNT:
+### Learning gate
 
-- visualize the bounds-clipped affected square area;
-- presentation should communicate the 5x5-style footprint clearly.
+I should be able to explain the difference between:
 
-Spectrum Core / Light Ball:
-
-- visualize the selected or fallback color;
-- show the relationship between Spectrum Core and the tiles that will be cleared.
-
-All effect feedback is presentation-only.
-
-Core remains responsible for:
-
-- footprint;
-- targeting;
-- chain order;
-- activation eligibility;
-- scoring facts;
-- Board mutations.
-
-Presentation only visualizes those facts.
-
-Do not add explicit special-combination bonuses in Phase 11.
-Phase 10 Option A remains unchanged.
-
-## 6. UI Polish
-
-Existing functional systems already include:
-
-- Moves
-- Goal progress
-- Score
-- Win state
-- Lose state
-- Restart
-
-Phase 11 should polish their presentation and layout rather than reimplement their gameplay logic.
-
-Possible work:
-
-- cleaner HUD hierarchy;
-- better spacing/alignment;
-- clearer goal display;
-- simple Win panel;
-- simple Lose panel;
-- consistent Restart presentation.
-
-Do not spend large amounts of time producing custom UI art.
-
-## Phase 11 Architecture Constraints
-
-Preserve:
-
-- Core remains Unity-independent.
-- Presentation contains no gameplay special rules.
-- Board remains authoritative.
-- Animation never becomes authoritative state.
-- Input remains locked through the complete resolution sequence.
-- Board/View consistency remains required after resolution.
-- LevelProgress remains independent from special gameplay logic.
-- Existing deterministic RNG behavior must not be altered by polish work.
-
-Avoid without a concrete need:
-
-- generic animation framework;
-- Strategy hierarchy for visual effects;
-- per-special gameplay MonoBehaviours;
-- Factory singleton;
-- global event bus;
-- object pooling;
-- new packages only for visual convenience.
-
-Prefer small focused presentation helpers when an existing class gains a genuinely separate responsibility.
-
-## Suggested Order
-
-Use this as guidance rather than a rigid dependency graph:
-
-Visual Identity Pass
-→ asset integration/readability validation
-→ Swap animation polish
-→ Falling animation polish
-→ Clear feedback
-→ Special tile effect feedback
-→ UI polish
-
-The detailed implementation sequence will be defined in `Docs/Phases/PHASE11_EXECUTION.md` when Phase 11 execution begins.
+- a gameplay bug;
+- a release blocker;
+- a polish issue;
+- a policy/compliance requirement;
+- a performance concern;
+- a deferred product feature.
 
 ---
 
-# 18. Phase 12 — Mobile Pass
+# 20. Phase 14 — Gameplay Robustness & Adversarial Testing
 
-## Requirements
+## Goal
 
-- Touch input
-- Portrait-oriented layout if appropriate
-- UI anchors
-- Different screen aspect ratios
-- No keyboard requirement
-- Avoid obviously wasteful allocations
-- Avoid unnecessary physics
-- Avoid unnecessary per-frame polling
+Remove player-facing gameplay states that can make the game impossible to continue or leave it incorrectly locked.
 
-Potential build target:
+The exact implementation scope comes from the approved Phase 13 audit.
 
-```text
-Android
-```
+## Expected focus
 
-Building to device is useful but not required for every development step.
+### Dead-board handling
 
----
+A stable board is not necessarily a playable board.
 
-# 19. Phase 13 — Testing Strategy
+Define and test:
 
-Prioritize tests for deterministic gameplay logic.
+- what counts as at least one legal player move;
+- when legal-move detection runs;
+- what happens when no legal move exists;
+- whether the board reshuffles, regenerates, or uses another minimal recovery rule;
+- how determinism/restart behavior should work;
+- how presentation communicates recovery if necessary.
 
-## High-value EditMode tests
+Do not add a large level-generation framework merely to solve dead boards.
 
-### Board
+### Exception / lock recovery
 
-- Dimensions
-- Tile access
-- Invalid positions
-- Generation rules
+Review the documented LockedAfterException path.
 
-### MatchFinder
+The goal is not to hide exceptions.
 
-- Horizontal match
-- Vertical match
-- 4+
-- 5+
-- Intersection
-- Multiple matches
-- No match
+The goal is to avoid leaving the player in an unrecoverable input-locked state after a recoverable presentation/runtime failure.
 
-### Swap
+Any recovery policy must:
 
-- Adjacent valid
-- Diagonal invalid
-- Distant invalid
-- Match-producing swap
-- Non-match swap
+- preserve useful error visibility;
+- avoid silently corrupting Board/View state;
+- define when restart/rebuild is safer than continuing.
 
-### Gravity
+### Adversarial review
 
-Example:
+Reuse the old adversarial-review idea here.
 
-```text
-A
-.
-B
-.
-C
-```
+Ask a reviewer to generate concrete board states and interaction sequences that try to break:
 
-becomes:
+- matching;
+- swapping;
+- rollback;
+- gravity;
+- refill;
+- cascades;
+- specials;
+- chain reactions;
+- dead-board recovery;
+- outcomes;
+- restart;
+- input locking.
 
-```text
-.
-.
-A
-B
-C
-```
+Convert high-value findings into focused tests.
 
-### Refill
+## Validation gate
 
-- All empty cells filled
-- Board remains valid
-- Correct dimensions
+At minimum:
 
-### Resolution
+- all existing EditMode tests;
+- all existing PlayMode tests;
+- new robustness tests;
+- runtime scenarios for every recovery path;
+- clean Console except declared negative-test output;
+- deterministic restart still behaves as intended.
 
-- Cascades terminate
-- Stable board eventually returns
-- Correct cleared positions
-
-### Special tiles
-
-- Creation
-- Activation
-- Chain reactions
+Do not move to polish while a confirmed MUST-FIX gameplay blocker remains open.
 
 ---
 
-# 20. Phase 14 — AI Adversarial Review
+# 21. Phase 15 — Player Experience, Accessibility & Presentation Polish
 
-Ask Claude:
+## Goal
 
-```text
-Try to break this Match-3 implementation.
+Make the small game feel intentional enough to release without turning it into a much larger product.
 
-Do not modify files.
+Use the Phase 13 audit to decide which items are mandatory.
 
-Generate at least 15 concrete board states or interaction sequences
-that could expose bugs in:
+## Candidate work
 
-- matching
-- swapping
-- rollback
-- gravity
-- refill
-- cascades
-- special tiles
-- state transitions
-- input locking
+### Selection feedback
 
-For each case, explain the expected behavior.
-```
+Touch interaction should make the currently selected tile understandable.
 
-Convert the best findings into tests.
+Prefer a small presentation-only cue.
+
+Do not move selection rules into TileView.
+
+### Tall-screen composition
+
+The centered camera framing is technically correct but can leave large empty vertical areas on tall phones.
+
+The rejected vertical-bias experiment remains historical evidence.
+
+Future solutions should prefer composition/art/UI changes such as:
+
+- board backdrop;
+- stronger board-area framing;
+- taller or richer HUD treatment;
+- carefully reviewed side margins.
+
+Do not reintroduce device-specific hacks.
+
+### Outcome dimmer
+
+Consider a full-screen decorative dimmer while keeping the interactive outcome card inside SafeArea.
+
+Background/decorative UI may cover the full screen; interactive UI must remain safe-area aware.
+
+### Colour accessibility
+
+Normal gems are primarily distinguished by colour.
+
+Evaluate a small secondary cue such as:
+
+- subtle internal symbol;
+- pattern;
+- material/shape detail.
+
+Do not destroy the established Prismatic Energy visual family.
+
+### Audio / haptics
+
+The original roadmap included basic sound/VFX hooks but the project has focused mainly on visuals.
+
+Audit whether a store-ready version should add a small audio/haptic feedback pass for:
+
+- selection/swap;
+- match clear;
+- special activation;
+- win/loss;
+- buttons.
+
+Keep it minimal. No audio-manager architecture unless a real need exists.
+
+## Product-scope rule
+
+Do not add:
+
+- economy;
+- coins;
+- shop;
+- ads;
+- IAP;
+- daily rewards;
+- backend;
+- login/accounts;
+- live-ops;
+- dozens of levels.
+
+The target remains one small, coherent game experience.
+
+## Validation
+
+Review on at least:
+
+- the Galaxy S23;
+- a short portrait simulation;
+- a tall portrait simulation;
+- asymmetric safe-area simulation.
+
+Human feel review is required for presentation choices.
 
 ---
 
-# 21. Phase 15 — Performance Review
+# 22. Phase 16 — Performance & Stability Review
 
-First measure / inspect. Do not blindly optimize.
+## Goal
 
-Prompt:
+Measure the release candidate on real hardware before optimizing.
 
-```text
-Review this project as a mobile Unity engineer.
+Reuse the old performance-review phase here, but ground it in profiling evidence.
 
-Do not modify anything.
+## Profile first
 
-Look for:
-- avoidable garbage allocations
-- LINQ in hot gameplay paths
-- repeated GetComponent calls
-- unnecessary Update methods
-- excessive Instantiate/Destroy
-- unnecessary physics
-- expensive operations repeated every frame
-- excessive coupling that could create performance bugs
+Inspect on Android where practical:
 
-Rank findings:
-1. real issue now
-2. likely future issue
-3. theoretical / not worth optimizing
-```
+- CPU frame time;
+- GPU frame time;
+- managed allocations during idle and moves;
+- garbage collection;
+- memory usage;
+- Physics2D.SyncTransforms cost;
+- raycast/picking cost;
+- tile instantiate/destroy behavior;
+- Wisp temporary flyer;
+- special chains;
+- long cascades;
+- UI/layout callbacks;
+- thermal behavior over a longer play session.
 
-Possible topics to learn:
+## Classification
 
-- Unity Profiler
-- GC allocations
-- Object pooling
-- Update cost
-- Instantiate / Destroy
-- Sprite rendering
-- Draw calls
-- CPU vs GPU bottlenecks
+For every finding:
 
-Only add pooling if it solves an actual issue or meaningfully demonstrates mobile-game engineering.
+1. real release issue;
+2. worthwhile improvement;
+3. theoretical / not worth changing.
+
+Do not add pooling because pooling is a common mobile pattern.
+
+Add it only if profiling shows repeated allocation/Instantiate/Destroy is a meaningful problem.
+
+## Stability checks
+
+Include:
+
+- repeated restart cycles;
+- long play session;
+- background / foreground lifecycle;
+- interruption/resume where practical;
+- memory growth check;
+- crash/logcat review;
+- frame pacing around expensive effects.
+
+## Exit criteria
+
+The project should have no known measured performance problem that makes the supported gameplay unpleasant on the chosen baseline device.
+
+Do not claim broad device compatibility from one phone.
 
 ---
 
-# 22. Phase 16 — Cross-Agent Review
+# 23. Phase 17 — Android Production Build, Versioning & Signing
 
-Use one model to critique the other.
+## Goal
 
-### Claude Review
+Move from a development APK to a real Google Play upload artifact.
 
-```text
-Review the entire repository as a senior Unity/mobile-game engineer.
+This phase is release engineering, not gameplay work.
 
-Do not modify files.
+## Required decisions
 
-Identify the five highest-value engineering improvements.
+### Target API
+
+Re-check the current Google Play target-API rule.
+
+Working requirement as of 2026-10-28:
+
+- Android mobile new apps / updates: target API 36 or higher.
+
+### Package identity
+
+Keep the approved application identifier unless there is a strong reason to change it before first Play upload:
+
+com.tugaykapucu.match3
+
+Treat package identity as effectively permanent once published.
+
+### Versioning
+
+Define:
+
+- user-visible version name;
+- monotonically increasing Android version code.
+
+Document the first-release convention.
+
+### Build format
+
+Produce a signed **Android App Bundle (.aab)** for Google Play.
+
+The earlier APK remains useful for local device testing but is not the final Play publishing artifact.
+
+### Signing
+
+Set up release/upload signing deliberately.
+
+Rules:
+
+- never commit keystore files, private keys, passwords, or secrets;
+- document where the upload key is backed up;
+- understand the difference between upload key and Play App Signing key;
+- verify that a future update can be signed/uploaded correctly.
+
+### Build configuration
+
+Review:
+
+- Development Build off;
+- script debugging off;
+- IL2CPP;
+- ARM64;
+- stripping settings;
+- managed stripping level;
+- target/min API;
+- orientation;
+- permissions;
+- graphics APIs;
+- compression/build options;
+- app icon / launcher assets;
+- version name/code.
+
+Do not change settings just because a "release" preset sounds more optimized.
+
+## Validation
+
+Produce at least:
+
+- one successful signed release AAB;
+- one installable release-equivalent build for device smoke testing, where practical;
+- build report / size review;
+- clean device launch;
+- Win/Loss/restart smoke;
+- no unexpected logcat errors.
+
+Store the release artifact outside source control unless there is a deliberate artifact policy.
+
+---
+
+# 24. Phase 18 — Google Play Store & Policy Readiness
+
+## Goal
+
+Prepare everything Play Console needs without adding monetization or data collection merely for the sake of publishing.
+
+## App setup
+
+Decide and document:
+
+- final app/game name;
+- default language;
+- app/game category;
+- free/paid status;
+- support/contact details.
+
+## Store listing
+
+Prepare compliant:
+
+- 512×512 Play Store app icon;
+- 1024×500 feature graphic;
+- at least the required screenshots;
+- short description;
+- full description;
+- optional preview video only if worthwhile.
+
+Store assets must represent the actual game.
+
+Do not imply rankings, awards, player counts, or features that do not exist.
+
+## App content / policy declarations
+
+Complete the applicable Play Console declarations, including:
+
+- ads declaration;
+- app access;
+- target audience and content;
+- content rating;
+- Data safety;
+- privacy policy where required / appropriate;
+- permissions declarations if any sensitive/high-risk permission exists.
+
+The correct answers must come from the actual app behavior and dependencies.
+
+Do not guess that "the game collects no data" without checking Unity packages, permissions, SDKs, and built manifest behavior.
+
+## Privacy principle
+
+Prefer a release with no unnecessary analytics/ads/tracking SDKs.
+
+If the game does not need data collection, keeping the data surface small makes both engineering and policy work simpler.
+
+## Policy verification
+
+Google Play policy is time-sensitive.
+
+Re-check official requirements immediately before Play Console submission.
+
+---
+
+# 25. Phase 19 — Play Testing Track & Production Access
+
+## Goal
+
+Test the exact Play-delivered build and satisfy any account-specific production-access requirement.
+
+## Internal testing first
+
+Upload the signed AAB to an internal testing track or use the appropriate Play internal distribution flow.
+
+Verify:
+
+- Play-generated install works;
+- correct version is delivered;
+- portrait orientation;
+- touch;
+- safe area;
+- specials;
+- Win/Loss;
+- Restart/Play Again;
+- frame pacing;
+- no unexpected permissions/prompts;
+- update path with a higher version code.
+
+## Closed testing
+
+If the account is subject to Google's new-personal-account production-access rule:
+
+- run the required closed test;
+- keep the required number of testers opted in for the required continuous period;
+- collect meaningful feedback;
+- answer the production-access questions accurately.
+
+As of 2026-10-28, the official requirement states at least 12 testers continuously opted in for the preceding 14 days when applying for production access. Verify the account-specific Play Console requirement before starting the clock.
+
+If the account is not subject to that requirement, still use a testing track before production.
+
+## Play-side automated feedback
+
+Review what Play Console provides, such as:
+
+- pre-launch report;
+- device compatibility;
+- crashes / ANRs;
+- policy warnings;
+- bundle/device delivery information.
+
+Classify issues before fixing them.
+
+---
+
+# 26. Phase 20 — Release Candidate & Production Submission
+
+## Goal
+
+Create one release candidate and decide deliberately whether it is acceptable to ship.
+
+## Release-candidate gate
+
+Require:
+
+- approved known-issue list;
+- no open MUST-FIX release blockers;
+- complete automated regression suites;
+- final physical-device smoke;
+- Play-delivered test build validated;
+- release AAB built with final version code/name;
+- store listing complete;
+- app-content declarations complete;
+- privacy/data-safety answers reviewed;
+- crash/ANR/pre-launch findings reviewed.
+
+## Final cross-agent review
+
+Reuse the old Cross-Agent Review here.
+
+One reviewer should inspect the release candidate as a senior Unity/mobile-game engineer.
+
+The other reviewer should challenge each finding instead of blindly accepting it.
 
 Focus on:
-- correctness
-- maintainability
-- extensibility
-- Unity usage
-- mobile considerations
-- tests
 
-Avoid speculative over-engineering.
-```
+- correctness;
+- release risk;
+- maintainability;
+- Unity usage;
+- mobile behavior;
+- test coverage;
+- policy/release configuration.
 
-### Codex Response
+Human developer makes the final call.
 
-Give Codex the review:
+## Production submission
 
-```text
-Read this external review.
+Do not let an agent automatically publish to production.
 
-Do not modify files yet.
+The human developer should review:
 
-For each finding:
-- agree / disagree
-- explain why
-- estimate engineering value
-- propose the smallest fix if needed
+- exact AAB;
+- version;
+- countries/regions;
+- release notes;
+- staged/full rollout choice;
+- known issues;
+- Play Console warnings.
 
-Do not blindly accept reviewer feedback.
-```
-
-I make the final decision.
+Only then submit.
 
 ---
 
-# 23. Phase 17 — Interview Mode
+# 27. Phase 21 — Portfolio README & Engineering Story
 
-Once the repository is mature:
+## Goal
 
-```text
-Act as a senior engineer interviewing me about this repository.
+Make the repository understandable to a reviewer who was not present during development.
 
-Ask one question at a time.
-
-Challenge weak answers.
-
-Focus on:
-- OOP
-- design patterns
-- Unity
-- algorithms
-- state management
-- coupling
-- testability
-- mobile performance
-- Match-3 edge cases
-
-Frequently ask:
-"What would happen if the requirement changed?"
-```
-
-Useful questions include:
-
-- Why separate `Board` and `BoardView`?
-- Why isn't every Tile a gameplay-heavy MonoBehaviour?
-- Why did you choose this MatchFinder algorithm?
-- How do you prevent user input during a cascade?
-- What happens if an animation is interrupted?
-- How would you add a new booster?
-- Would you use Singleton here?
-- Where does Observer help?
-- Where would Observer be over-engineering?
-- What happens on a 12×12 board?
-- How would you make the board deterministic for testing?
-- What allocations happen during one move?
-
----
-
-# 24. Design Patterns to Learn Through the Project
-
-Do not force them into the project.
-
-## Observer
-
-Useful when:
-
-```text
-gameplay event
-   ↓
-score / goals / UI react
-```
-
-Question:
-
-> Does an event reduce coupling here?
-
----
-
-## State
-
-Useful for:
-
-```text
-Idle
-Swapping
-Resolving
-Win
-Lose
-```
-
-Question:
-
-> Is state behavior complex enough to justify explicit state objects, or is an enum sufficient?
-
----
-
-## Strategy
-
-Potentially useful for:
-
-```text
-Rocket behavior
-Bomb behavior
-Color Bomb behavior
-```
-
-Question:
-
-> Are behaviors genuinely interchangeable and independently extensible?
-
----
-
-## Factory
-
-Potentially useful when creation becomes complicated:
-
-```text
-CreateTile(...)
-CreateSpecialTile(...)
-```
-
-Question:
-
-> Is creation logic complex enough to deserve its own abstraction?
-
----
-
-## Object Pool
-
-Potentially useful for:
-
-- Tile views
-- Particles
-- Repeated effects
-
-Question:
-
-> Is Instantiate/Destroy actually causing a measurable or likely problem?
-
----
-
-## Singleton
-
-Treat cautiously.
-
-Do not default to:
-
-```text
-GameManager.Instance
-AudioManager.Instance
-UIManager.Instance
-BoardManager.Instance
-EverythingManager.Instance
-```
-
-Be able to explain the trade-off:
-
-> Convenient global access vs hidden dependencies and global state.
-
----
-
-# 25. Scope Boundaries
-
-Do **not** add these unless the core project is already excellent:
-
-- ECS / DOTS
-- Multiplayer
-- Networking
-- Backend
-- Ads
-- IAP
-- LiveOps
-- Complex shaders
-- Custom render pipeline
-- Procedural art pipeline
-- Heavy dependency-injection framework
-- Huge generic architecture framework
-
-This project should remain understandable.
-
----
-
-# 26. Definition of Done
-
-The project is complete when:
-
-- [ ] Board generates reliably
-- [ ] Initial board has no unwanted matches
-- [ ] Adjacent swaps work
-- [ ] Invalid swaps rollback
-- [ ] Match detection works
-- [ ] Matches clear
-- [ ] Gravity works
-- [ ] Refill works
-- [ ] Cascades resolve
-- [ ] Input locking works
-- [ ] Moves work
-- [ ] Score works
-- [ ] Goals work
-- [ ] Win works
-- [ ] Lose works
-- [ ] Restart works
-- [ ] Special tiles work
-- [ ] Basic animations work
-- [ ] Mobile input works
-- [ ] Important core logic has tests
-- [ ] Unity Console is clean
-- [ ] Project can be built/run
-- [ ] README explains architecture
-- [ ] README discloses AI-assisted workflow
-- [ ] I can explain every major class
-- [ ] I can explain every design pattern used
-- [ ] I can explain MatchFinder without AI
-- [ ] I can modify the project without relying entirely on AI
-
----
-
-# 27. README Content for the Final Repository
+The README is no longer optional.
 
 Suggested structure:
 
-```text
+~~~text
 # Agentic Match-3
 
 ## Overview
-
 ## Gameplay
-
 ## Features
-
-## Architecture
-
-## Project Structure
-
-## Testing
-
-## AI Development Workflow
-
-## Unity MCP
-
-## Engineering Decisions
-
-## What I Learned
-
 ## Screenshots / GIF
-
+## Architecture
+## Project Structure
+## Testing
+## Mobile / Android Validation
+## Release Engineering
+## AI Development Workflow
+## Unity MCP
+## Engineering Decisions
+## Known Trade-offs
+## What I Learned
 ## How to Run
-```
+~~~
 
 Be transparent:
 
 > This project was intentionally developed as an experiment in agentic game development. Codex and Claude Code were used for implementation, review, testing, and Unity Editor automation under human-written requirements and supervision.
 
-That is a feature of this repository, not something to hide.
+Document:
+
+- Core vs Presentation separation;
+- deterministic gameplay;
+- special-effect planning;
+- mobile adaptation;
+- testing totals;
+- physical-device validation;
+- release process;
+- meaningful rejected designs, not just successful choices.
+
+Do not turn the README into a transcript of the entire project.
 
 ---
 
-# 28. Parallel Dream Games Preparation
+# 28. Phase 22 — Final Learning Review & Interview Mode
 
-This repository is **not** the final proof that I personally can write a Match-3 game without AI.
+## Goal
 
-Treat it as:
+Close the learning loop.
 
-```text
+The repository is not complete merely because it shipped.
+
+I should be able to explain and modify the important systems without outsourcing every decision.
+
+## Interview mode
+
+Use a senior-engineer interview format.
+
+Ask one question at a time and challenge weak answers.
+
+Focus on:
+
+- OOP;
+- Core vs Presentation;
+- Unity lifecycle;
+- algorithms;
+- MatchFinder;
+- special creation/activation;
+- deterministic RNG;
+- state/sequence management;
+- input locking;
+- touch/picking;
+- safe areas/camera fitting;
+- allocations/performance;
+- Android build/signing;
+- release trade-offs;
+- testing strategy.
+
+Frequently ask:
+
+"What would happen if the requirement changed?"
+
+## Practical learning gate
+
+I should be able to make at least one meaningful scoped change myself, explain the diff, and validate it without relying entirely on an agent.
+
+---
+
+# 29. Design Patterns to Learn Through the Project
+
+Do not force patterns into the code.
+
+## Observer
+
+Useful when a gameplay fact needs multiple independent consumers.
+
+Question:
+
+> Does an event materially reduce coupling here, or does a direct call remain clearer?
+
+## State
+
+Useful when state-specific behavior becomes complex.
+
+Question:
+
+> Is an enum / explicit status enough, or are separate state objects genuinely easier to reason about?
+
+## Strategy
+
+Useful when behaviors are truly interchangeable and independently extensible.
+
+Do not create a Strategy hierarchy merely because specials have different outcomes.
+
+## Factory
+
+Useful when creation itself becomes complex.
+
+Do not hide simple prefab/view construction behind a factory without need.
+
+## Object Pool
+
+Useful only when measured allocation / Instantiate/Destroy cost justifies it.
+
+## Singleton
+
+Treat cautiously.
+
+Convenient global access trades explicit dependencies for hidden global state.
+
+Do not default to GameManager.Instance / AudioManager.Instance / UIManager.Instance style architecture.
+
+---
+
+# 30. Scope Boundaries
+
+The release goal does **not** mean "turn this into a live-service Match-3."
+
+Do not add these unless a later explicit product decision changes the project:
+
+- ECS / DOTS;
+- multiplayer;
+- networking;
+- backend;
+- accounts/login;
+- ads;
+- IAP;
+- economy/shop;
+- daily rewards;
+- live-ops;
+- analytics SDKs without a concrete need;
+- push notifications;
+- complex shaders;
+- custom render pipeline;
+- procedural art pipeline;
+- heavy dependency-injection framework;
+- huge generic architecture framework;
+- dozens of levels merely to make the game look larger.
+
+Prefer one small, coherent, finished experience over a wide unfinished feature set.
+
+---
+
+# 31. Release Definition of Done
+
+The project is release-ready when all approved MUST-FIX items are closed and the following are true:
+
+## Gameplay
+
+- [ ] Board generates reliably
+- [ ] Initial board has no unwanted matches
+- [ ] At least one legal move is guaranteed or dead-board recovery is defined
+- [ ] Adjacent swaps work
+- [ ] Invalid swaps rollback
+- [ ] Match detection works
+- [ ] Clear / gravity / refill / cascades work
+- [ ] Input locking works
+- [ ] Moves / score / goals work
+- [ ] Win / lose / restart work
+- [ ] Special tiles and chains work
+- [ ] No known player-stuck state remains accepted accidentally
+
+## Mobile / UX
+
+- [ ] Touch-only gameplay works
+- [ ] Portrait safe-area layout works
+- [ ] Supported aspect ratios remain playable
+- [ ] Important touch targets are usable
+- [ ] Approved presentation/accessibility blockers are closed
+- [ ] Outcome/restart flow is understandable
+- [ ] Human device-feel review completed
+
+## Quality
+
+- [ ] Important deterministic logic has tests
+- [ ] Adversarial gameplay review completed
+- [ ] Performance/stability review completed
+- [ ] No known release-blocking crash/ANR issue
+- [ ] Unity Console / Android logs have no unexplained release errors
+- [ ] Known issues are explicitly accepted, fixed, or deferred
+
+## Android release
+
+- [ ] Current Google Play target API requirement satisfied
+- [ ] Final package identifier approved
+- [ ] Version name/code policy defined
+- [ ] Signed release AAB builds successfully
+- [ ] Upload/signing keys are safely managed outside Git
+- [ ] Play-delivered test installation succeeds
+- [ ] Physical-device release smoke passes
+
+## Google Play
+
+- [ ] Store listing complete
+- [ ] Required icon / feature graphic / screenshots complete
+- [ ] App-content declarations complete
+- [ ] Data safety / privacy answers match actual app behavior
+- [ ] Content rating / target audience completed
+- [ ] Account-specific testing requirement satisfied
+- [ ] Pre-launch / Play Console findings reviewed
+- [ ] Production-access requirements satisfied
+- [ ] Human approves the exact production submission
+
+## Repository / learning
+
+- [ ] README explains architecture
+- [ ] README discloses AI-assisted workflow
+- [ ] README includes testing/mobile/release evidence
+- [ ] I can explain every major class
+- [ ] I can explain important design choices and rejected alternatives
+- [ ] I can explain MatchFinder without AI
+- [ ] I can modify and validate the project without relying entirely on AI
+
+---
+
+# 32. README Content for the Final Repository
+
+Use Phase 21 as the source of truth.
+
+Keep the README concise enough that a hiring reviewer can understand the project quickly.
+
+The repository should clearly communicate:
+
+- what the game is;
+- what is technically interesting;
+- how it is architected;
+- how it was tested;
+- what was validated on Android;
+- how AI agents were supervised;
+- what trade-offs remain.
+
+---
+
+# 33. Parallel Dream Games Preparation
+
+This repository still serves a different purpose from a future mostly-human-implemented interview project.
+
+Treat this repository as:
+
+~~~text
 Agentic Match-3
 AI implementation: HIGH
 Human specification/review: HIGH
 Purpose:
-- learn Unity
-- learn Match-3 systems
-- learn Codex
-- learn Claude Code
-- learn MCP
-```
+- learn Unity and Match-3 systems
+- learn agent supervision
+- learn testing/debugging
+- learn mobile engineering
+- learn release engineering
+- ship a real small product
+~~~
 
-Later, create a separate project:
+Later, a separate Dream-style project may be used to demonstrate higher personal implementation ownership.
 
-```text
-Dream-style Match-3
-AI implementation: LOW / MEDIUM
-Human implementation: HIGH
-Purpose:
-- demonstrate personal Unity engineering
-- interview preparation
-- portfolio
-```
-
-Knowledge should flow from the first project into the second.
+Knowledge should flow from this project into the next one.
 
 Code should not simply be copied without understanding.
 
 ---
 
-# 29. Context and Token Budget Guidelines
+# 34. Context and Token Budget Guidelines
 
 AI context is a limited project resource.
 
-## Keep Always-On Instructions Small
+Keep always-on instructions small:
 
-Aim for:
+- AGENTS.md → short shared engineering/workflow rules
+- CLAUDE.md → short Claude-specific adapter
+- PLAN.md → detailed on-demand roadmap
 
-```text
-AGENTS.md   → short, high-signal shared rules
-CLAUDE.md   → very short Claude role adapter
-PLAN.md     → detailed but on-demand reference
-```
+Load only what a task needs.
 
-Do not repeat PLAN content inside AGENTS or CLAUDE.
-
-## Load Only What the Task Needs
-
-Examples:
-
-```text
-Fix this compile error.
-```
-
-Needs current code and `AGENTS.md`, not the full roadmap.
-
-```text
-Implement special tiles.
-```
-
-Should reference the Special Tiles phase in `PLAN.md`.
-
-```text
-Review the entire architecture before final polish.
-```
-
-May justify broader repository / PLAN reading.
-
-## Prefer Repository State Over Conversation History
-
-For a fresh agent session, prefer:
-
-```text
-Inspect the repository and current git status.
-Then read Phase X of PLAN.md.
-```
-
-instead of manually pasting long summaries of previous sessions.
-
-## Avoid Duplicate Agent Work
+Prefer repository state over conversation-history summaries for fresh agent sessions.
 
 Do not ask Codex and Claude to independently implement the same feature unless comparison is the explicit goal.
 
-Default:
-
-```text
-Codex = implementation
-Claude = review / teaching
-```
-
 ---
 
-# 30. Recommended Working Loop
+# 35. Recommended Working Loop
 
-For every feature:
+For every meaningful feature or release task:
 
-```text
-1. Write requirement myself
-       ↓
-2. Point the agent to the relevant PLAN.md phase only if needed
-       ↓
-3. Ask for design first if architecture is non-trivial
-       ↓
-4. Understand / approve design
-       ↓
-5. Codex implements
-       ↓
-6. Run tests + Unity validation
-       ↓
-7. Read git diff
-       ↓
-8. Claude reviews
-       ↓
-9. I choose valid feedback
-       ↓
-10. Codex fixes approved issues
-       ↓
-11. Re-run tests
-       ↓
-12. I explain the feature in my own words
-       ↓
-13. Commit
-```
+1. write/approve the requirement;
+2. inspect current repository state;
+3. read only the relevant PLAN.md phase;
+4. ask for design first when architecture/release behavior is non-trivial;
+5. understand and approve the design;
+6. one agent implements;
+7. run focused tests/validation;
+8. inspect the diff;
+9. second agent reviews/challenges;
+10. human chooses valid feedback;
+11. implement only approved fixes;
+12. rerun validation;
+13. human explains the change in their own words;
+14. commit/push only after review.
 
 This loop is more important than the exact architecture.
 
 ---
 
-# 31. First Three Actions
+# 36. Current Next Action
 
-Start here.
+Phases 0-12 are complete.
 
-## Action 1
+The next phase is:
 
-Create the Unity 6 project and Git repository.
+**Phase 13 — Release Readiness & Product Gap Audit**
 
-## Action 2
+Do not start by fixing DeadBoard, UI polish, signing, or Play Console configuration.
 
-Add:
-
-```text
-PLAN.md
-AGENTS.md
-CLAUDE.md
-```
-
-Use:
-
-- `AGENTS.md` as the short shared rule set
-- `CLAUDE.md` as a tiny Claude-specific adapter
-- `PLAN.md` as an on-demand roadmap/reference
-
-Make a baseline commit.
-
-## Action 3
-
-Before writing gameplay code, set up Unity MCP and pass these two smoke tests:
-
-```text
-Inspect current scene without changing it.
-```
-
-then:
-
-```text
-Create an empty GameObject named MCP_Test.
-```
-
-Once that works, begin **Phase 2 — Core Board Model**.
+First create the Phase 13 audit, classify the remaining work, review it, and then approve the release sequence.
 
 ---
 
 ## Final Principle
 
-The goal is not:
+The original question was:
 
-> "Can AI build a Match-3 game?"
+> Can I use AI agents to build a real Unity system while becoming capable of understanding, reviewing, debugging, and extending the important parts myself?
 
-It probably can build much of one.
+After Phase 12, the project adds a second question:
 
-The useful question is:
+> Can I take that system through the boring but essential work required to ship and maintain a real small mobile game responsibly?
 
-> **"Can I use AI agents to build a real Unity system while becoming capable of understanding, reviewing, debugging, extending, and eventually rebuilding the important parts myself?"**
-
-If the answer is yes, this project succeeds.
+The project succeeds if both answers become yes.
