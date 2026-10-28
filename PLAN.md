@@ -1194,7 +1194,7 @@ Do not move to polish while a confirmed MUST-FIX gameplay blocker remains open.
 
 ---
 
-# 21. Phase 15 — Player Experience, Accessibility & Presentation Polish
+# 21. Phase 15 — Mobile Interaction & Presentation Polish
 
 ## Goal
 
@@ -1203,6 +1203,38 @@ Make the small game feel intentional enough to release without turning it into a
 Use the Phase 13 audit to decide which items are mandatory.
 
 ## Candidate work
+
+### Swipe input
+
+The current mobile flow uses two taps to select adjacent tiles.
+
+Before release, add a natural directional swipe path while preserving the existing gameplay semantics.
+
+Desired behavior:
+
+- pointer/touch begins on a tile;
+- movement beyond an approved threshold determines the dominant cardinal direction;
+- that direction resolves to one orthogonally adjacent GridPosition;
+- the existing swap validation/resolution path handles the move;
+- busy/terminal input rules remain unchanged.
+
+Architecture rule:
+
+~~~text
+touch / pointer gesture
+        ↓
+swap intent: first position + adjacent second position
+        ↓
+existing gameplay swap path
+~~~
+
+Core does not need to know what a swipe is.
+
+Do not add a generic gesture framework unless a concrete need appears.
+
+Keep two-tap input initially unless device testing shows the two interaction styles conflict or create ambiguity.
+
+Validate thresholds and feel on a physical phone rather than choosing a pixel value only from theory.
 
 ### Selection feedback
 
@@ -1289,7 +1321,136 @@ Human feel review is required for presentation choices.
 
 ---
 
-# 22. Phase 16 — Performance & Stability Review
+# 22. Phase 16 — Level System & Game Flow
+
+## Goal
+
+Turn the current single-level gameplay loop into a small, coherent game flow with a beginning, progression, and repeatable level sessions.
+
+This phase should add product/navigation structure without moving level-navigation concerns into Core board logic.
+
+## Main menu
+
+Add a minimal main menu suitable for the first release.
+
+Initial scope may be:
+
+- Play / Continue;
+- optional Level Select if it materially improves testing/player flow;
+- Settings only if there are real settings to expose.
+
+Do not add empty menu buttons merely to imitate a larger game.
+
+The app should no longer feel like it launches directly into an isolated technical board demo.
+
+## Level definition
+
+Introduce the smallest clear representation for level configuration.
+
+Candidate data:
+
+- level identifier / order;
+- starting move count;
+- goal type / color;
+- goal amount;
+- board seed or approved generation configuration.
+
+Prefer data/configuration over hard-coded per-level branches.
+
+Do not create a large level framework until requirements justify it.
+
+## Initial release scope
+
+Target approximately **5–10 intentionally configured levels** for the first release.
+
+The goal is to demonstrate progression and a complete player flow, not content volume.
+
+Do not add dozens of levels merely to make the game appear larger.
+
+## Progression
+
+Define:
+
+- how the current/unlocked level is tracked;
+- what happens after Win;
+- what happens after Loss;
+- how Retry works;
+- how Next Level works;
+- how returning to the main menu works;
+- what happens after the final available level.
+
+A basic expected flow is:
+
+~~~text
+Main Menu
+   ↓
+Play / Continue
+   ↓
+Level
+   ↓
+Win ─────→ Next Level
+ ↓
+optional menu return
+
+Loss ────→ Retry
+~~~
+
+If persistence is added, keep it minimal and explain exactly what is stored.
+
+Do not introduce accounts, cloud save, backend, or live-ops.
+
+## Architecture boundary
+
+The Board and match-resolution Core should remain responsible for gameplay rules inside a level.
+
+They should not become responsible for:
+
+- which level number the player is on;
+- scene/menu navigation;
+- unlock/progression UI;
+- store-facing product flow.
+
+Keep the distinction clear:
+
+~~~text
+Level configuration
+        ↓
+start gameplay session
+        ↓
+Core Board / LevelProgress run the level
+        ↓
+level outcome
+        ↓
+game-flow / progression layer decides Retry / Next / Menu
+~~~
+
+## Validation
+
+At minimum verify:
+
+- starting each configured level uses the intended moves/goal/configuration;
+- Win advances correctly;
+- Loss retries correctly;
+- Restart still restarts the current level;
+- Next Level does not leak previous Board/View/score state;
+- returning to menu and re-entering gameplay is clean;
+- first and final level edge cases are defined;
+- mobile safe-area/layout behavior remains valid;
+- deterministic behavior remains understood where seeds are used.
+
+### Learning gate
+
+I should be able to explain:
+
+- the difference between a gameplay session and game-flow/navigation state;
+- why LevelDefinition is configuration rather than Board responsibility;
+- where progression state lives;
+- what would change if the game later had 100 levels;
+- what is deliberately not being built yet.
+
+---
+
+# 23. Phase 17 — Performance & Stability Review
 
 ## Goal
 
@@ -1347,7 +1508,7 @@ Do not claim broad device compatibility from one phone.
 
 ---
 
-# 23. Phase 17 — Android Production Build, Versioning & Signing
+# 24. Phase 18 — Android Production Build, Versioning & Signing
 
 ## Goal
 
@@ -1434,7 +1595,7 @@ Store the release artifact outside source control unless there is a deliberate a
 
 ---
 
-# 24. Phase 18 — Google Play Store & Policy Readiness
+# 25. Phase 19 — Google Play Store & Policy Readiness
 
 ## Goal
 
@@ -1495,7 +1656,7 @@ Re-check official requirements immediately before Play Console submission.
 
 ---
 
-# 25. Phase 19 — Play Testing Track & Production Access
+# 26. Phase 20 — Play Testing Track & Production Access
 
 ## Goal
 
@@ -1546,7 +1707,7 @@ Classify issues before fixing them.
 
 ---
 
-# 26. Phase 20 — Release Candidate & Production Submission
+# 27. Phase 21 — Release Candidate & Production Submission
 
 ## Goal
 
@@ -1605,7 +1766,7 @@ Only then submit.
 
 ---
 
-# 27. Phase 21 — Portfolio README & Engineering Story
+# 28. Phase 22 — Portfolio README & Engineering Story
 
 ## Goal
 
@@ -1654,7 +1815,7 @@ Do not turn the README into a transcript of the entire project.
 
 ---
 
-# 28. Phase 22 — Final Learning Review & Interview Mode
+# 29. Phase 23 — Final Learning Review & Interview Mode
 
 ## Goal
 
@@ -1698,7 +1859,7 @@ I should be able to make at least one meaningful scoped change myself, explain t
 
 ---
 
-# 29. Design Patterns to Learn Through the Project
+# 30. Design Patterns to Learn Through the Project
 
 Do not force patterns into the code.
 
@@ -1744,7 +1905,7 @@ Do not default to GameManager.Instance / AudioManager.Instance / UIManager.Insta
 
 ---
 
-# 30. Scope Boundaries
+# 31. Scope Boundaries
 
 The release goal does **not** mean "turn this into a live-service Match-3."
 
@@ -1767,13 +1928,13 @@ Do not add these unless a later explicit product decision changes the project:
 - procedural art pipeline;
 - heavy dependency-injection framework;
 - huge generic architecture framework;
-- dozens of levels merely to make the game look larger.
+- dozens of levels merely to make the game look larger; the approved first-release target is a small 5–10 level set.
 
 Prefer one small, coherent, finished experience over a wide unfinished feature set.
 
 ---
 
-# 31. Release Definition of Done
+# 32. Release Definition of Done
 
 The project is release-ready when all approved MUST-FIX items are closed and the following are true:
 
@@ -1795,12 +1956,23 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 ## Mobile / UX
 
 - [ ] Touch-only gameplay works
+- [ ] Directional swipe swapping works through the approved existing swap path
 - [ ] Portrait safe-area layout works
 - [ ] Supported aspect ratios remain playable
 - [ ] Important touch targets are usable
 - [ ] Approved presentation/accessibility blockers are closed
 - [ ] Outcome/restart flow is understandable
 - [ ] Human device-feel review completed
+
+## Game flow
+
+- [ ] Main menu / game entry flow is complete
+- [ ] Initial release level set is configured and reviewable
+- [ ] Win → Next Level flow works
+- [ ] Loss → Retry flow works
+- [ ] Restart restarts the current level
+- [ ] Progression state does not leak gameplay state between levels
+- [ ] Final available level behavior is defined
 
 ## Quality
 
@@ -1845,9 +2017,9 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 
 ---
 
-# 32. README Content for the Final Repository
+# 33. README Content for the Final Repository
 
-Use Phase 21 as the source of truth.
+Use Phase 22 as the source of truth.
 
 Keep the README concise enough that a hiring reviewer can understand the project quickly.
 
@@ -1863,7 +2035,7 @@ The repository should clearly communicate:
 
 ---
 
-# 33. Parallel Dream Games Preparation
+# 34. Parallel Dream Games Preparation
 
 This repository still serves a different purpose from a future mostly-human-implemented interview project.
 
@@ -1890,7 +2062,7 @@ Code should not simply be copied without understanding.
 
 ---
 
-# 34. Context and Token Budget Guidelines
+# 35. Context and Token Budget Guidelines
 
 AI context is a limited project resource.
 
@@ -1908,7 +2080,7 @@ Do not ask Codex and Claude to independently implement the same feature unless c
 
 ---
 
-# 35. Recommended Working Loop
+# 36. Recommended Working Loop
 
 For every meaningful feature or release task:
 
@@ -1931,7 +2103,7 @@ This loop is more important than the exact architecture.
 
 ---
 
-# 36. Current Next Action
+# 37. Current Next Action
 
 Phases 0-12 are complete.
 
