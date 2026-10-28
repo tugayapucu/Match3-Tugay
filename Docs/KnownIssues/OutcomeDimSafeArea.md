@@ -2,7 +2,7 @@
 
 Status: Deferred; cosmetic issue confirmed during Phase 12 Step 8.
 
-On Won or Lost, the dark overlay leaves undimmed strips outside the safe area. This is visible with simulated notch, bottom-gesture and asymmetric insets. The outcome card and Play Again remain centered, readable and reachable inside the safe area. Physical-device appearance has not been checked.
+On Won or Lost, the dark overlay leaves undimmed strips outside the safe area. This is visible with simulated notch, bottom-gesture and asymmetric insets. The outcome card and Play Again remain centered, readable and reachable inside the safe area. Phase 12 Step 10 also confirmed the undimmed top cutout strip in Win/Loss screenshots on a physical Samsung Galaxy S23 (Android 16, 1080×2340). Other devices and inset shapes remain unverified physically.
 
 Cause: `OutcomePanel` contains the dimming Image and stretches to fill `LevelHud`, which fills `SafeArea`. Its current anchors and zero offsets make the overlay cover only that region; parenting itself does not clip UI.
 

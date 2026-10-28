@@ -1,6 +1,6 @@
 # Android frame-rate policy
 
-Status: Policy implemented in Phase 12 Step 7; real Android device validation remains pending.
+Status: Fixed policy implemented in Phase 12 Step 7; basic S23 presentation cadence checked in Step 10. Sustained performance remains unverified.
 
 `BoardBootstrap.Start` requests `Application.targetFrameRate = 60` only on Android. This is a fixed baseline, with no adaptive FPS logic or per-frame policy work. Core is unchanged. The target is a request, not a performance guarantee; sustained device performance, thermal behavior and battery cost have not been measured.
 
@@ -35,4 +35,19 @@ Measured in Unity **6000.5.10f1**, Windows Editor, approximately **165 Hz** disp
 | Wisp flight | 250 ms | 266.22 ms | 249.96 ms | 248.95 ms |
 | Wisp landing | 120 ms | 133.50 ms | 133.56 ms | 125.11 ms |
 
-All phases passed the unchanged tolerances: about 33.3 / 16.7 / 8.3 ms respectively. Animation code and configured durations were not changed. These Editor measurements do not establish Android frame pacing or physical-device performance; verify the requested baseline in the later Android validation step.
+All phases passed the unchanged tolerances: about 33.3 / 16.7 / 8.3 ms respectively. Animation code and configured durations were not changed. These Editor measurements do not establish Android frame pacing or physical-device performance; the limited Android observations are recorded separately below.
+
+## Physical-device observations (Phase 12 Step 10)
+
+Samsung Galaxy S23 (SM-S911B), Android 16 / API 36, 1080 x 2340: Android reported
+an active display mode around 60 Hz, with 120 Hz among its supported modes.
+Two short 127-frame SurfaceFlinger presentation samples measured 59.9348 FPS
+while idle and 59.4542 FPS around the final restart. The latter included a
+33.3764 ms maximum interval; this is not a claim of zero stutter.
+
+The source's Android-only 60 FPS request is unchanged. The Android Player's
+`Application.targetFrameRate` property was not directly inspected. These
+presentation samples support approximately 60 FPS in the observed windows,
+not sustained performance, thermal stability, battery cost, every animation's
+cadence, or behavior on other display modes/devices. Keep those checks deferred;
+no evidence here justifies adaptive FPS logic.
