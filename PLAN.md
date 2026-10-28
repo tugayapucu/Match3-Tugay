@@ -1268,6 +1268,20 @@ At minimum review these existing issues:
 - FrameRatePolicy remaining limitations
 - WatchList
 
+## Play account, testing-track and privacy checks
+
+Verify first, because the answers decide the Phase 17 plan:
+
+- whether the Play developer account is subject to the personal-account production-access testing requirement, which decides whether Phase 17 must start a closed test;
+- what Play Console requires before an internal testing track and before a closed testing track (app-content declarations, store-listing minimum);
+- the current Google Play privacy-policy requirement;
+- whether a privacy policy must also be reachable inside the app;
+- whether a non-development Android build still declares `INTERNET`.
+
+Data Safety answers must come from the actual release manifest, packages and SDK behavior, not from assumptions based on the development APK.
+
+Do not state privacy/data-collection conclusions until the Phase 17 release-configuration AAB has been inspected. Re-verify them against the final build in Phase 21.
+
 ## Working Google Play facts to verify during execution
 
 Google Play requirements change over time. Re-check official documentation during the phase instead of relying only on this roadmap.
@@ -1406,15 +1420,17 @@ Do not move to polish while a confirmed MUST-FIX gameplay blocker remains open.
 
 ---
 
-# 21. Phase 15 — Mobile Interaction & Presentation Polish
+# 21. Phase 15 — Mobile Interaction Polish
 
 ## Goal
 
-Make the small game feel intentional enough to release without turning it into a much larger product.
+Make touch interaction feel natural and understandable on a phone.
 
-Use the Phase 13 audit to decide which items are mandatory.
+Directional swipe input and selection feedback are **pre-approved release requirements**. The Phase 13 audit may adjust their details or priority, not remove them.
 
-## Candidate work
+Presentation-dependent polish belongs to Phase 18, after the Phase 16 level flow exists.
+
+## Required work
 
 ### Swipe input
 
@@ -1456,80 +1472,18 @@ Prefer a small presentation-only cue.
 
 Do not move selection rules into TileView.
 
-### Tall-screen composition
-
-The centered camera framing is technically correct but can leave large empty vertical areas on tall phones.
-
-The rejected vertical-bias experiment remains historical evidence.
-
-Future solutions should prefer composition/art/UI changes such as:
-
-- board backdrop;
-- stronger board-area framing;
-- taller or richer HUD treatment;
-- carefully reviewed side margins.
-
-Do not reintroduce device-specific hacks.
-
-### Outcome dimmer
-
-Consider a full-screen decorative dimmer while keeping the interactive outcome card inside SafeArea.
-
-Background/decorative UI may cover the full screen; interactive UI must remain safe-area aware.
-
-### Colour accessibility
-
-Normal gems are primarily distinguished by colour.
-
-Evaluate a small secondary cue such as:
-
-- subtle internal symbol;
-- pattern;
-- material/shape detail.
-
-Do not destroy the established Prismatic Energy visual family.
-
-### Audio / haptics
-
-The original roadmap included basic sound/VFX hooks but the project has focused mainly on visuals.
-
-Audit whether a store-ready version should add a small audio/haptic feedback pass for:
-
-- selection/swap;
-- match clear;
-- special activation;
-- win/loss;
-- buttons.
-
-Keep it minimal. No audio-manager architecture unless a real need exists.
-
-## Product-scope rule
-
-Do not add:
-
-- economy;
-- coins;
-- shop;
-- ads;
-- IAP;
-- daily rewards;
-- backend;
-- login/accounts;
-- live-ops;
-- dozens of levels.
-
-The target remains one small, coherent game experience.
+Keep the cue simple. Phase 18 may restyle it but must not change selection rules.
 
 ## Validation
 
-Review on at least:
+At minimum:
 
-- the Galaxy S23;
-- a short portrait simulation;
-- a tall portrait simulation;
-- asymmetric safe-area simulation.
+- focused tests for gesture → adjacent swap intent mapping;
+- all existing EditMode / PlayMode tests;
+- swipe thresholds, two-tap selection and selection feedback reviewed on the Galaxy S23;
+- edge/corner cells, invalid-swap rollback and input locking during resolution rechecked on the device.
 
-Human feel review is required for presentation choices.
+Human touch-feel review is required.
 
 ---
 
@@ -1636,6 +1590,21 @@ level outcome
 game-flow / progression layer decides Retry / Next / Menu
 ~~~
 
+## Android Back behavior
+
+Android Back is a Phase 16 design decision. Review the UX first; do not hard-code a final choice in this roadmap.
+
+At minimum decide:
+
+- gameplay → menu, with or without confirmation;
+- Back while the board is resolving and input is locked;
+- Back on the Win/Loss outcome screen;
+- main menu → system-standard exit/back behavior.
+
+The likely safe default during resolution is to ignore or defer Back until the active resolution finishes, unless the later UX/architecture review supports another safe behavior.
+
+Do not introduce a pause system unless the approved Back decision requires one.
+
 ## Validation
 
 At minimum verify:
@@ -1646,6 +1615,7 @@ At minimum verify:
 - Restart still restarts the current level;
 - Next Level does not leak previous Board/View/score state;
 - returning to menu and re-entering gameplay is clean;
+- Android Back follows the approved decision, including during resolution;
 - first and final level edge cases are defined;
 - mobile safe-area/layout behavior remains valid;
 - deterministic behavior remains understood where seeds are used.
@@ -1662,13 +1632,229 @@ I should be able to explain:
 
 ---
 
-# 23. Phase 17 — Performance & Stability Review
+# 23. Phase 17 — Play Test Bootstrap
+
+## Goal
+
+Get the first stable build into Play testing early, so any account-required closed-test period runs in parallel with later polish and performance work.
+
+This is a bootstrap/testing-track phase, not the final production build (Phase 20).
+
+## Entry criteria
+
+- Phase 14 is complete and no confirmed MUST-FIX gameplay blocker remains open;
+- the Phase 16 level flow is complete, so testers play a real game;
+- Phase 13 has verified the account-specific testing requirement and what each testing track requires.
+
+## First-time release identity
+
+### Package identity
+
+Keep the approved application identifier unless there is a strong reason to change it before first Play upload:
+
+com.tugaykapucu.match3
+
+Package identity becomes effectively permanent at the first Play upload, so it is decided here rather than in Phase 20.
+
+### Versioning
+
+Define:
+
+- user-visible version name;
+- monotonically increasing Android version code.
+
+Document the convention. Every later testing or production upload needs a higher version code.
+
+### Signing
+
+Set up release/upload signing deliberately.
+
+The first Play-testable AAB is signed locally with the **upload key**. Play App Signing then manages the app-signing key used for Play-distributed artifacts.
+
+Rules:
+
+- never commit keystore files, private keys, passwords, or secrets;
+- document where the upload key is backed up (the location, never the secret);
+- understand the difference between upload key and Play App Signing key;
+- verify that a future update can be signed/uploaded correctly.
+
+## First Play-testable AAB
+
+Produce a stable, release-configuration **Android App Bundle (.aab)**:
+
+- Development Build and script debugging off;
+- signed locally with the upload key;
+- manifest, permissions (including `INTERNET`) and packages/SDKs inspected as the evidence for Data Safety answers;
+- device smoke on the Galaxy S23.
+
+Store the artifact outside source control.
+
+## Play Console bootstrap
+
+- create the app in Play Console;
+- complete the app-content declarations and store-listing minimum the testing tracks require, as verified in Phase 13;
+- provide a privacy policy if required;
+- base Data Safety answers on the inspected AAB, not on assumptions.
+
+Placeholder screenshots are acceptable here; final store assets belong to Phase 21.
+
+## Internal testing first
+
+Upload the signed AAB to an internal testing track or use the appropriate Play internal distribution flow.
+
+Verify:
+
+- Play-generated install works;
+- correct version is delivered;
+- portrait orientation;
+- touch;
+- safe area;
+- specials;
+- Win/Loss;
+- Restart/Play Again;
+- frame pacing;
+- no unexpected permissions/prompts;
+- update path with a higher version code.
+
+## Closed testing
+
+If the account is subject to Google's new-personal-account production-access rule:
+
+- run the required closed test;
+- keep the required number of testers opted in for the required continuous period;
+- collect meaningful feedback.
+
+As of 2026-10-28, the official requirement states at least 12 testers continuously opted in for the preceding 14 days when applying for production access. Verify the account-specific Play Console requirement before starting the clock.
+
+If the account is not subject to that requirement, still use a testing track before production.
+
+Start the closed test as soon as the internal test passes. Record the start date and tester count.
+
+Later phases continue in parallel with the closed test. New builds may be uploaded to the testing track with a higher version code; re-check the current official Play requirement before execution rather than assuming how builds or testers are counted.
+
+Applying for production access belongs to Phase 22.
+
+## Play-side automated feedback
+
+Review what Play Console provides, such as:
+
+- pre-launch report;
+- device compatibility;
+- crashes / ANRs;
+- policy warnings;
+- bundle/device delivery information.
+
+Classify issues before fixing them.
+
+---
+
+# 24. Phase 18 — Presentation & Accessibility Polish
+
+## Goal
+
+Make the small game feel intentional enough to release without turning it into a much larger product.
+
+This phase runs after Phase 16, so the final HUD and outcome UI, including the level-flow buttons, are polished once.
+
+Use the Phase 13 audit to decide which items are mandatory.
+
+## Candidate work
+
+### Final HUD and outcome UI
+
+- final HUD layout;
+- level indicator, if approved;
+- final outcome panel with the Phase 16 Next Level / Retry / Menu buttons;
+- optional restyling of the Phase 15 selection cue without changing selection rules.
+
+### Tall-screen composition
+
+The centered camera framing is technically correct but can leave large empty vertical areas on tall phones.
+
+The rejected vertical-bias experiment remains historical evidence.
+
+Future solutions should prefer composition/art/UI changes such as:
+
+- board backdrop, if useful;
+- stronger board-area framing;
+- taller or richer HUD treatment;
+- carefully reviewed side margins.
+
+Do not reintroduce device-specific hacks.
+
+### Outcome dimmer
+
+Consider a full-screen decorative dimmer while keeping the interactive outcome card inside SafeArea.
+
+Background/decorative UI may cover the full screen; interactive UI must remain safe-area aware.
+
+### Colour accessibility
+
+Normal gems are primarily distinguished by colour.
+
+Evaluate a small secondary cue such as:
+
+- subtle internal symbol;
+- pattern;
+- material/shape detail.
+
+Do not destroy the established Prismatic Energy visual family.
+
+### Audio / haptics
+
+The original roadmap included basic sound/VFX hooks but the project has focused mainly on visuals.
+
+Audit whether a store-ready version should add a small audio/haptic feedback pass for:
+
+- selection/swap;
+- match clear;
+- special activation;
+- win/loss;
+- buttons.
+
+Keep it minimal. No audio-manager architecture unless a real need exists.
+
+## Product-scope rule
+
+Do not add:
+
+- economy;
+- coins;
+- shop;
+- ads;
+- IAP;
+- daily rewards;
+- backend;
+- login/accounts;
+- live-ops;
+- dozens of levels.
+
+The target remains one small, coherent game experience.
+
+## Validation
+
+Review on at least:
+
+- the Galaxy S23;
+- a short portrait simulation;
+- a tall portrait simulation;
+- asymmetric safe-area simulation.
+
+Human feel review is required for presentation choices.
+
+UI changes reach closed testers through new testing-track uploads with a higher version code.
+
+---
+
+# 25. Phase 19 — Performance & Stability Review
 
 ## Goal
 
 Measure the release candidate on real hardware before optimizing.
 
 Reuse the old performance-review phase here, but ground it in profiling evidence.
+
+It runs after Phase 18, so it profiles the final presentation rather than UI that is about to change.
 
 ## Profile first
 
@@ -1720,13 +1906,15 @@ Do not claim broad device compatibility from one phone.
 
 ---
 
-# 24. Phase 18 — Android Production Build, Versioning & Signing
+# 26. Phase 20 — Final Android Production Build
 
 ## Goal
 
-Move from a development APK to a real Google Play upload artifact.
+Produce the final production AAB and review its release configuration.
 
 This phase is release engineering, not gameplay work.
+
+Phase 17 already established package identity, the version-code convention, upload-key signing and Play App Signing. Do not make new identity or signing decisions here; if one appears necessary, stop and escalate.
 
 ## Required decisions
 
@@ -1738,22 +1926,9 @@ Working requirement as of 2026-10-28:
 
 - Android mobile new apps / updates: target API 36 or higher.
 
-### Package identity
-
-Keep the approved application identifier unless there is a strong reason to change it before first Play upload:
-
-com.tugaykapucu.match3
-
-Treat package identity as effectively permanent once published.
-
 ### Versioning
 
-Define:
-
-- user-visible version name;
-- monotonically increasing Android version code.
-
-Document the first-release convention.
+Set the final user-visible version name and the next version code, following the Phase 17 convention.
 
 ### Build format
 
@@ -1763,14 +1938,9 @@ The earlier APK remains useful for local device testing but is not the final Pla
 
 ### Signing
 
-Set up release/upload signing deliberately.
+Sign the final AAB locally with the Phase 17 upload key. Play App Signing manages the app-signing key used for Play-distributed artifacts.
 
-Rules:
-
-- never commit keystore files, private keys, passwords, or secrets;
-- document where the upload key is backed up;
-- understand the difference between upload key and Play App Signing key;
-- verify that a future update can be signed/uploaded correctly.
+Never commit keystore files, private keys, passwords, or secrets.
 
 ### Build configuration
 
@@ -1796,7 +1966,7 @@ Do not change settings just because a "release" preset sounds more optimized.
 
 Produce at least:
 
-- one successful signed release AAB;
+- one successful final signed release AAB;
 - one installable release-equivalent build for device smoke testing, where practical;
 - build report / size review;
 - clean device launch;
@@ -1807,11 +1977,13 @@ Store the release artifact outside source control unless there is a deliberate a
 
 ---
 
-# 25. Phase 19 — Google Play Store & Policy Readiness
+# 27. Phase 21 — Google Play Store & Policy Readiness
 
 ## Goal
 
 Prepare everything Play Console needs without adding monetization or data collection merely for the sake of publishing.
+
+Phase 17 created the app and completed what the testing tracks required. This phase finalizes the store assets and re-verifies every declaration against the final Phase 20 build.
 
 ## App setup
 
@@ -1834,6 +2006,8 @@ Prepare compliant:
 - full description;
 - optional preview video only if worthwhile.
 
+Capture final screenshots after Phase 18.
+
 Store assets must represent the actual game.
 
 Do not imply rankings, awards, player counts, or features that do not exist.
@@ -1852,6 +2026,8 @@ Complete the applicable Play Console declarations, including:
 
 The correct answers must come from the actual app behavior and dependencies.
 
+Re-verify each answer against the final Phase 20 manifest, packages and SDKs; earlier answers were based on the Phase 17 build.
+
 Do not guess that "the game collects no data" without checking Unity packages, permissions, SDKs, and built manifest behavior.
 
 ## Privacy principle
@@ -1868,62 +2044,13 @@ Re-check official requirements immediately before Play Console submission.
 
 ---
 
-# 26. Phase 20 — Play Testing Track & Production Access
+# 28. Phase 22 — Release Candidate, Production Access & Submission
 
 ## Goal
 
-Test the exact Play-delivered build and satisfy any account-specific production-access requirement.
+Create one release candidate, satisfy any account-specific production-access requirement, and decide deliberately whether it is acceptable to ship.
 
-## Internal testing first
-
-Upload the signed AAB to an internal testing track or use the appropriate Play internal distribution flow.
-
-Verify:
-
-- Play-generated install works;
-- correct version is delivered;
-- portrait orientation;
-- touch;
-- safe area;
-- specials;
-- Win/Loss;
-- Restart/Play Again;
-- frame pacing;
-- no unexpected permissions/prompts;
-- update path with a higher version code.
-
-## Closed testing
-
-If the account is subject to Google's new-personal-account production-access rule:
-
-- run the required closed test;
-- keep the required number of testers opted in for the required continuous period;
-- collect meaningful feedback;
-- answer the production-access questions accurately.
-
-As of 2026-10-28, the official requirement states at least 12 testers continuously opted in for the preceding 14 days when applying for production access. Verify the account-specific Play Console requirement before starting the clock.
-
-If the account is not subject to that requirement, still use a testing track before production.
-
-## Play-side automated feedback
-
-Review what Play Console provides, such as:
-
-- pre-launch report;
-- device compatibility;
-- crashes / ANRs;
-- policy warnings;
-- bundle/device delivery information.
-
-Classify issues before fixing them.
-
----
-
-# 27. Phase 21 — Release Candidate & Production Submission
-
-## Goal
-
-Create one release candidate and decide deliberately whether it is acceptable to ship.
+If the closed-test requirement applies, its testing period must be complete before applying for production access. If Phases 18–21 finish before the testing period ends, waiting is expected; do not shortcut the requirement.
 
 ## Release-candidate gate
 
@@ -1960,6 +2087,14 @@ Focus on:
 
 Human developer makes the final call.
 
+## Production access
+
+If the account is subject to the production-access requirement:
+
+- confirm the Phase 17 closed test met the current official requirement;
+- answer the production-access questions accurately;
+- wait for access before planning the production submission date.
+
 ## Production submission
 
 Do not let an agent automatically publish to production.
@@ -1978,7 +2113,7 @@ Only then submit.
 
 ---
 
-# 28. Phase 22 — Portfolio README & Engineering Story
+# 29. Phase 23 — Portfolio README & Engineering Story
 
 ## Goal
 
@@ -2027,7 +2162,7 @@ Do not turn the README into a transcript of the entire project.
 
 ---
 
-# 29. Phase 23 — Final Learning Review & Interview Mode
+# 30. Phase 24 — Final Learning Review & Interview Mode
 
 ## Goal
 
@@ -2071,7 +2206,7 @@ I should be able to make at least one meaningful scoped change myself, explain t
 
 ---
 
-# 30. Design Patterns to Learn Through the Project
+# 31. Design Patterns to Learn Through the Project
 
 Do not force patterns into the code.
 
@@ -2117,7 +2252,7 @@ Do not default to GameManager.Instance / AudioManager.Instance / UIManager.Insta
 
 ---
 
-# 31. Scope Boundaries
+# 32. Scope Boundaries
 
 The release goal does **not** mean "turn this into a live-service Match-3."
 
@@ -2146,7 +2281,7 @@ Prefer one small, coherent, finished experience over a wide unfinished feature s
 
 ---
 
-# 32. Release Definition of Done
+# 33. Release Definition of Done
 
 The project is release-ready when all approved MUST-FIX items are closed and the following are true:
 
@@ -2168,7 +2303,8 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 ## Mobile / UX
 
 - [ ] Touch-only gameplay works
-- [ ] Directional swipe swapping works through the approved existing swap path
+- [ ] Directional swipe swapping works through the approved existing swap path (pre-approved in Phase 15)
+- [ ] Selected tile is visibly indicated
 - [ ] Portrait safe-area layout works
 - [ ] Supported aspect ratios remain playable
 - [ ] Important touch targets are usable
@@ -2185,6 +2321,7 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 - [ ] Restart restarts the current level
 - [ ] Progression state does not leak gameplay state between levels
 - [ ] Final available level behavior is defined
+- [ ] Android Back behavior is defined and works, including during board resolution
 
 ## Quality
 
@@ -2212,7 +2349,8 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 - [ ] App-content declarations complete
 - [ ] Data safety / privacy answers match actual app behavior
 - [ ] Content rating / target audience completed
-- [ ] Account-specific testing requirement satisfied
+- [ ] Account-specific testing requirement satisfied (closed-test period completed, if applicable)
+- [ ] Privacy policy available where Google Play requires it, including in-app if required
 - [ ] Pre-launch / Play Console findings reviewed
 - [ ] Production-access requirements satisfied
 - [ ] Human approves the exact production submission
@@ -2229,9 +2367,9 @@ The project is release-ready when all approved MUST-FIX items are closed and the
 
 ---
 
-# 33. README Content for the Final Repository
+# 34. README Content for the Final Repository
 
-Use Phase 22 as the source of truth.
+Use Phase 23 as the source of truth.
 
 Keep the README concise enough that a hiring reviewer can understand the project quickly.
 
@@ -2247,7 +2385,7 @@ The repository should clearly communicate:
 
 ---
 
-# 34. Parallel Dream Games Preparation
+# 35. Parallel Dream Games Preparation
 
 This repository still serves a different purpose from a future mostly-human-implemented interview project.
 
@@ -2274,7 +2412,7 @@ Code should not simply be copied without understanding.
 
 ---
 
-# 35. Context and Token Budget Guidelines
+# 36. Context and Token Budget Guidelines
 
 AI context is a limited project resource.
 
@@ -2292,7 +2430,7 @@ Do not ask Codex and Claude to independently implement the same feature unless c
 
 ---
 
-# 36. Recommended Working Loop
+# 37. Recommended Working Loop
 
 For every meaningful feature or release task:
 
@@ -2315,7 +2453,7 @@ This loop is more important than the exact architecture.
 
 ---
 
-# 37. Current Next Action
+# 38. Current Next Action
 
 Phases 0-12 are complete.
 
@@ -2326,6 +2464,10 @@ The next phase is:
 Do not start by fixing DeadBoard, UI polish, signing, or Play Console configuration.
 
 First create the Phase 13 audit, classify the remaining work, review it, and then approve the release sequence.
+
+The approved sequence after the audit is Phases 14–24 above. If the closed-test requirement applies, Phase 17 starts it early and later phases continue in parallel.
+
+Learning checkpoint: review the 20 Phase 12 learning questions while the material is fresh. This is not a development phase and does not block Phase 13; the full interview mode remains Phase 24.
 
 ---
 
