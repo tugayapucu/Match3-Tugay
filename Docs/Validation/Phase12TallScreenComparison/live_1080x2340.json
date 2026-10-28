@@ -1,0 +1,41 @@
+{
+  "scenario": "1080x2340",
+  "width": 1080,
+  "height": 2340,
+  "safe": "(x:0.00, y:0.00, width:1080.00, height:2340.00)",
+  "checks": [
+    {
+      "bias": 0.5,
+      "contained": true,
+      "cornerPicking": true,
+      "restartClear": true,
+      "rootUnchanged": true,
+      "boardPixels": 984.0,
+      "topGap": 530.0,
+      "bottomGap": 530.0,
+      "orthographicSize": 9.75
+    },
+    {
+      "bias": 0.333333343,
+      "contained": true,
+      "cornerPicking": true,
+      "restartClear": true,
+      "rootUnchanged": true,
+      "boardPixels": 984.0,
+      "topGap": 364.0,
+      "bottomGap": 696.0,
+      "orthographicSize": 9.75
+    },
+    {
+      "bias": 0.25,
+      "contained": true,
+      "cornerPicking": true,
+      "restartClear": true,
+      "rootUnchanged": true,
+      "boardPixels": 984.0,
+      "topGap": 281.0,
+      "bottomGap": 779.000061,
+      "orthographicSize": 9.75
+    }
+  ]
+}

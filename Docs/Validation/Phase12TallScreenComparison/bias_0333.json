@@ -1,0 +1,13 @@
+{
+  "bias": 0.333333343,
+  "screen": {
+    "width": 1080,
+    "height": 2340
+  },
+  "region": "(x:48.00, y:208.00, width:984.00, height:1980.00)",
+  "cameraY": -1.61666667,
+  "orthographicSize": 9.75,
+  "boardWidth": 984.0,
+  "topGap": 364.0,
+  "bottomGap": 696.0
+}
