@@ -1,6 +1,6 @@
 # Dead board soft-lock
 
-Status: Still deferred after Phase 10; most important gameplay gap.
+Status: Reviewed after Phase 12: unchanged; still deferred, and the most important gameplay gap.
 
 After resolution the board is stable (no matches), but a normal-only board can still have no legal move: no adjacent swap would create a match. The player cannot continue making moves; Restart is the manual way out.
 

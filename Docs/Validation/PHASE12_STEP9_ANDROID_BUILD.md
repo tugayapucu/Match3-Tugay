@@ -2,7 +2,7 @@
 
 Validated: 2026-10-28, Unity 6000.5.10f1 on Windows.
 
-Result: Android development APK successfully built and inspected. No physical Android device was connected during the original build validation. A subsequent installation/launch check is recorded below; it does not establish the remaining device-runtime checks.
+Result: Android development APK successfully built and inspected. No physical Android device was connected during the original build validation. Subsequent S23 device checks, including Step 10 observations, are recorded below with their limits.
 
 ## Final Android configuration
 
@@ -95,21 +95,28 @@ S23 (SM-S911B, 1080 x 2340) in portrait. An ADB screenshot of the running game i
 saved with the [tall-screen comparison record](Phase12TallScreenComparison/README.md).
 The [tall-screen composition issue](../KnownIssues/TallScreenComposition.md) was
 observed on this device and is deferred to UI polish; the original centered
-framing is retained. No experimental-bias APK was installed.
+framing is retained. No experimental-bias APK was installed. The table includes
+the later Phase 12 Step 10 observations, superseding the earlier unverified
+entries. See [device cadence](../KnownIssues/FrameRatePolicy.md#physical-device-observations-phase-12-step-10)
+and [mobile picking](../KnownIssues/MobileLayoutAndPicking.md) for details and limitations.
 
 | Check | Verified status |
 | --- | --- |
 | APK installation, launch and portrait presentation | Confirmed by developer and running-game screenshot |
 | Device resolution/model | 1080 x 2340 / SM-S911B, confirmed through ADB |
-| Android version / active display refresh rate | Unverified; the device was not ADB-authorized when writing this follow-up |
-| Delivered game FPS | Unverified; the 60 FPS request is not a measurement |
-| Edge taps, valid/invalid moves and input locking on the device | Unverified |
-| Cascades, all specials and Restart behavior on the device | Unverified |
-| Win/Lose and Play Again on the device | Unverified |
-| Outcome dimmer strips on the physical display | Unverified |
+| Android version / active display refresh rate | Android 16 / API 36; active mode approximately 60 Hz, with 120 Hz among supported modes |
+| Delivered game FPS | Short 127-frame presentation samples: 59.9348 FPS idle and 59.4542 FPS around restart; sustained/per-effect performance unverified |
+| Edge taps, valid/invalid moves and input locking on the device | Deliberate near-cell-corner and center presses, same/diagonal/distant selection retention and a valid move checked; phone rollback/busy timing not separately instrumented |
+| Cascades, all specials and Restart behavior on the device | Cascades, Nova, Wisp, Spectrum Core, mixed chain and Restart checked; Beam has Editor coverage, not a separate phone check |
+| Win/Lose and Play Again on the device | Win after 12 moves (25/25, score 11,000), Loss after 20 moves (12/25, score 6,400); Play Again returned the initial screenshot |
+| Outcome dimmer strips on the physical display | Undimmed top cutout strip confirmed in S23 Win/Loss screenshots; other physical inset shapes unverified |
 
-## Remaining device checklist (not executed)
+## Remaining physical-device checks
 
-When a device is available, record its model, Android version, resolution, refresh rate and actual delivered FPS. Check launch and portrait orientation; safe-area layout; touch selection, valid swaps and invalid rollback; cascades and all special effects including Wisp flight; HUD, Win/Lose, Restart and Play Again; and input/restart locking during resolution. No keyboard should be required.
+Still unverified: finger comfort at every corner, one-handed Restart comfort,
+subjective Wisp-flight readability and animation smoothness, sustained/thermal
+performance, separate phone checks for Beam and rollback/busy timing, and other
+devices. Step 10 used ADB touchscreen injection, not a human comfort assessment.
+No keyboard was used.
 
-On a 90 Hz or other high-refresh device, measure the actual rate rather than assuming the 60 FPS request guarantees 60 or switches the display mode. Check the [known outcome-dimmer limitation](../KnownIssues/OutcomeDimSafeArea.md) on the physical screen. Device installation is optional for Step 9; this checklist does not claim Step 10 runtime review has been performed.
+On a 90 Hz or other high-refresh device, measure the actual rate rather than assuming the 60 FPS request guarantees 60 or switches the display mode. The [known outcome-dimmer limitation](../KnownIssues/OutcomeDimSafeArea.md) remains deferred despite its S23 confirmation. Device installation was optional for Step 9; the subsequent Step 10 observations above do not claim the remaining checks have passed.

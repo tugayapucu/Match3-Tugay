@@ -1,6 +1,6 @@
 # Input stays locked if resolution throws
 
-Status: Still deferred after the Phase 10 review; recovery policy remains undecided.
+Status: Reviewed after Phase 12: unchanged; still deferred, and recovery policy remains undecided.
 
 `BoardInputController.FinishSwap` unlocks input only at its end. If an exception is thrown during a swap, rollback or resolution (for example a board/view consistency check failing in `BoardView`), the coroutine stops and `isInputLocked` stays `true` for the rest of the session.
 

@@ -23,3 +23,9 @@ remain unverified. Keep the full-cell colliders and per-permitted-press sync;
 `Physics2D.SyncTransforms` cost was not profiled. The cosmetic
 [tall-screen composition](TallScreenComposition.md) and
 [outcome dimmer strips](OutcomeDimSafeArea.md) remain deferred to UI polish.
+
+## Phase 12 Step 6 per-frame audit
+
+- Three callbacks were reviewed: `BoardInputController.Update` returns when uninitialized/locked and handles no input without a new press; `SafeAreaLayout.Update` and `BoardCameraFitter.LateUpdate` skip layout work when cached inputs are unchanged.
+- The recorded warmed Editor idle-call probe reported 0 managed bytes over 1,000 calls per path. This measures those controlled calls, not whole-frame allocations or Android performance.
+- `Physics2D.SyncTransforms` cost and per-move allocations remain unprofiled and need measurement. No pooling was introduced; keep it deferred unless a concrete measured need justifies it.

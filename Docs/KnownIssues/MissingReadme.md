@@ -1,6 +1,6 @@
 # Missing README
 
-Status: Deferred; write once the next phase's architecture settles.
+Status: Reviewed after Phase 12: unchanged; still deferred release/portfolio documentation work.
 
 The repository has no `README.md`, although the Definition of Done in `PLAN.md` requires one that explains the architecture and discloses the AI-assisted workflow. It is the first file a reviewer or interviewer sees.
 
