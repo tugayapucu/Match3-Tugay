@@ -2,7 +2,7 @@
 
 Validated: 2026-10-28, Unity 6000.5.10f1 on Windows.
 
-Result: Android development APK successfully built and inspected. No physical Android device was connected; installation and device-runtime validation were not performed.
+Result: Android development APK successfully built and inspected. No physical Android device was connected during the original build validation. A subsequent installation/launch check is recorded below; it does not establish the remaining device-runtime checks.
 
 ## Final Android configuration
 
@@ -88,7 +88,27 @@ References: [Unity Android build/signing guide](https://docs.unity.com/en-us/eng
 - **540/540 EditMode** and **166/166 regular PlayMode** tests passed after restoration. The three explicit frame-timing tests were intentionally skipped; Step 9 does not repeat Step 7's timing measurements.
 - Final test Console contains only the expected Purple negative-test exception and no-room warning as errors/warnings. They are separate from the successful Android build's zero errors and recorded build warnings.
 
-## Proposed device checklist (not executed)
+## Physical device check
+
+The developer installed the APK and confirmed that it runs on a Samsung Galaxy
+S23 (SM-S911B, 1080 x 2340) in portrait. An ADB screenshot of the running game is
+saved with the [tall-screen comparison record](Phase12TallScreenComparison/README.md).
+The [tall-screen composition issue](../KnownIssues/TallScreenComposition.md) was
+observed on this device and is deferred to UI polish; the original centered
+framing is retained. No experimental-bias APK was installed.
+
+| Check | Verified status |
+| --- | --- |
+| APK installation, launch and portrait presentation | Confirmed by developer and running-game screenshot |
+| Device resolution/model | 1080 x 2340 / SM-S911B, confirmed through ADB |
+| Android version / active display refresh rate | Unverified; the device was not ADB-authorized when writing this follow-up |
+| Delivered game FPS | Unverified; the 60 FPS request is not a measurement |
+| Edge taps, valid/invalid moves and input locking on the device | Unverified |
+| Cascades, all specials and Restart behavior on the device | Unverified |
+| Win/Lose and Play Again on the device | Unverified |
+| Outcome dimmer strips on the physical display | Unverified |
+
+## Remaining device checklist (not executed)
 
 When a device is available, record its model, Android version, resolution, refresh rate and actual delivered FPS. Check launch and portrait orientation; safe-area layout; touch selection, valid swaps and invalid rollback; cascades and all special effects including Wisp flight; HUD, Win/Lose, Restart and Play Again; and input/restart locking during resolution. No keyboard should be required.
 
