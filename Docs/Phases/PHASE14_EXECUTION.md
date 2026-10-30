@@ -27,7 +27,7 @@ Do not turn this phase into a generic fault-tolerance, state-machine, hint, shuf
 
 By the end of Phase 14:
 
-- every Playing board has at least one legal move;
+- every stable Playing board that is waiting for input has at least one legal move;
 - a newly generated board is both stable and playable;
 - runtime dead-board recovery is deterministic;
 - recovery does not change moves, score or goals;
@@ -77,7 +77,36 @@ This automatically respects:
 
 The authoritative Board must not be mutated by the query.
 
-A small `Board.Clone()` or equivalent independent copy is acceptable because Phase 14 now provides a concrete reason for it.
+Copy strategy:
+
+```text
+copy the Board contents into one scratch Board once
+→ for each candidate pair: swap → SwapValidator.Analyze(...) → swap back
+```
+
+`Analyze` reads the board after the swap, so the swap must be applied to the scratch copy first.
+
+`Board.SetTile` is already public, so the copy can be built from `Width`, `Height`, `GetTile` and `SetTile` without changing `Board`.
+
+Do not add `Board.Clone()` unless a second concrete consumer later justifies it.
+
+## Specials and playability
+
+Current-game fact: on the current full 8×8 board, a special tile with an occupied orthogonal neighbour guarantees a legal `SpecialSwap` (`SwapValidator` returns `SpecialSwap` for any special swapped with a non-empty adjacent cell).
+
+Therefore dead stable states in the current game are expected to be **normal-only boards**.
+
+Do not build that assumption into the generic Core API. A special with no adjacent cell (for example on a 1×1 board) or with only empty neighbours has no legal swap.
+
+`HasAnyLegalMove` stays generic and based on actual adjacency plus `SwapValidator`. An early return for `special + occupied orthogonal neighbour` is acceptable only if it keeps exactly those semantics.
+
+## Board identity
+
+The authoritative `Board` instance is shared by `BoardBootstrap`, `BoardInputController`, `BoardResolutionRunner` and `BoardView`.
+
+Any recovery must mutate that existing instance in place and then re-render it.
+
+Never replace the shared `Board` object during a session.
 
 ## Determinism
 
@@ -88,6 +117,24 @@ Any recovery randomness must be:
 - caller-owned;
 - reproducible;
 - reset predictably on Restart.
+
+Checking playability must consume **zero randomness** when the board is already playable.
+
+When no recovery occurs, existing seed-42 behavior must remain byte-for-byte unchanged. That includes every existing deterministic test and the Phase 13 S23 9-move Win route (11 moves left, goal 25/25, score 8,300).
+
+If recovery consumes randomness, document which stream it consumes. Subsequent randomness may change only after an actual recovery.
+
+## Recovery failure policy
+
+Dead-board recovery runs inside the locked move window. If it throws there, it recreates the LockedAfterException freeze.
+
+Therefore:
+
+- retries are bounded;
+- retry exhaustion during normal runtime recovery must not intentionally throw and leave the move locked;
+- a deterministic safe fallback must exist;
+- genuine programming or invariant failures stay visible and are not broadly swallowed;
+- "fail loudly" is reserved for impossible configuration, validated at startup or restart, where it cannot freeze a move.
 
 ## Exception policy
 
@@ -165,7 +212,8 @@ Record:
 - current test baseline;
 - known negative-test Console output;
 - current seed / RNG ownership;
-- whether the tree is clean.
+- whether the tree is clean;
+- the Phase 13 baseline: audit commit `fbe596a`, followed by the Phase 14 plan commit `987a822`. Record whether local `main` is ahead of `origin/main` at the time of the check.
 
 Do not rerun the full suites merely to re-prove unchanged Phase 13 code.
 
@@ -213,9 +261,16 @@ Do not add a hint API unless a real consumer requires the actual move.
 
 ## Copy strategy
 
-Prefer a Core-only scratch Board.
+Use one Core-only scratch Board per query:
 
-If `Board.Clone()` is added, test:
+```text
+copy contents once
+→ for each candidate pair: swap → Analyze → swap back
+```
+
+Do not copy the board once per pair.
+
+Do not add `Board.Clone()` unless a second concrete consumer justifies it. If one is added later, test:
 
 - dimensions copied;
 - every tile copied;
@@ -235,7 +290,8 @@ At minimum:
 5. special swap makes board playable;
 6. original Board unchanged after query;
 7. narrow/small boards if Core allows them;
-8. repeat calls return the same answer.
+8. repeat calls return the same answer;
+9. a special with no occupied orthogonal neighbour does not by itself make the board playable (for example a 1×1 board).
 
 STOP for review if the API differs materially from this.
 
@@ -287,6 +343,12 @@ playable board
 
 Search fixed seeds / deterministic move choices.
 
+Do not systematically avoid special swaps. A policy that never swaps specials lets them accumulate, and any special with an occupied neighbour keeps the board playable, so such a search under-reports dead boards.
+
+Vary the move choice deterministically: for example, seeded random legal moves including `SpecialSwap`, alongside first-found normal moves.
+
+Report the move policy with the result, because occurrence depends on it.
+
 Prefer:
 
 ```text
@@ -297,15 +359,27 @@ broad one-off search
 
 Do not add a huge permanent fuzz test merely for impressive numbers.
 
+## Where search code lives
+
+A Core-only post-resolution search has to mirror the resolution loop that lives in Presentation (`BoardResolutionRunner`). A committed copy of that loop could drift from the real one.
+
+Therefore:
+
+- broad dead-board searches remain throwaway scratch or Editor tooling, not committed production or test infrastructure;
+- permanent tests use captured fixture boards;
+- permanent end-to-end tests go through the real `BoardResolutionRunner`.
+
 ## Record
 
 For any dead state:
 
 - starting seed;
+- move policy;
 - move sequence if relevant;
 - final board;
 - no current matches;
-- no legal moves.
+- no legal moves;
+- whether it is reachable from the shipped configuration (seed 42, 20 moves, Red goal 25). A reachable seed plus move sequence can later be replayed on the S23.
 
 STOP for review before recovery design.
 
@@ -337,7 +411,9 @@ Requirements:
 - no mutation of authoritative Board;
 - reuse `SwapValidator`;
 - special swaps supported automatically;
-- adjacent pairs checked once.
+- adjacent pairs checked once;
+- one scratch copy per query (copy once, then swap → Analyze → swap back);
+- generic semantics: no assumption that any special makes any Board playable.
 
 Run focused Core tests first, then the full EditMode suite.
 
@@ -417,6 +493,8 @@ Simple but likely unfair when moves remain.
 
 Use only with a strong product reason.
 
+In the current game, dead stable states are expected to be normal-only boards (see Specials and playability). Options A and B therefore only need to handle all-normal boards in practice, but must stay correct for any board they receive.
+
 ## Decision criteria
 
 Choose the smallest option that guarantees:
@@ -426,7 +504,33 @@ Choose the smallest option that guarantees:
 - recovered board is playable;
 - deterministic behavior;
 - bounded work / no infinite retry;
+- no intentional exception during normal runtime recovery (see Recovery failure policy);
+- the existing `Board` instance is mutated in place;
+- moves, score and goal are unchanged;
 - easy explanation in interview.
+
+## Fallback comparison
+
+Compare the simplest guaranteed fallback options for when bounded retries are exhausted.
+
+One candidate worth considering:
+
+```text
+retries exhausted
+→ copy a known deterministic playable board,
+  produced by the already-guaranteed starting-board generation path,
+  into the existing Board instance
+→ moves / score / goal unchanged
+```
+
+Do not commit to a complicated constructive-pattern algorithm at this stage.
+
+Whatever fallback is chosen must still produce:
+
+- no immediate match;
+- at least one legal move;
+- deterministic behavior;
+- bounded execution.
 
 ## RNG decision
 
@@ -434,7 +538,9 @@ Explicitly record:
 
 - which `System.Random` stream recovery consumes;
 - why;
-- how Restart recreates it.
+- how Restart recreates it;
+- that checking an already-playable board consumes zero randomness;
+- that subsequent randomness changes only after an actual recovery.
 
 Do not add a third RNG stream unless necessary.
 
@@ -476,11 +582,13 @@ For a dead generated board:
 
 - retry/recover deterministically;
 - do not use unbounded loops;
-- fail loudly for impossible configuration.
+- fail loudly for impossible configuration, at startup or restart, where it cannot freeze a move;
+- consume zero randomness when the first generated board is already playable.
 
 Tests:
 
 - current seed 42 remains identical if already playable;
+- all existing deterministic tests stay byte-for-byte unchanged when no recovery occurs;
 - known dead seed becomes playable;
 - no immediate matches;
 - at least one legal move;
@@ -496,7 +604,7 @@ Show diff/tests first.
 Suggested commit after approval:
 
 ```text
-Guarantee a playable starting board
+Guarantee playable boards after generation
 ```
 
 STOP.
@@ -538,6 +646,10 @@ Presentation owns:
 
 Do not let Presentation invent the shuffle/result.
 
+Recovery mutates the existing authoritative `Board` instance in place, then `BoardView` re-renders it. Never replace the shared `Board` object.
+
+Recovery follows the Recovery failure policy: bounded retries, a deterministic safe fallback, and no intentional exception while the move is locked.
+
 ## Presentation scope
 
 Prefer the smallest behavior:
@@ -567,7 +679,12 @@ At minimum:
 10. terminal Loss → no recovery;
 11. Board/View agree;
 12. input remains locked until recovery finishes;
-13. Restart after recovery still reproduces intended start.
+13. Restart after recovery still reproduces intended start;
+14. the shared `Board` instance is the same object after recovery;
+15. retry exhaustion reaches the deterministic fallback instead of throwing;
+16. no recovery → existing deterministic sequences unchanged.
+
+Permanent end-to-end tests go through the real `BoardResolutionRunner`, using captured fixture boards.
 
 ## Runtime scenario
 
@@ -604,7 +721,10 @@ BoardResolutionRunner
 onValidMoveResolved
 LevelProgress
 LevelHudView
+dead-board recovery (new in Phase 14)
 ```
+
+Dead-board recovery runs inside the locked move window, so it is audited as a throw site like the rest.
 
 For each important throw ask:
 
@@ -848,6 +968,8 @@ Do not repeat the full Phase 12 campaign.
 
 Use the S23 to smoke-test changed robustness behavior.
 
+If Step 3 found a real seed + move sequence that reaches a dead board in the shipped configuration, prefer replaying that sequence on the S23 (as Phase 13 replayed the Win route) over a special test build.
+
 If a controlled dead-board scenario can be reached safely:
 
 - show dead state;
@@ -884,6 +1006,15 @@ If resolved, record:
 - resolved status.
 
 ## `LockedAfterException.md`
+
+In every case, correct the impact the current document understates (Phase 13 audit, Open Verification Items):
+
+- after an exception inside the move, input stays locked **and** Restart and Play Again stay disabled, because the busy notification that re-enables them never runs;
+- `RestartLevel` also refuses to run while input is locked;
+- a throw after the input lock but before the busy notification leaves Restart visibly enabled, but clicking it is refused;
+- the only recovery today is relaunching the app (nothing is saved, so relaunch fully recovers).
+
+Also update the outdated owner wording in the known-issue docs this phase touches (for example "future game-flow work" → Phase 14).
 
 If a trigger was found/fixed:
 
@@ -955,6 +1086,10 @@ Phase 14 is complete only when:
 - [ ] initial boards are stable and playable;
 - [ ] runtime Playing boards cannot remain dead;
 - [ ] recovery is deterministic;
+- [ ] recovery mutates the shared `Board` instance in place;
+- [ ] recovery has bounded retries and a deterministic fallback, with no intentional exception while the move is locked;
+- [ ] checking an already-playable board consumes zero randomness;
+- [ ] existing seed-42 deterministic behavior is unchanged when no recovery occurs;
 - [ ] recovery changes no move/score/goal values;
 - [ ] no recovery occurs after Win/Loss;
 - [ ] Board/View consistency survives recovery;
