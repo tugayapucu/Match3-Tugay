@@ -39,6 +39,9 @@ namespace Match3.Presentation
 
         // The current session's authoritative instance, shared by the view, input and resolution runner.
         private Board board;
+        // A private copy of the validated starting tiles, kept for dead-board recovery. It is never shown, never handed
+        // to input or resolution, and never changed; every restart replaces it with a new copy.
+        private Board startingBoard;
         private LevelProgress levelProgress;
 
         // The rules state of the current level; null until Start has run, replaced on every restart.
@@ -104,7 +107,10 @@ namespace Match3.Presentation
 
             // Build and validate the new session first, so a bad setting fails before the current level is touched.
             var newProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
-            var newBoard = BoardGenerator.Generate(width, height, palette, seed);
+            // Stable and playable: no match now and at least one legal move.
+            var newBoard = BoardGenerator.GeneratePlayable(width, height, palette, seed);
+            var newStartingBoard = new Board(newBoard.Width, newBoard.Height);
+            newStartingBoard.CopyTilesFrom(newBoard);
             // Recreate both independent streams per session: targeting draws must never advance refill.
             var refillRandom = new System.Random(seed);
             var targetingRandom = new System.Random(unchecked(seed ^ 0x5EED1234));
@@ -113,6 +119,7 @@ namespace Match3.Presentation
 
             levelProgress = newProgress;
             board = newBoard;
+            startingBoard = newStartingBoard;
             // Render destroys the previous level's tile views and registers new ones.
             boardView.Render(board);
             // Pass the same authoritative instance after its tile visuals have been created.

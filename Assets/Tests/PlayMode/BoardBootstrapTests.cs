@@ -234,6 +234,42 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Start_StartingSnapshot_IsAnIndependentCopyThatPlayDoesNotChange()
+        {
+            Set("startingMoveCount", 5);
+            Set("goalTarget", 50);
+            yield return StartBootstrap();
+            var startingTiles = ReadTiles();
+
+            Assert.That(StartingSnapshot(), Is.Not.SameAs(CurrentBoard()), "A separate Board, not another reference.");
+            Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles));
+
+            yield return PlayValidMove();
+
+            Assert.That(ReadTiles(), Is.Not.EqualTo(startingTiles), "The move changed the authoritative board.");
+            Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles), "The snapshot did not change.");
+        }
+
+        [UnityTest]
+        public IEnumerator RestartLevel_RecreatesTheSameStartingBoardAndANewSnapshot()
+        {
+            Set("startingMoveCount", 5);
+            Set("goalTarget", 50);
+            yield return StartBootstrap();
+            var startingTiles = ReadTiles();
+            var firstSnapshot = StartingSnapshot();
+
+            yield return PlayValidMove();
+            hud.Restart.onClick.Invoke();
+            yield return null;
+
+            Assert.That(StartingSnapshot(), Is.Not.SameAs(firstSnapshot), "Every session gets its own snapshot.");
+            Assert.That(StartingSnapshot(), Is.Not.SameAs(CurrentBoard()));
+            Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles));
+            Assert.That(ReadTiles(), Is.EqualTo(startingTiles), "Same seed, same starting board.");
+        }
+
+        [UnityTest]
         public IEnumerator RestartLevel_AfterWon_StartsPlayableAgain()
         {
             Set("startingMoveCount", 2);
@@ -571,9 +607,19 @@ namespace Match3.Presentation.Tests
             return (Board)typeof(BoardBootstrap).GetField("board", Fields).GetValue(bootstrap);
         }
 
+        // The private copy of the starting tiles that dead-board recovery will fall back to.
+        private Board StartingSnapshot()
+        {
+            return (Board)typeof(BoardBootstrap).GetField("startingBoard", Fields).GetValue(bootstrap);
+        }
+
         private TileType[,] ReadTiles()
         {
-            var board = CurrentBoard();
+            return ReadTiles(CurrentBoard());
+        }
+
+        private static TileType[,] ReadTiles(Board board)
+        {
             var tiles = new TileType[board.Width, board.Height];
             for (int y = 0; y < board.Height; y++)
             {
