@@ -68,6 +68,25 @@ namespace Match3.Core
             return true;
         }
 
+        // Overwrites every tile with source's tiles. This Board object stays the same, so every holder of it sees the new
+        // tiles; the two Boards keep independent contents afterwards. Copying a Board onto itself changes nothing.
+        public void CopyTilesFrom(Board source)
+        {
+            // Check everything before touching any tile, so a rejected copy leaves this Board unchanged.
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (source.Width != Width || source.Height != Height)
+            {
+                throw new ArgumentException("The source board must have the same width and height.", nameof(source));
+            }
+
+            // Multidimensional arrays copy as one flat sequence of the same length.
+            Array.Copy(source.tiles, tiles, tiles.Length);
+        }
+
         // Fail loudly on bad coordinates instead of silently ignoring them.
         private void ValidatePosition(GridPosition position)
         {

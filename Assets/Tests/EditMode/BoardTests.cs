@@ -289,6 +289,68 @@ namespace Match3.Core.Tests
             Assert.That(board.GetTile(position), Is.EqualTo(TileType.Red));
         }
 
+        [Test]
+        public void CopyTilesFrom_NullSource_ThrowsAndChangesNothing()
+        {
+            var board = CreateSwapTestBoard();
+            var before = ReadTiles(board);
+
+            Assert.Throws<ArgumentNullException>(() => board.CopyTilesFrom(null));
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+        }
+
+        [TestCase(2, 2)]
+        [TestCase(3, 3)]
+        [TestCase(2, 3)]
+        public void CopyTilesFrom_DifferentDimensions_ThrowsBeforeChangingAnyTile(int width, int height)
+        {
+            var board = CreateSwapTestBoard();
+            var before = ReadTiles(board);
+            var source = new Board(width, height);
+
+            Assert.Throws<ArgumentException>(() => board.CopyTilesFrom(source));
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void CopyTilesFrom_SameDimensions_CopiesEveryTileAndLeavesTheSourceUnchanged()
+        {
+            var source = CreateSwapTestBoard();
+            var expected = ReadTiles(source);
+            var board = new Board(source.Width, source.Height);
+
+            board.CopyTilesFrom(source);
+
+            Assert.That(ReadTiles(board), Is.EqualTo(expected));
+            Assert.That(ReadTiles(source), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void CopyTilesFrom_AfterCopying_TheBoardsHaveIndependentContents()
+        {
+            var source = CreateSwapTestBoard();
+            var board = new Board(source.Width, source.Height);
+            board.CopyTilesFrom(source);
+            var corner = new GridPosition(0, 0);
+
+            source.SetTile(corner, TileType.Empty);
+            Assert.That(board.GetTile(corner), Is.EqualTo(TileType.Red), "Changing the source must not change the copy.");
+
+            board.SetTile(new GridPosition(2, 1), TileType.Empty);
+            Assert.That(source.GetTile(new GridPosition(2, 1)), Is.EqualTo(TileType.Orange), "Changing the copy must not change the source.");
+        }
+
+        [Test]
+        public void CopyTilesFrom_ItselfAsSource_ChangesNothing()
+        {
+            var board = CreateSwapTestBoard();
+            var before = ReadTiles(board);
+
+            board.CopyTilesFrom(board);
+
+            Assert.That(ReadTiles(board), Is.EqualTo(before));
+        }
+
         private static Board CreateSwapTestBoard()
         {
             var board = new Board(3, 2);

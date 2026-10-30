@@ -17,14 +17,7 @@ namespace Match3.Core
 
             // Every trial swap happens on this private copy, so the caller's Board is never touched.
             var scratch = new Board(board.Width, board.Height);
-            for (int y = 0; y < board.Height; y++)
-            {
-                for (int x = 0; x < board.Width; x++)
-                {
-                    var position = new GridPosition(x, y);
-                    scratch.SetTile(position, board.GetTile(position));
-                }
-            }
+            scratch.CopyTilesFrom(board);
 
             // Checking only the right and upper neighbour visits each adjacent pair exactly once.
             for (int y = 0; y < scratch.Height; y++)
