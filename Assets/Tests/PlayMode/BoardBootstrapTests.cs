@@ -19,6 +19,20 @@ namespace Match3.Presentation.Tests
         private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic;
         private const int Size = 5;
 
+        // Seed 93 on the shipped 8x8 six-colour level: ten normal moves (first click, second click) that leave a stable
+        // board with no legal move while the level is still Playing.
+        private static readonly int[,] Seed93Moves =
+        {
+            { 5, 7, 6, 7 }, { 2, 7, 3, 7 }, { 5, 6, 5, 7 }, { 1, 6, 1, 7 }, { 0, 7, 1, 7 },
+            { 3, 7, 4, 7 }, { 2, 6, 3, 6 }, { 3, 6, 3, 7 }, { 1, 6, 1, 7 }, { 4, 5, 5, 5 }
+        };
+
+        private static readonly string[] Seed93DeadRows =
+        {
+            "PGGOYYOP", "BRYBGBGY", "OYBPYRPY", "PGRPRBGP",
+            "PGOGBOYO", "OYRGGPPY", "BYPRYORR", "GRPBGPYR"
+        };
+
         private GameObject tileTemplate;
         private GameObject boardObject;
         private GameObject cameraObject;
@@ -267,6 +281,115 @@ namespace Match3.Presentation.Tests
             Assert.That(StartingSnapshot(), Is.Not.SameAs(CurrentBoard()));
             Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles));
             Assert.That(ReadTiles(), Is.EqualTo(startingTiles), "Same seed, same starting board.");
+        }
+
+        [UnityTest]
+        public IEnumerator Seed93Route_LastMoveEndsTheLevel_LeavesTheDeadBoardBecauseLossIsNeverRecovered()
+        {
+            // Ten moves only: the tenth move loses, so recovery must not run. This also shows the real input,
+            // resolution runner and bootstrap reach the dead board.
+            ConfigureSeed93Level(10, 25);
+            yield return StartBootstrap();
+
+            for (int move = 0; move < 10; move++)
+            {
+                yield return PlaySeed93Move(move);
+            }
+
+            Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
+            Assert.That(ReadTiles(), Is.EqualTo(TilesFromRows(Seed93DeadRows)), "The real runner reaches the dead board.");
+            Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Seed93Route_StillPlaying_RecoversTheDeadBoardInPlaceBeforeUnlocking()
+        {
+            ConfigureSeed93Level(20, 25);
+            yield return StartBootstrap();
+            var startingTiles = ReadTiles();
+            var authoritativeBoard = CurrentBoard();
+
+            for (int move = 0; move < 9; move++)
+            {
+                yield return PlaySeed93Move(move);
+            }
+
+            // The tenth move would leave a dead board. Recovery runs before the controller unlocks,
+            // so the first unlocked frame already shows a playable board.
+            Click(new GridPosition(Seed93Moves[9, 0], Seed93Moves[9, 1]));
+            Click(new GridPosition(Seed93Moves[9, 2], Seed93Moves[9, 3]));
+            Assert.That(controller.IsInputLocked, Is.True);
+            yield return WaitUntilUnlocked();
+
+            Assert.That(CurrentBoard(), Is.SameAs(authoritativeBoard), "Recovery keeps the same Board object.");
+            Assert.That(ReadTiles(), Is.Not.EqualTo(TilesFromRows(Seed93DeadRows)), "The dead board was replaced.");
+            Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty);
+            Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.True);
+
+            // Exactly the values the ten moves earn; recovery adds nothing.
+            var level = bootstrap.LevelProgress;
+            Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(level.MovesRemaining, Is.EqualTo(10));
+            Assert.That(level.GoalProgress, Is.EqualTo(3));
+            Assert.That(level.Score, Is.EqualTo(3300));
+            Assert.That(controller.enabled, Is.True);
+
+            // One frame later the replaced views' deferred Destroy has run.
+            yield return null;
+            Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(64));
+            AssertViewsMatchBoard();
+
+            // Play continues on the recovered board through the same controller path: one more legal move.
+            yield return PlayValidMove();
+            Assert.That(level.MovesRemaining, Is.EqualTo(9), "Exactly one more move was consumed.");
+            Assert.That(level.Score, Is.GreaterThan(3300), "The move scored its cleared tiles.");
+            Assert.That(level.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty, "The board is stable again.");
+            Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.True);
+            yield return null;
+            AssertViewsMatchBoard();
+            Click(new GridPosition(0, 0));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)), "The next click is accepted normally.");
+
+            hud.Restart.onClick.Invoke();
+            yield return null;
+            Assert.That(ReadTiles(), Is.EqualTo(startingTiles), "Restart still starts from the seed's starting board.");
+            Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles));
+        }
+
+        [UnityTest]
+        public IEnumerator ValidMoveResolved_DeadBoardWhilePlaying_RecoversWithoutChangingProgress()
+        {
+            ConfigureSeed93Level(20, 25);
+            yield return StartBootstrap();
+            CurrentBoard().CopyTilesFrom(BoardFromRows(Seed93DeadRows));
+
+            ReportValidMove(TileType.Green);
+
+            // Only the reported move counts: one move, one tile's score, no goal tiles.
+            var level = bootstrap.LevelProgress;
+            Assert.That(level.MovesRemaining, Is.EqualTo(19));
+            Assert.That(level.Score, Is.EqualTo(100));
+            Assert.That(level.GoalProgress, Is.Zero);
+            Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.True);
+            Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty);
+
+            yield return null;
+            AssertViewsMatchBoard();
+        }
+
+        [UnityTest]
+        public IEnumerator ValidMoveResolved_DeadBoardOnWin_IsNotRecovered()
+        {
+            ConfigureSeed93Level(20, 3);
+            yield return StartBootstrap();
+            CurrentBoard().CopyTilesFrom(BoardFromRows(Seed93DeadRows));
+
+            ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
+
+            Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
+            Assert.That(ReadTiles(), Is.EqualTo(TilesFromRows(Seed93DeadRows)), "No recovery after the level is won.");
         }
 
         [UnityTest]
@@ -605,6 +728,59 @@ namespace Match3.Presentation.Tests
         private Board CurrentBoard()
         {
             return (Board)typeof(BoardBootstrap).GetField("board", Fields).GetValue(bootstrap);
+        }
+
+        // The shipped level's board and palette, framed so every cell can be clicked.
+        private void ConfigureSeed93Level(int startingMoveCount, int goalTarget)
+        {
+            Set("width", 8);
+            Set("height", 8);
+            Set("palette", new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange });
+            Set("seed", 93);
+            Set("startingMoveCount", startingMoveCount);
+            Set("goalTarget", goalTarget);
+            cameraObject.transform.position = new Vector3(203.5f, 203.5f, -10f);
+            inputCamera.orthographicSize = 8f;
+        }
+
+        // Clicks one recorded move and waits until the controller unlocks.
+        private IEnumerator PlaySeed93Move(int move)
+        {
+            Click(new GridPosition(Seed93Moves[move, 0], Seed93Moves[move, 1]));
+            Click(new GridPosition(Seed93Moves[move, 2], Seed93Moves[move, 3]));
+            Assert.That(controller.IsInputLocked, Is.True, $"Move {move + 1} should start.");
+            yield return WaitUntilUnlocked();
+        }
+
+        // Rows top-down, as on screen: R/G/B/Y/P/O are the normal colours.
+        private static TileType[,] TilesFromRows(params string[] rows)
+        {
+            const string symbols = ".RGBYPO";
+            var tiles = new TileType[rows[0].Length, rows.Length];
+            for (int row = 0; row < rows.Length; row++)
+            {
+                for (int x = 0; x < rows[row].Length; x++)
+                {
+                    tiles[x, rows.Length - 1 - row] = (TileType)symbols.IndexOf(rows[row][x]);
+                }
+            }
+
+            return tiles;
+        }
+
+        private static Board BoardFromRows(params string[] rows)
+        {
+            var tiles = TilesFromRows(rows);
+            var board = new Board(tiles.GetLength(0), tiles.GetLength(1));
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    board.SetTile(new GridPosition(x, y), tiles[x, y]);
+                }
+            }
+
+            return board;
         }
 
         // The private copy of the starting tiles that dead-board recovery will fall back to.

@@ -42,6 +42,9 @@ namespace Match3.Presentation
         // A private copy of the validated starting tiles, kept for dead-board recovery. It is never shown, never handed
         // to input or resolution, and never changed; every restart replaces it with a new copy.
         private Board startingBoard;
+        // The session's refill stream, the same instance the resolution runner uses. Dead-board recovery draws from it
+        // only when it actually replaces a board, so a game without recovery replays exactly as before.
+        private System.Random refillRandom;
         private LevelProgress levelProgress;
 
         // The rules state of the current level; null until Start has run, replaced on every restart.
@@ -112,14 +115,15 @@ namespace Match3.Presentation
             var newStartingBoard = new Board(newBoard.Width, newBoard.Height);
             newStartingBoard.CopyTilesFrom(newBoard);
             // Recreate both independent streams per session: targeting draws must never advance refill.
-            var refillRandom = new System.Random(seed);
+            var newRefillRandom = new System.Random(seed);
             var targetingRandom = new System.Random(unchecked(seed ^ 0x5EED1234));
             var resolution = new BoardResolutionRunner(
-                newBoard, boardView, palette, refillRandom, fallDuration, refillDuration, targetingRandom);
+                newBoard, boardView, palette, newRefillRandom, fallDuration, refillDuration, targetingRandom);
 
             levelProgress = newProgress;
             board = newBoard;
             startingBoard = newStartingBoard;
+            refillRandom = newRefillRandom;
             // Render destroys the previous level's tile views and registers new ones.
             boardView.Render(board);
             // Pass the same authoritative instance after its tile visuals have been created.
@@ -143,6 +147,15 @@ namespace Match3.Presentation
             if (levelProgress.Status != LevelStatus.Playing)
             {
                 inputController.enabled = false;
+                return;
+            }
+
+            // Still playing on a settled board: if no legal move is left, Core replaces the tiles in place.
+            // Moves, score and goal are untouched. The controller still holds the input lock until this returns,
+            // so the player never sees an unlocked dead board.
+            if (DeadBoardRecovery.RecoverIfDead(board, palette, refillRandom, startingBoard))
+            {
+                boardView.Render(board);
             }
         }
 
