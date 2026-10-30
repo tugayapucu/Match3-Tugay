@@ -244,6 +244,66 @@ namespace Match3.Core.Tests
             Assert.That(exception.ParamName, Is.EqualTo(parameterName));
         }
 
+        [Test]
+        public void GeneratePlayable_ShippedSeed42_KeepsTheExactGenerateLayout()
+        {
+            var palette = CreateShippedPalette();
+
+            // Already playable, so the first attempt is used: the starting board players see does not change.
+            Assert.That(HaveSameTiles(BoardGenerator.GeneratePlayable(8, 8, palette, 42), BoardGenerator.Generate(8, 8, palette, 42)), Is.True);
+        }
+
+        [TestCase(8, 42)]
+        [TestCase(3, 0)]
+        [TestCase(4, 81)]
+        public void GeneratePlayable_AcceptedBoard_IsStableAndHasALegalMove(int size, int seed)
+        {
+            var board = BoardGenerator.GeneratePlayable(size, size, CreateShippedPalette(), seed);
+
+            Assert.That(MatchFinder.FindMatches(board), Is.Empty);
+            Assert.That(BoardPlayability.HasAnyLegalMove(board), Is.True);
+        }
+
+        [TestCase(8, 42)]
+        [TestCase(3, 0)]
+        public void GeneratePlayable_SameInputs_ProduceTheSameBoard(int size, int seed)
+        {
+            var palette = CreateShippedPalette();
+
+            Assert.That(HaveSameTiles(
+                BoardGenerator.GeneratePlayable(size, size, palette, seed),
+                BoardGenerator.GeneratePlayable(size, size, palette, seed)), Is.True);
+        }
+
+        [Test]
+        public void GeneratePlayable_DeadFirstCandidates_AdvanceToTheFirstPlayableDerivedSeed()
+        {
+            var palette = CreateShippedPalette();
+            // Found by search: on 3x3 with six colours, seeds 0 to 3 generate dead boards and seed 4 is the first playable one.
+            for (int seed = 0; seed < 4; seed++)
+            {
+                Assert.That(BoardPlayability.HasAnyLegalMove(BoardGenerator.Generate(3, 3, palette, seed)), Is.False, $"Seed {seed}.");
+            }
+
+            Assert.That(HaveSameTiles(BoardGenerator.GeneratePlayable(3, 3, palette, 0), BoardGenerator.Generate(3, 3, palette, 4)), Is.True);
+        }
+
+        [Test]
+        public void GeneratePlayable_NoPlayableCandidateWithinTheBudget_ThrowsBudgetExhausted()
+        {
+            // A 1x1 board has no adjacent pair, so every attempt is dead.
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => BoardGenerator.GeneratePlayable(1, 1, CreateShippedPalette(), 42));
+
+            Assert.That(exception.Message, Does.Contain("attempt budget was exhausted"));
+            Assert.That(exception.Message, Does.Contain("seeds 42 to 51"));
+        }
+
+        private static TileType[] CreateShippedPalette()
+        {
+            return new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange };
+        }
+
         private static TileType[] CreatePalette()
         {
             return new[] { TileType.Red, TileType.Green, TileType.Blue };

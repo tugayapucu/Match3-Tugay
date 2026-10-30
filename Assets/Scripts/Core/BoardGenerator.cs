@@ -6,6 +6,28 @@ namespace Match3.Core
     // Builds a fully filled Board with no resolvable lines or same-color 2x2 squares.
     public static class BoardGenerator
     {
+        // Total attempts for a playable board: seed + 0 through seed + 9.
+        private const int PlayableAttempts = 10;
+
+        // Like Generate, but the board also has at least one legal move. The first attempt is exactly Generate(seed),
+        // so an already-playable board is returned unchanged; otherwise the derived seeds seed + 1, seed + 2, ... are tried.
+        // Deterministic, and throws only at session setup (never during a move) if every attempt is dead.
+        public static Board GeneratePlayable(int width, int height, IReadOnlyList<TileType> palette, int seed)
+        {
+            for (int attempt = 0; attempt < PlayableAttempts; attempt++)
+            {
+                var candidate = Generate(width, height, palette, unchecked(seed + attempt));
+                if (BoardPlayability.HasAnyLegalMove(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"The playable-board generation attempt budget was exhausted: seeds {seed} to {unchecked(seed + PlayableAttempts - 1)} "
+                + "produced no board with a legal move.");
+        }
+
         // Same width/height/palette order/seed always produce the same board (reproducible for tests and bugs).
         public static Board Generate(int width, int height, IReadOnlyList<TileType> palette, int seed)
         {
