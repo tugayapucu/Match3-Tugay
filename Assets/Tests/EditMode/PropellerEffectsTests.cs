@@ -105,6 +105,65 @@ namespace Match3.Core.Tests
             Assert.That(random.Calls, Is.EqualTo(1));
         }
 
+        // Spectrum Core + Wisp player swap. Activations run in position order, so the Core goes first whichever cell
+        // was selected first; it takes the most common colour (its partner is a special), and the Wisp can then only
+        // fly to the one cell neither its takeoff nor the Core's pending Reds cover.
+        [TestCase(0, 1)]
+        [TestCase(1, 0)]
+        public void LightBallPlusPropellerSwap_EitherSelectionOrder_LeavesTheWispOneTarget(int firstX, int secondX)
+        {
+            var board = TestBoards.Create("FLRRB");
+            var first = new GridPosition(firstX, 0);
+            var second = new GridPosition(secondX, 0);
+            board.TrySwapAdjacent(first, second);
+            var move = SwapValidator.Analyze(board, first, second);
+            var random = new IndexRandom(0);
+
+            var plan = SpecialEffects.Plan(board, move.InitialActivations, random);
+
+            Assert.That(move.Kind, Is.EqualTo(SwapKind.SpecialSwap));
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].Type, Is.EqualTo(TileType.LightBall));
+            Assert.That(plan.Effects[0].Origin, Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(plan.Effects[0].Footprint, Is.EqualTo(new[]
+            {
+                new GridPosition(0, 0), new GridPosition(2, 0), new GridPosition(3, 0)
+            }), "Red is the most common colour.");
+            Assert.That(plan.Effects[1].Type, Is.EqualTo(TileType.Propeller));
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(new GridPosition(1, 0)));
+            Assert.That(plan.Effects[1].RemoteTarget, Is.EqualTo(new GridPosition(4, 0)));
+            Assert.That(random.LastBound, Is.EqualTo(1), "Only the Blue is left to target.");
+            Assert.That(random.Calls, Is.EqualTo(1));
+            Assert.That(plan.RemovedPositions.Count, Is.EqualTo(5));
+        }
+
+        // Two Wisps queued by the swap itself: the first one's remote hit lands inside the second one's takeoff,
+        // so the second must look further, and every cell is still removed once.
+        [Test]
+        public void TwoAdjacentPropellers_SecondTargetsWhatTheFirstLeft_AndEachCellIsRemovedOnce()
+        {
+            var board = TestBoards.Create("FFRG");
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            board.TrySwapAdjacent(first, second);
+            var move = SwapValidator.Analyze(board, first, second);
+            var random = new IndexRandom(0);
+
+            var plan = SpecialEffects.Plan(board, move.InitialActivations, random);
+
+            Assert.That(plan.Effects.Count, Is.EqualTo(2));
+            Assert.That(plan.Effects[0].Origin, Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(plan.Effects[0].RemoteTarget, Is.EqualTo(new GridPosition(2, 0)), "First of Red and Green.");
+            Assert.That(plan.Effects[1].Origin, Is.EqualTo(new GridPosition(1, 0)));
+            Assert.That(plan.Effects[1].RemoteTarget, Is.EqualTo(new GridPosition(3, 0)));
+            Assert.That(random.Calls, Is.EqualTo(2));
+            Assert.That(random.LastBound, Is.EqualTo(1), "The Red is already scheduled, so only the Green is left.");
+            Assert.That(plan.RemovedPositions, Is.EqualTo(new[]
+            {
+                new GridPosition(0, 0), new GridPosition(1, 0), new GridPosition(2, 0), new GridPosition(3, 0)
+            }));
+        }
+
         [Test]
         public void ConflictingRequests_AreRejectedBeforeAnyTargetingDraw()
         {

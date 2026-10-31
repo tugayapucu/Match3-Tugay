@@ -1129,6 +1129,21 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator SpecialSwap_LightBallWithPropeller_WispTakesTheOnlyTargetLeft()
+        {
+            // The Core clears both Reds first; the Wisp's takeoff and those Reds leave only the Blue at (4,0),
+            // so the fixed targeting stream has a single choice. The whole row clears and refills left to right.
+            UseLevel(4, TileType.Red, 9);
+            SetBoard(new ScriptedRandom(0, 0, 1, 0, 2), "FLRRB");
+
+            yield return VerifyValidMove(new GridPosition(0, 0), new GridPosition(1, 0), 1, false, "RRGRB");
+
+            AssertLevel(3, 300, 2, LevelStatus.Playing);
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(3), "Two Reds and the Blue; specials earn nothing.");
+            Assert.That(reportedResults[0].CountOf(TileType.Blue), Is.EqualTo(1));
+        }
+
+        [UnityTest]
         public IEnumerator SpecialSwap_SurvivingPartnerPattern_UsesFirstScanAnchorAndCostsOneMove()
         {
             UseLevel(3, TileType.Red, 10);

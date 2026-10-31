@@ -385,6 +385,46 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Seed93Route_AfterRestart_RecoversTheSameWayAndTheNextMoveReplays()
+        {
+            ConfigureSeed93Level(20, 25);
+            yield return StartBootstrap();
+            var startingTiles = ReadTiles();
+            var recovered = new TileType[2][,];
+            var afterNextMove = new TileType[2][,];
+            var scores = new int[2];
+
+            // Recovery draws from the session's refill stream, so a restarted session must reach the same recovered
+            // board and then refill the next move the same way.
+            for (int session = 0; session < 2; session++)
+            {
+                if (session == 1)
+                {
+                    hud.Restart.onClick.Invoke();
+                    yield return null;
+                    Assert.That(ReadTiles(), Is.EqualTo(startingTiles));
+                }
+
+                for (int move = 0; move < Seed93Moves.GetLength(0); move++)
+                {
+                    yield return PlaySeed93Move(move);
+                }
+
+                recovered[session] = ReadTiles();
+                yield return PlayValidMove();
+                afterNextMove[session] = ReadTiles();
+                scores[session] = bootstrap.LevelProgress.Score;
+                Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(9));
+            }
+
+            Assert.That(recovered[0], Is.Not.EqualTo(TilesFromRows(Seed93DeadRows)), "The route reached a real recovery.");
+            Assert.That(recovered[1], Is.EqualTo(recovered[0]));
+            Assert.That(afterNextMove[1], Is.EqualTo(afterNextMove[0]));
+            Assert.That(scores[1], Is.EqualTo(scores[0]));
+            Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles), "The snapshot is still the starting board.");
+        }
+
+        [UnityTest]
         public IEnumerator ValidMoveResolved_DeadBoardWhilePlaying_RecoversWithoutChangingProgress()
         {
             ConfigureSeed93Level(20, 25);
