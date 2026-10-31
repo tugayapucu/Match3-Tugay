@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Match3.Core;
 using NUnit.Framework;
 using UnityEditor;
@@ -8,6 +9,11 @@ namespace Match3.Presentation.Tests
 {
     public class BoardViewTests
     {
+        private static readonly TileType[] ShippedPalette =
+        {
+            TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange
+        };
+
         private GameObject boardObject;
         private GameObject tileTemplate;
         private BoardView boardView;
@@ -296,6 +302,59 @@ namespace Match3.Presentation.Tests
             Assert.That(boardView.GetTileView(position), Is.SameAs(view));
             Assert.That(view.Position, Is.EqualTo(position));
         }
+
+        [Test]
+        public void ValidateConfiguration_ShippedPaletteAndDefaultDurations_Passes()
+        {
+            Assert.DoesNotThrow(() => boardView.ValidateConfiguration(ShippedPalette));
+        }
+
+        [TestCase("clearDuration", -1f)]
+        [TestCase("specialActivationDuration", float.NaN)]
+        [TestCase("wispFlightDuration", float.PositiveInfinity)]
+        public void ValidateConfiguration_InvalidDuration_FailsNamingTheField(string field, float value)
+        {
+            var serialized = new SerializedObject(boardView);
+            serialized.FindProperty(field).floatValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var exception = Assert.Throws<InvalidOperationException>(() => boardView.ValidateConfiguration(ShippedPalette));
+            Assert.That(exception.Message, Does.Contain(field));
+        }
+
+        // Every visible type is required with the shipped palette: its six colours, plus all specials.
+        [TestCaseSource(nameof(VisibleTypes))]
+        public void ValidateConfiguration_MissingRequiredSprite_FailsNamingTheTile(TileType missing)
+        {
+            TestTiles.RemoveSprite(tileTemplate.GetComponent<TileView>(), missing);
+
+            var exception = Assert.Throws<InvalidOperationException>(() => boardView.ValidateConfiguration(ShippedPalette));
+            Assert.That(exception.Message, Does.Contain($"Assign the {missing} sprite"));
+        }
+
+        [Test]
+        public void ValidateConfiguration_MissingSpriteForAColourOutsideThePalette_Passes()
+        {
+            // Refill spawns only palette colours, so an unused colour's sprite is never needed.
+            TestTiles.RemoveSprite(tileTemplate.GetComponent<TileView>(), TileType.Orange);
+
+            Assert.DoesNotThrow(() => boardView.ValidateConfiguration(
+                new[] { TileType.Red, TileType.Green, TileType.Blue }));
+        }
+
+        [Test]
+        public void ValidateConfiguration_NullPaletteOrMissingPrefab_Fails()
+        {
+            Assert.Throws<ArgumentNullException>(() => boardView.ValidateConfiguration(null));
+
+            var serialized = new SerializedObject(boardView);
+            serialized.FindProperty("tilePrefab").objectReferenceValue = null;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            Assert.Throws<InvalidOperationException>(() => boardView.ValidateConfiguration(ShippedPalette));
+        }
+
+        private static IEnumerable<TileType> VisibleTypes => TestTiles.VisibleTypes;
 
         private TileView[] GetViews()
         {

@@ -23,6 +23,39 @@ namespace Match3.Presentation
         // Find a visual by cell address and track only our own clones for cleanup.
         private readonly Dictionary<GridPosition, TileView> tileViews = new Dictionary<GridPosition, TileView>();
 
+        // Called when a level starts: checks the Inspector values a move reads only later, so a broken setup fails
+        // here instead of after a move has locked input. Required sprites are the palette's colours (refill spawns
+        // only those) and every special (any match may create one). The per-call guards below stay in place.
+        public void ValidateConfiguration(IReadOnlyList<TileType> palette)
+        {
+            if (palette == null)
+            {
+                throw new ArgumentNullException(nameof(palette));
+            }
+
+            if (tilePrefab == null)
+            {
+                throw new InvalidOperationException("Assign a TileView prefab before starting.");
+            }
+
+            ValidateConfiguredDuration(clearDuration, nameof(clearDuration));
+            ValidateConfiguredDuration(specialActivationDuration, nameof(specialActivationDuration));
+            ValidateConfiguredDuration(wispFlightDuration, nameof(wispFlightDuration));
+
+            foreach (TileType tileType in palette)
+            {
+                tilePrefab.ValidateSprite(tileType);
+            }
+
+            foreach (TileType tileType in Enum.GetValues(typeof(TileType)))
+            {
+                if (TileRules.IsSpecial(tileType))
+                {
+                    tilePrefab.ValidateSprite(tileType);
+                }
+            }
+        }
+
         // Display the supplied board by reading its cells, without changing its data.
         public void Render(Board board)
         {
@@ -450,6 +483,15 @@ namespace Match3.Presentation
             if (duration < 0f || float.IsNaN(duration) || float.IsInfinity(duration))
             {
                 throw new ArgumentOutOfRangeException(nameof(duration), duration, "Duration must be finite and nonnegative.");
+            }
+        }
+
+        // An Inspector value, not a method argument, so the message names the field to fix.
+        private static void ValidateConfiguredDuration(float duration, string fieldName)
+        {
+            if (duration < 0f || float.IsNaN(duration) || float.IsInfinity(duration))
+            {
+                throw new InvalidOperationException($"BoardView {fieldName} must be finite and nonnegative, not {duration}.");
             }
         }
 

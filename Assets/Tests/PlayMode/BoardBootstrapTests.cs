@@ -180,6 +180,32 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Start_InvalidBoardViewDuration_FailsBeforeCreatingTheBoard()
+        {
+            // Read only by the clear animation, so without the startup check the first match would hit it mid-move.
+            typeof(BoardView).GetField("clearDuration", Fields).SetValue(boardView, -1f);
+            LogAssert.Expect(LogType.Exception, new Regex("clearDuration must be finite and nonnegative"));
+
+            yield return StartBootstrap();
+
+            Assert.That(bootstrap.LevelProgress, Is.Null);
+            Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator Start_MissingSpecialSprite_FailsBeforeCreatingTheBoard()
+        {
+            // A starting board holds no specials, so without the startup check only a move could reach this sprite.
+            typeof(TileView).GetField("tntSprite", Fields).SetValue(tileTemplate.GetComponent<TileView>(), null);
+            LogAssert.Expect(LogType.Exception, new Regex("Assign the TNT sprite"));
+
+            yield return StartBootstrap();
+
+            Assert.That(bootstrap.LevelProgress, Is.Null);
+            Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
+        }
+
+        [UnityTest]
         public IEnumerator ValidMoveResolved_LevelStillPlaying_KeepsInputEnabled()
         {
             Set("startingMoveCount", 2);

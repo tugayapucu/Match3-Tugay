@@ -59,5 +59,11 @@ namespace Match3.Presentation.Tests
 
             return view;
         }
+
+        // Leaves one sprite slot unassigned, as a broken Inspector setup would.
+        public static void RemoveSprite(TileView template, TileType type)
+        {
+            typeof(TileView).GetField(SpriteFields[type], Fields).SetValue(template, null);
+        }
     }
 }

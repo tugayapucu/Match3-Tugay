@@ -46,11 +46,7 @@ namespace Match3.Presentation
         public void SetTileType(TileType tileType)
         {
             // Look up the sprite first so an invalid type or an unassigned sprite throws before any state changes.
-            Sprite sprite = GetSprite(tileType);
-            if (tileType != TileType.Empty && sprite == null)
-            {
-                throw new InvalidOperationException($"Assign the {tileType} sprite before displaying that tile.");
-            }
+            Sprite sprite = GetRequiredSprite(tileType);
 
             // Lazy cache: Initialize can run before Awake when the prefab is inactive.
             if (spriteRenderer == null)
@@ -76,6 +72,23 @@ namespace Match3.Presentation
         public void SetGridPosition(GridPosition position)
         {
             Position = position;
+        }
+
+        // Same check SetTileType makes, without changing anything; BoardView runs it on the prefab at level start.
+        public void ValidateSprite(TileType tileType)
+        {
+            GetRequiredSprite(tileType);
+        }
+
+        private Sprite GetRequiredSprite(TileType tileType)
+        {
+            Sprite sprite = GetSprite(tileType);
+            if (tileType != TileType.Empty && sprite == null)
+            {
+                throw new InvalidOperationException($"Assign the {tileType} sprite before displaying that tile.");
+            }
+
+            return sprite;
         }
 
         // TileType -> sprite mapping lives here, not in Core, because appearance is a presentation detail.

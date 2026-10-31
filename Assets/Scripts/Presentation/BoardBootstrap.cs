@@ -105,6 +105,9 @@ namespace Match3.Presentation
                 throw new InvalidOperationException($"The goal tile type {goalTileType} is not in the palette.");
             }
 
+            // Inspector values a move would otherwise read only after input locks: fail here, before the first move.
+            boardView.ValidateConfiguration(palette);
+
             // Restart clicks come back here. Assigned (not added), so restarting never stacks handlers.
             levelHud.Initialize(RestartLevel);
 
