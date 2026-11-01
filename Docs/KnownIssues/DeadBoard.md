@@ -1,6 +1,6 @@
 # Dead board soft-lock
 
-Status: Resolved in Phase 14. Verified in tests and in Editor PlayMode; Android device confirmation is pending (Phase 14 Step 12 was deferred because no device was available).
+Status: Resolved in Phase 14. Verified in tests, in Editor PlayMode, and on a Galaxy S23 (Android 16) with ADB-injected touch events. That is one device and one build, not every Android device.
 
 ## Terms
 
@@ -59,7 +59,26 @@ It runs only at settled-board checkpoints:
   - A dead board while Playing is recovered without changing progress.
   - A dead board on a Win is not recovered.
 - **Adversarial Play Mode run (Phase 14 Step 8):** 4,000 moves through the real game. At each of the 4,090 points where input unlocked, the board was checked: stable, playable and matching its views, with 0 violations.
-- **Not yet done:** the S23 replay of the seed-93 route. A seed-93 build and the expected move-by-move HUD values are prepared for when a device is available.
+- **Galaxy S23 smoke test (Phase 14 Step 12, 2026-11-02):**
+  - **Setup:**
+    - a non-development APK of the current code, differing only in a temporary scene seed of 93;
+    - the 20-move seed-93 route, played with ADB-injected touch events (80 ms presses). This is not a test of human touch comfort.
+  - **HUD:** matched the expected moves, goal and score after every one of the 20 moves.
+  - **Recovery:** the board was replaced at move 10 with moves, goal and score unchanged (10 moves, 3/25, 3,300).
+    - The recovered board read from the screenshot equals the Core simulation's prediction, and has no match and 17 legal swaps.
+    - No dead frame was ever drawn, because recovery runs before input unlocks.
+  - **Rest of the route:**
+    - a Beam was created and activated (moves 11–12);
+    - cascades played out;
+    - move 20 ended in a Loss, and presses after it changed nothing.
+  - **Replays:**
+    - Play Again and Restart each brought back the starting screen byte for byte;
+    - after Restart, the replayed recovery screenshot and the next move's screenshot were byte-identical to the first run.
+  - **Device log:**
+    - the known `AssetPackManager` `ClassNotFoundException` at startup (Phase 13 audit, Finding 6);
+    - two Android platform messages, both non-fatal and with no observed effect: `libpenguin.so` not found, and "Failed to close dex file in finalizer";
+    - no other Unity errors or warnings, and no fatal exceptions.
+  - **Not retested on the device:** Win, every special pair, and sustained frame rate.
 
 ## Notes
 
