@@ -1079,35 +1079,35 @@ No notebook note is required unless one of these is genuinely new/useful.
 
 Phase 14 is complete only when:
 
-- [ ] legal-move semantics are defined;
-- [ ] legal-move detection exists in Core;
-- [ ] playability queries do not mutate the authoritative Board;
-- [ ] at least one concrete dead-board fixture exists;
-- [ ] initial boards are stable and playable;
-- [ ] runtime Playing boards cannot remain dead;
-- [ ] recovery is deterministic;
-- [ ] recovery mutates the shared `Board` instance in place;
-- [ ] recovery has bounded retries and a deterministic fallback, with no intentional exception while the move is locked;
-- [ ] checking an already-playable board consumes zero randomness;
-- [ ] existing seed-42 deterministic behavior is unchanged when no recovery occurs;
-- [ ] recovery changes no move/score/goal values;
-- [ ] no recovery occurs after Win/Loss;
-- [ ] Board/View consistency survives recovery;
-- [ ] restart determinism still works;
-- [ ] LockedAfterException reachability was investigated;
-- [ ] any production trigger found has a focused regression test;
-- [ ] exception recovery policy is explicitly decided;
-- [ ] no broad exception swallowing was added;
-- [ ] Codex adversarial review is complete;
-- [ ] high-value reviewer findings are tested/resolved/documented;
-- [ ] all EditMode tests pass;
-- [ ] all PlayMode tests pass;
-- [ ] runtime recovery scenarios pass;
-- [ ] Console has no unexplained errors/warnings;
-- [ ] S23 smoke validation is complete where practical;
-- [ ] known-issue docs reflect final evidence;
-- [ ] no confirmed MUST gameplay blocker remains;
-- [ ] human reviewed final diff.
+- [x] legal-move semantics are defined;
+- [x] legal-move detection exists in Core;
+- [x] playability queries do not mutate the authoritative Board;
+- [x] at least one concrete dead-board fixture exists;
+- [x] initial boards are stable and playable;
+- [x] runtime Playing boards cannot remain dead;
+- [x] recovery is deterministic;
+- [x] recovery mutates the shared `Board` instance in place;
+- [x] recovery has bounded retries and a deterministic fallback, with no intentional exception while the move is locked;
+- [x] checking an already-playable board consumes zero randomness;
+- [x] existing seed-42 deterministic behavior is unchanged when no recovery occurs;
+- [x] recovery changes no move/score/goal values;
+- [x] no recovery occurs after Win/Loss;
+- [x] Board/View consistency survives recovery;
+- [x] restart determinism still works;
+- [x] LockedAfterException reachability was investigated;
+- [x] any production trigger found has a focused regression test;
+- [x] exception recovery policy is explicitly decided;
+- [x] no broad exception swallowing was added;
+- [x] Codex adversarial review is complete;
+- [x] high-value reviewer findings are tested/resolved/documented;
+- [x] all EditMode tests pass;
+- [x] all PlayMode tests pass;
+- [x] runtime recovery scenarios pass;
+- [x] Console has no unexplained errors/warnings;
+- [x] S23 smoke validation is complete where practical;
+- [x] known-issue docs reflect final evidence;
+- [x] no confirmed MUST gameplay blocker remains;
+- [x] human reviewed final diff.
 
 Do not start Phase 15 automatically.
 
