@@ -130,21 +130,41 @@ namespace Match3.Presentation
                 return;
             }
 
+            TryStartSwap(selectedPosition.Value, position);
+        }
+
+        // True means an animated attempt started, including one that will roll back.
+        // Rejected requests preserve the old selection and never acquire another move's lock.
+        private bool TryStartSwap(GridPosition first, GridPosition second)
+        {
+            if (!isActiveAndEnabled || board == null || isInputLocked)
+            {
+                return false;
+            }
+
+            // Core throws for off-board coordinates. Swipes derive their neighbour without picking it.
+            if (!board.IsInBounds(first) || !board.IsInBounds(second)
+                || board.GetTile(first) == TileType.Empty || board.GetTile(second) == TileType.Empty)
+            {
+                return false;
+            }
+
             ValidateSwapDuration();
-            GridPosition first = selectedPosition.Value;
             // Lock before the model changes; Core decides whether these cells may swap.
             isInputLocked = true;
-            if (!board.TrySwapAdjacent(first, position))
+            if (!board.TrySwapAdjacent(first, second))
             {
                 isInputLocked = false;
-                return;
+                return false;
             }
 
             // The Board now holds the attempted result; Core decides whether it is a real Match-3 move.
-            SwapAnalysis move = SwapValidator.Analyze(board, first, position);
+            SwapAnalysis move = SwapValidator.Analyze(board, first, second);
+            selectedPosition = first;
             // Only an accepted adjacent swap is a move; rejected clicks above never reach this point.
             onBusyChanged(true);
             StartCoroutine(FinishSwap(move));
+            return true;
         }
 
         private IEnumerator FinishSwap(SwapAnalysis move)
