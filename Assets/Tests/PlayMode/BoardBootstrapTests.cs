@@ -865,7 +865,7 @@ namespace Match3.Presentation.Tests
             controller.HandlePointerUp(point);
         }
 
-        // Virtual touchscreen events reach Update; this helper never calls the gesture handlers or edits the Board.
+        // Virtual touchscreen events reach Update; this helper never calls HandlePointer* directly or edits the Board.
         private void Swipe(Touchscreen touch, int id, GridPosition first, GridPosition second)
         {
             Vector2 start = inputCamera.WorldToScreenPoint(boardView.GetTileView(first).transform.position);

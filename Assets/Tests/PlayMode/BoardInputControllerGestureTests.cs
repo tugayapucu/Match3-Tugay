@@ -382,6 +382,110 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Update_TapThenSwipeThenTap_UsesSwipeOriginAndStartsAFreshSelection()
+        {
+            var touch = CreateTouchscreen();
+            int id = 0;
+            var swipeOrigin = new GridPosition(0, 0);
+            // Same tile; adjacent tile (the original press-first conflict); distant tile.
+            foreach (var tapped in new[] { swipeOrigin, new GridPosition(0, 1), new GridPosition(2, 2) })
+            {
+                UseLevel(5, TileType.Green, 10);
+                SetBoard(new ScriptedRandom(2, 3, 5), "GBY", "GPO", "RGG");
+                reportedResults.Clear();
+                busyChanges.Clear();
+                var before = ReadTiles();
+                Vector2 tapPoint = ScreenPosition(tapped);
+                SendGestureTouch(touch, ++id, TouchPhase.Began, tapPoint);
+                Assert.That(controller.SelectedPosition, Is.Null);
+                SendGestureTouch(touch, id, TouchPhase.Ended, tapPoint);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(tapped));
+
+                Vector2 start = ScreenPosition(swipeOrigin);
+                Vector2 end = start + Vector2.right * CellPixels() * 0.4f;
+                SendGestureTouch(touch, ++id, TouchPhase.Began, start);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(tapped), "Pressing the swipe origin must retain A until classification.");
+                Assert.That(controller.IsInputLocked, Is.False, "No premature A-to-B swap, even when A is adjacent to B.");
+                Assert.That(ReadTiles(), Is.EqualTo(before));
+                Assert.That(busyChanges, Is.Empty);
+                SendGestureTouch(touch, id, TouchPhase.Moved, end);
+                Assert.That(controller.IsInputLocked, Is.True);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(swipeOrigin));
+                SendGestureTouch(touch, id, TouchPhase.Ended, end);
+                yield return WaitForSwap();
+
+                AssertLevel(4, 300, 3, LevelStatus.Playing);
+                Assert.That(reportedResults.Count, Is.EqualTo(1));
+                Assert.That(ReadTiles(), Is.EqualTo(Tiles("OBY", "YPO", "BRG")));
+                Assert.That(controller.SelectedPosition, Is.Null, "Swipe release must not create an extra tap.");
+                Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+                AssertStable();
+
+                var nextSelection = new GridPosition(2, 1);
+                tapPoint = ScreenPosition(nextSelection);
+                var settled = ReadTiles();
+                SendGestureTouch(touch, ++id, TouchPhase.Began, tapPoint);
+                Assert.That(controller.SelectedPosition, Is.Null);
+                Assert.That(controller.IsInputLocked, Is.False);
+                SendGestureTouch(touch, id, TouchPhase.Ended, tapPoint);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(nextSelection));
+                Assert.That(ReadTiles(), Is.EqualTo(settled));
+                AssertLevel(4, 300, 3, LevelStatus.Playing);
+                Assert.That(reportedResults.Count, Is.EqualTo(1));
+                Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Update_IgnoredTapsAndRejectedSwipe_PreserveSelectionForTheNextAdjacentTap()
+        {
+            var touch = CreateTouchscreen();
+            UseLevel(5, TileType.Green, 10);
+            SetBoard(new ScriptedRandom(2, 3, 5), "GBY", "GPO", "RGG");
+            var first = new GridPosition(0, 0);
+            var before = ReadTiles();
+            SendTouchState(touch, 1, TouchPhase.Began, first);
+            SendTouchState(touch, 1, TouchPhase.Ended, first);
+
+            // A non-adjacent tap and a tap outside the board must both keep the original selection.
+            Vector2 outside = inputCamera.WorldToScreenPoint(new Vector3(110f, 110f, 0f));
+            int id = 1;
+            foreach (Vector2 point in new[] { ScreenPosition(new GridPosition(2, 2)), outside })
+            {
+                SendGestureTouch(touch, ++id, TouchPhase.Began, point);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                Assert.That(controller.IsInputLocked, Is.False);
+                SendGestureTouch(touch, id, TouchPhase.Ended, point);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            }
+
+            Vector2 start = ScreenPosition(new GridPosition(2, 2));
+            SendGestureTouch(touch, ++id, TouchPhase.Began, start);
+            SendGestureTouch(touch, id, TouchPhase.Moved, start + Vector2.right * CellPixels());
+            SendGestureTouch(touch, id, TouchPhase.Ended, start + Vector2.right * CellPixels());
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(busyChanges, Is.Empty);
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
+
+            var second = new GridPosition(1, 0);
+            SendTouchState(touch, ++id, TouchPhase.Began, second);
+            Assert.That(controller.IsInputLocked, Is.False, "An adjacent second tap also waits for release.");
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            SendTouchState(touch, id, TouchPhase.Ended, second);
+            Assert.That(controller.IsInputLocked, Is.True);
+            yield return WaitForSwap();
+
+            AssertLevel(4, 300, 3, LevelStatus.Playing);
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(ReadTiles(), Is.EqualTo(Tiles("OBY", "YPO", "BRG")));
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            AssertStable();
+        }
+
+        [UnityTest]
         public IEnumerator Update_HeldSwipePastUnlock_DoesNotRepeatOrBecomeATap()
         {
             var touch = CreateTouchscreen();
