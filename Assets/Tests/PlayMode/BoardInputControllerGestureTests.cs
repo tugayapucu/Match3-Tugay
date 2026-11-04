@@ -271,8 +271,16 @@ namespace Match3.Presentation.Tests
         public IEnumerator Update_TouchDisplacedReleaseWithoutMovementPoll_UsesTrueOriginAndRollsBack()
         {
             var touch = CreateTouchscreen();
+            UseLevel(5, TileType.Red, 25);
+            SetBoard(new System.Random(1), "RGB", "YPO", "RGB");
             var before = ReadTiles();
-            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            var first = new GridPosition(0, 0);
+            var second = new GridPosition(1, 0);
+            var views = SnapshotViews();
+            var movingView = boardView.GetTileView(first);
+            Vector3 worldStart = movingView.transform.position;
+            float fullDistance = Vector3.Distance(worldStart, boardView.GetTileView(second).transform.position);
+            Vector2 start = ScreenPosition(first);
             Vector2 end = start + Vector2.right * CellPixels() * 1.4f;
             InputSystem.QueueStateEvent(touch, new TouchState { touchId = 1, phase = TouchPhase.Began, position = start });
             InputSystem.QueueStateEvent(touch, new TouchState { touchId = 1, phase = TouchPhase.Ended, position = end });
@@ -284,10 +292,93 @@ namespace Match3.Presentation.Tests
             Assert.That(expected[1, 0], Is.EqualTo(before[0, 0]));
             Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
             Assert.That(controller.IsInputLocked, Is.True);
-            yield return WaitForSwap();
+            bool sawForward = false;
+            bool sawRollback = false;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
+                AssertLevel(5, 0, 0, LevelStatus.Playing);
+                float distance = Vector3.Distance(movingView.transform.position, worldStart);
+                if (distance > 0.001f && distance < fullDistance - 0.001f)
+                {
+                    sawForward |= movingView.Position == first;
+                    sawRollback |= movingView.Position == second;
+                }
+                yield return null;
+            }
+            Assert.That(sawForward && sawRollback, Is.True, "Both animation directions must be observed.");
             Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(SnapshotViews(), Is.EqualTo(views), "Rollback keeps the original tile objects.");
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
+            AssertStable();
             Assert.That(reportedResults, Is.Empty);
             Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+        }
+
+        [UnityTest]
+        public IEnumerator Swipe_ValidCascade_ChargesOneMoveAndReportsEveryRoundExactlyOnce()
+        {
+            var touch = CreateTouchscreen();
+            UseLevel(5, TileType.Blue, 10);
+            // Clear GGG, then refill BBB, then YYY: three rounds, nine normal tiles in one move.
+            SetBoard(new ScriptedRandom(2, 2, 2, 3, 3, 3, 2, 3, 5), "GBY", "GPO", "RGG");
+            var red = boardView.GetTileView(new GridPosition(0, 0));
+            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            Vector2 end = start + Vector2.right * CellPixels() * 0.4f;
+            SendGestureTouch(touch, 1, TouchPhase.Began, start);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            SendGestureTouch(touch, 1, TouchPhase.Moved, end);
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy" }));
+
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (controller.IsInputLocked)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
+                AssertLevel(5, 0, 0, LevelStatus.Playing);
+                SendGestureTouch(touch, 1, TouchPhase.Stationary, end);
+                yield return null;
+            }
+            // Still held at unlock: neither it nor its release may create a second attempt/tap.
+            SendGestureTouch(touch, 1, TouchPhase.Stationary, end);
+            SendGestureTouch(touch, 1, TouchPhase.Ended, end);
+
+            AssertLevel(4, 900, 3, LevelStatus.Playing);
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(9));
+            Assert.That(reportedResults[0].CountOf(TileType.Blue), Is.EqualTo(3));
+            Assert.That(ReadTiles(), Is.EqualTo(Tiles("OBY", "YPO", "BRG")));
+            Assert.That(boardView.GetTileView(new GridPosition(1, 0)), Is.SameAs(red));
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            AssertStable();
+        }
+
+        [UnityTest]
+        public IEnumerator Swipe_SpecialPair_UsesNormalChainRulesAndChargesOneMove()
+        {
+            var touch = CreateTouchscreen();
+            UseLevel(5, TileType.Red, 10);
+            // After F swaps right: LFRRB. Light Ball targets the two Reds; Wisp's only remote target is Blue.
+            SetBoard(new ScriptedRandom(0, 0, 1, 0, 2), "FLRRB");
+            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            Vector2 end = ScreenPosition(new GridPosition(1, 0));
+            SendGestureTouch(touch, 1, TouchPhase.Began, start);
+            SendGestureTouch(touch, 1, TouchPhase.Moved, end);
+            Assert.That(controller.IsInputLocked, Is.True);
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
+            SendGestureTouch(touch, 1, TouchPhase.Ended, end);
+            yield return WaitForSwap();
+
+            AssertLevel(4, 300, 2, LevelStatus.Playing);
+            Assert.That(reportedResults.Count, Is.EqualTo(1));
+            Assert.That(reportedResults[0].ClearedCount, Is.EqualTo(3), "The two specials give no color credit.");
+            Assert.That(reportedResults[0].CountOf(TileType.Red), Is.EqualTo(2));
+            Assert.That(reportedResults[0].CountOf(TileType.Blue), Is.EqualTo(1));
+            Assert.That(ReadTiles(), Is.EqualTo(Tiles("RRGRB")));
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            AssertStable();
         }
 
         [UnityTest]
