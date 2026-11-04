@@ -6,8 +6,11 @@ using System.Text.RegularExpressions;
 using Match3.Core;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 namespace Match3.Presentation.Tests
 {
@@ -382,6 +385,75 @@ namespace Match3.Presentation.Tests
             yield return null;
             Assert.That(ReadTiles(), Is.EqualTo(startingTiles), "Restart still starts from the seed's starting board.");
             Assert.That(ReadTiles(StartingSnapshot()), Is.EqualTo(startingTiles));
+        }
+
+        [UnityTest]
+        public IEnumerator Seed93Swipes_RecoveryFinishesInsideTheLockedProductionCallback()
+        {
+            var input = new InputTestFixture();
+            input.Setup();
+            try
+            {
+                var touch = InputSystem.AddDevice<Touchscreen>();
+                _ = touch.press.wasPressedThisFrame;
+                ConfigureSeed93Level(20, 25);
+                yield return StartBootstrap();
+                var authoritativeBoard = CurrentBoard();
+                int reports = 0;
+                bool observedRecoveryWhileLocked = false;
+                var callbackField = typeof(BoardInputController).GetField("onValidMoveResolved", Fields);
+                var productionCallback = (Action<ResolutionResult>)callbackField.GetValue(controller);
+                callbackField.SetValue(controller, (Action<ResolutionResult>)(result =>
+                {
+                    Assert.That(controller.IsInputLocked, Is.True);
+                    Assert.That(hud.Restart.interactable, Is.False);
+                    productionCallback(result);
+                    reports++;
+                    if (reports == 10)
+                    {
+                        Assert.That(controller.IsInputLocked, Is.True, "Recovery must finish before the controller unlocks.");
+                        Assert.That(hud.Restart.interactable, Is.False);
+                        Assert.That(CurrentBoard(), Is.SameAs(authoritativeBoard));
+                        Assert.That(ReadTiles(), Is.Not.EqualTo(TilesFromRows(Seed93DeadRows)));
+                        Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty);
+                        Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.True);
+                        Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(10));
+                        Assert.That(bootstrap.LevelProgress.Score, Is.EqualTo(3300));
+                        Assert.That(bootstrap.LevelProgress.GoalProgress, Is.EqualTo(3));
+                        observedRecoveryWhileLocked = true;
+                    }
+                }));
+
+                for (int move = 0; move < Seed93Moves.GetLength(0); move++)
+                {
+                    Swipe(touch, move + 1, new GridPosition(Seed93Moves[move, 0], Seed93Moves[move, 1]),
+                        new GridPosition(Seed93Moves[move, 2], Seed93Moves[move, 3]));
+                    yield return WaitUntilUnlocked();
+                }
+                Assert.That(reports, Is.EqualTo(10));
+                Assert.That(observedRecoveryWhileLocked, Is.True, "The callback assertions must have run.");
+                Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
+                Assert.That(controller.SelectedPosition, Is.Null);
+                Assert.That(hud.Restart.interactable, Is.True);
+                yield return null;
+                AssertViewsMatchBoard();
+
+                Assert.That(TryFindMove(CurrentBoard(), true, out var first, out var second), Is.True);
+                Swipe(touch, 11, first, second);
+                yield return WaitUntilUnlocked();
+                Assert.That(reports, Is.EqualTo(11));
+                Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(9));
+                Assert.That(bootstrap.LevelProgress.Score, Is.GreaterThan(3300));
+                Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
+                Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty);
+                Assert.That(BoardPlayability.HasAnyLegalMove(CurrentBoard()), Is.True);
+                yield return null;
+                AssertViewsMatchBoard();
+            }
+            finally
+            {
+                input.TearDown();
+            }
         }
 
         [UnityTest]
@@ -791,6 +863,23 @@ namespace Match3.Presentation.Tests
             Vector2 point = inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position);
             controller.HandlePointerDown(point);
             controller.HandlePointerUp(point);
+        }
+
+        // Virtual touchscreen events reach Update; this helper never calls the gesture handlers or edits the Board.
+        private void Swipe(Touchscreen touch, int id, GridPosition first, GridPosition second)
+        {
+            Vector2 start = inputCamera.WorldToScreenPoint(boardView.GetTileView(first).transform.position);
+            Vector2 end = inputCamera.WorldToScreenPoint(boardView.GetTileView(second).transform.position);
+            foreach (TouchPhase phase in new[] { TouchPhase.Began, TouchPhase.Moved, TouchPhase.Ended })
+            {
+                InputSystem.QueueStateEvent(touch, new TouchState
+                {
+                    touchId = id, phase = phase, position = phase == TouchPhase.Began ? start : end
+                });
+                InputSystem.Update();
+                typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+                Assert.That(controller.IsInputLocked, Is.EqualTo(phase != TouchPhase.Began));
+            }
         }
 
         private Board CurrentBoard()
