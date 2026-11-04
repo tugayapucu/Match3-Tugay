@@ -200,10 +200,178 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.IsInputLocked, Is.False);
         }
 
+        [TestCase("Initialize")]
+        [TestCase("Disable")]
+        [TestCase("Focus")]
+        public void Gesture_Cancellation_DiscardsPendingInputButAllowsANewPress(string cause)
+        {
+            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            controller.HandlePointerDown(start);
+            if (cause == "Initialize")
+            {
+                controller.Initialize(board, boardView, inputCamera, CreateRunner(new System.Random(1)),
+                    onValidMoveResolved, RecordBusy);
+            }
+            else if (cause == "Disable")
+            {
+                controller.enabled = false;
+                controller.HandlePointerMove(start + Vector2.right * CellPixels());
+                controller.HandlePointerUp(start);
+                controller.enabled = true;
+            }
+            else
+            {
+                typeof(BoardInputController).GetMethod("OnApplicationFocus", Fields).Invoke(controller, new object[] { false });
+            }
+            controller.HandlePointerMove(start + Vector2.right * CellPixels());
+            controller.HandlePointerUp(start);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(busyChanges, Is.Empty);
+            Click(new GridPosition(0, 0));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Update_InitializedPointerSameFrameTap_ProcessesBothEdgesExactlyOnce(bool mouseInput)
+        {
+            var touch = CreateTouchscreen();
+            var mouse = mouseInput ? InputSystem.AddDevice<Mouse>() : null;
+            if (mouse != null)
+            {
+                _ = mouse.press.wasPressedThisFrame;
+            }
+            for (int tap = 0; tap < 2; tap++)
+            {
+                Vector2 point = ScreenPosition(new GridPosition(tap, 0));
+                if (mouse != null)
+                {
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = point, buttons = 1 });
+                    InputSystem.QueueStateEvent(mouse, new MouseState { position = point, buttons = 0 });
+                }
+                else
+                {
+                    InputSystem.QueueStateEvent(touch, new TouchState { touchId = tap + 1, phase = TouchPhase.Began, position = point });
+                    InputSystem.QueueStateEvent(touch, new TouchState { touchId = tap + 1, phase = TouchPhase.Ended, position = point });
+                }
+                InputSystem.Update();
+                PollGestureController();
+                if (tap == 0)
+                {
+                    Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+                    Assert.That(busyChanges, Is.Empty);
+                }
+            }
+            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy" }));
+        }
+
+        [UnityTest]
+        public IEnumerator Update_TouchDisplacedReleaseWithoutMovementPoll_UsesTrueOriginAndRollsBack()
+        {
+            var touch = CreateTouchscreen();
+            var before = ReadTiles();
+            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            Vector2 end = start + Vector2.right * CellPixels() * 1.4f;
+            InputSystem.QueueStateEvent(touch, new TouchState { touchId = 1, phase = TouchPhase.Began, position = start });
+            InputSystem.QueueStateEvent(touch, new TouchState { touchId = 1, phase = TouchPhase.Ended, position = end });
+            InputSystem.Update();
+            PollGestureController();
+
+            var expected = ReadTiles();
+            Assert.That(expected[0, 0], Is.EqualTo(before[1, 0]));
+            Assert.That(expected[1, 0], Is.EqualTo(before[0, 0]));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(controller.IsInputLocked, Is.True);
+            yield return WaitForSwap();
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+        }
+
+        [UnityTest]
+        public IEnumerator Update_HeldSwipePastUnlock_DoesNotRepeatOrBecomeATap()
+        {
+            var touch = CreateTouchscreen();
+            Vector2 start = ScreenPosition(new GridPosition(0, 0));
+            Vector2 end = start + Vector2.right * CellPixels();
+            SendGestureTouch(touch, 1, TouchPhase.Began, start);
+            SendGestureTouch(touch, 1, TouchPhase.Moved, end);
+            Assert.That(controller.IsInputLocked, Is.True);
+            yield return WaitForSwap();
+            SendGestureTouch(touch, 1, TouchPhase.Stationary, end);
+            SendGestureTouch(touch, 1, TouchPhase.Ended, end);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
+            SendGestureTouch(touch, 2, TouchPhase.Began, start);
+            SendGestureTouch(touch, 2, TouchPhase.Ended, start);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+        }
+
+        [Test]
+        public void Update_PointerDeviceChange_CancelsWithoutRearmingHeldInput()
+        {
+            var touch = CreateTouchscreen();
+            Vector2 point = ScreenPosition(new GridPosition(0, 0));
+            SendGestureTouch(touch, 1, TouchPhase.Began, point);
+            var mouse = InputSystem.AddDevice<Mouse>();
+            SendMouseState(mouse, point, 0);
+            SendGestureTouch(touch, 1, TouchPhase.Ended, point);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(busyChanges, Is.Empty);
+            SendGestureTouch(touch, 2, TouchPhase.Began, point);
+            SendGestureTouch(touch, 2, TouchPhase.Ended, point);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+        }
+
+        [Test]
+        public void Update_CancelledTouch_DoesNotCommitATap()
+        {
+            var touch = CreateTouchscreen();
+            Vector2 point = ScreenPosition(new GridPosition(0, 0));
+            SendGestureTouch(touch, 1, TouchPhase.Began, point);
+            SendGestureTouch(touch, 1, TouchPhase.Canceled, point);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(busyChanges, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator Swipe_ThresholdIsCapturedAtPress_AndNextPressUsesChangedCamera()
+        {
+            var cell = new GridPosition(1, 1);
+            Vector2 start = ScreenPosition(cell);
+            float oldSpacing = CellPixels();
+            controller.HandlePointerDown(start);
+            inputCamera.orthographicSize *= 0.5f;
+            controller.HandlePointerMove(start + Vector2.right * oldSpacing * 0.3f);
+            Assert.That(controller.IsInputLocked, Is.True, "The held gesture retains its press-time threshold.");
+            yield return WaitForSwap();
+
+            start = ScreenPosition(cell);
+            controller.HandlePointerDown(start);
+            controller.HandlePointerMove(start + Vector2.right * oldSpacing * 0.3f);
+            Assert.That(controller.IsInputLocked, Is.False, "A new press measures the now-larger cells.");
+            controller.HandlePointerUp(start + Vector2.right * oldSpacing * 0.3f);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
+        }
+
         private float CellPixels()
         {
             return Vector2.Distance(ScreenPosition(new GridPosition(0, 0)), ScreenPosition(new GridPosition(1, 0)));
         }
 
+        private void SendGestureTouch(Touchscreen touch, int id, TouchPhase phase, Vector2 point)
+        {
+            InputSystem.QueueStateEvent(touch, new TouchState { touchId = id, phase = phase, position = point });
+            InputSystem.Update();
+            PollGestureController();
+        }
+
+        private void PollGestureController()
+        {
+            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+        }
     }
 }
