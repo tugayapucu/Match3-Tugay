@@ -788,7 +788,9 @@ namespace Match3.Presentation.Tests
 
         private void Click(GridPosition position)
         {
-            controller.HandlePointerDown(inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position));
+            Vector2 point = inputCamera.WorldToScreenPoint(boardView.GetTileView(position).transform.position);
+            controller.HandlePointerDown(point);
+            controller.HandlePointerUp(point);
         }
 
         private Board CurrentBoard()

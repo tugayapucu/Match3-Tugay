@@ -3,12 +3,14 @@ using System.Collections;
 using Match3.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 namespace Match3.Presentation
 {
     public sealed class BoardInputController : MonoBehaviour
     {
         [SerializeField] private float swapDuration = 0.2f;
+        [SerializeField] private float swipeThresholdFraction = 0.25f;
 
         private Board board;
         private BoardView boardView;
@@ -21,6 +23,12 @@ namespace Match3.Presentation
         // Null means no selection; the controller remembers at most one logical cell.
         private GridPosition? selectedPosition;
         private bool isInputLocked;
+        // A gesture is distinct from the tap selection. Null means no held gesture to finish.
+        private GridPosition? gestureStartPosition;
+        private Vector2 gestureStartScreenPosition;
+        private Pointer gesturePointer;
+        private float gestureThresholdPixels;
+        private bool gestureRejectedUntilRelease;
 
         public GridPosition? SelectedPosition => selectedPosition;
         public bool IsInputLocked => isInputLocked;
@@ -68,6 +76,7 @@ namespace Match3.Presentation
             }
 
             ValidateSwapDuration();
+            ValidateSwipeThresholdFraction();
             this.board = board;
             this.boardView = boardView;
             inputCamera = camera;
@@ -75,6 +84,31 @@ namespace Match3.Presentation
             this.onValidMoveResolved = onValidMoveResolved;
             this.onBusyChanged = onBusyChanged;
             selectedPosition = null;
+            ClearGesture();
+        }
+
+        private void OnEnable()
+        {
+            // ButtonControl initializes frame-edge tracking lazily. Warm the current pointer before its first tap.
+            var pointer = Pointer.current;
+            if (pointer != null)
+            {
+                _ = pointer.press.wasPressedThisFrame;
+            }
+        }
+
+        private void OnDisable()
+        {
+            // A disabled component's running move still owns its lock and finishes its normal cleanup.
+            ClearGesture();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                ClearGesture();
+            }
         }
 
         private void Update()
@@ -84,12 +118,42 @@ namespace Match3.Presentation
                 return;
             }
 
-            // Mouse left-click and the touchscreen's primary touch share this press/position pair.
-            // Primary touch stays pressed until all fingers lift, so extra fingers are not new taps.
             var pointer = Pointer.current;
-            if (pointer != null && pointer.press.wasPressedThisFrame)
+            if (gestureStartPosition.HasValue && pointer != gesturePointer)
             {
-                HandlePointerDown(pointer.position.ReadValue());
+                ClearGesture();
+                return;
+            }
+
+            if (pointer == null)
+            {
+                return;
+            }
+
+            var touchscreen = pointer as Touchscreen;
+            if (touchscreen != null && touchscreen.primaryTouch.phase.ReadValue() == TouchPhase.Canceled)
+            {
+                ClearGesture();
+                return;
+            }
+
+            if (pointer.press.wasPressedThisFrame)
+            {
+                // Touch keeps the true origin even when press and release arrive in one input update.
+                // Mouse uses the position at the press poll; movement wholly between polls is not reconstructed.
+                Vector2 origin = touchscreen != null
+                    ? touchscreen.primaryTouch.startPosition.ReadValue() : pointer.position.ReadValue();
+                HandlePointerDown(origin);
+            }
+
+            // Independent from the press check: a very quick tap can have both edges in the same frame.
+            if (pointer.press.wasReleasedThisFrame)
+            {
+                HandlePointerUp(pointer.position.ReadValue());
+            }
+            else if (pointer.press.isPressed)
+            {
+                HandlePointerMove(pointer.position.ReadValue());
             }
         }
 
@@ -101,6 +165,7 @@ namespace Match3.Presentation
                 return;
             }
 
+            ClearGesture();
             // A tile may have landed since the last physics step; pick its current transform.
             Physics2D.SyncTransforms();
             // The ray converts screen pixels into a world-space query against 2D tile colliders.
@@ -124,13 +189,79 @@ namespace Match3.Presentation
                 return;
             }
 
-            if (!selectedPosition.HasValue)
+            ValidateSwipeThresholdFraction();
+            Vector2 center = inputCamera.WorldToScreenPoint(boardView.GetCellWorldPosition(position));
+            Vector2 neighbour = inputCamera.WorldToScreenPoint(
+                boardView.GetCellWorldPosition(new GridPosition(position.X + 1, position.Y)));
+            float spacing = Vector2.Distance(center, neighbour);
+            if (spacing <= 0f || float.IsNaN(spacing) || float.IsInfinity(spacing))
             {
-                selectedPosition = position;
+                throw new InvalidOperationException("Screen-space cell spacing must be finite and positive.");
+            }
+
+            gestureStartPosition = position;
+            gestureStartScreenPosition = screenPosition;
+            gesturePointer = Pointer.current;
+            gestureThresholdPixels = spacing * swipeThresholdFraction;
+        }
+
+        public void HandlePointerMove(Vector2 screenPosition)
+        {
+            if (!isActiveAndEnabled || board == null || isInputLocked
+                || !gestureStartPosition.HasValue || gestureRejectedUntilRelease)
+            {
                 return;
             }
 
-            TryStartSwap(selectedPosition.Value, position);
+            Vector2 delta = screenPosition - gestureStartScreenPosition;
+            if (Mathf.Max(Mathf.Abs(delta.x), Mathf.Abs(delta.y)) < gestureThresholdPixels)
+            {
+                return;
+            }
+
+            GridPosition first = gestureStartPosition.Value;
+            GridPosition second = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                ? new GridPosition(first.X + (delta.x > 0f ? 1 : -1), first.Y)
+                : new GridPosition(first.X, first.Y + (delta.y > 0f ? 1 : -1));
+            if (!TryStartSwap(first, second))
+            {
+                // Bounds/Empty rejection keeps the old tap selection, with no retries or tap on release.
+                gestureRejectedUntilRelease = true;
+            }
+        }
+
+        public void HandlePointerUp(Vector2 screenPosition)
+        {
+            if (!isActiveAndEnabled || board == null || isInputLocked || !gestureStartPosition.HasValue)
+            {
+                return;
+            }
+
+            // A release can be the first sample that crosses the threshold.
+            HandlePointerMove(screenPosition);
+            if (gestureStartPosition.HasValue && !gestureRejectedUntilRelease)
+            {
+                GridPosition tapped = gestureStartPosition.Value;
+                if (!selectedPosition.HasValue)
+                {
+                    selectedPosition = tapped;
+                }
+                else
+                {
+                    TryStartSwap(selectedPosition.Value, tapped);
+                }
+            }
+
+            ClearGesture();
+        }
+
+        private void ClearGesture()
+        {
+            gestureStartPosition = null;
+            gestureStartScreenPosition = default;
+            gesturePointer = null;
+            gestureThresholdPixels = 0f;
+            gestureRejectedUntilRelease = false;
         }
 
         // True means an animated attempt started, including one that will roll back.
@@ -161,6 +292,7 @@ namespace Match3.Presentation
             // The Board now holds the attempted result; Core decides whether it is a real Match-3 move.
             SwapAnalysis move = SwapValidator.Analyze(board, first, second);
             selectedPosition = first;
+            ClearGesture();
             // Only an accepted adjacent swap is a move; rejected clicks above never reach this point.
             onBusyChanged(true);
             StartCoroutine(FinishSwap(move));
@@ -199,6 +331,15 @@ namespace Match3.Presentation
             isInputLocked = false;
             // Last, so whoever is told "not busy" sees a fully settled controller.
             onBusyChanged(false);
+        }
+
+        private void ValidateSwipeThresholdFraction()
+        {
+            if (swipeThresholdFraction <= 0f || float.IsNaN(swipeThresholdFraction)
+                || float.IsInfinity(swipeThresholdFraction))
+            {
+                throw new InvalidOperationException("Swipe threshold fraction must be finite and positive.");
+            }
         }
 
         private void ValidateSwapDuration()

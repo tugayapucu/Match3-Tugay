@@ -81,13 +81,16 @@ namespace Match3.Presentation.Tests
                 // Inset 0.01 units from each cell edge, including transparent corners of the image.
                 Vector3 world = view.transform.position + new Vector3(corner.x, corner.y, 0f);
                 Vector2 point = inputCamera.WorldToScreenPoint(world);
+                GridPosition? previousSelection = controller.SelectedPosition;
                 QueuePress(touchId, point);
                 yield return null;
                 yield return null;
-                Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
+                Assert.That(controller.SelectedPosition, Is.EqualTo(previousSelection), "Press alone does not commit a tap.");
                 Assert.That(controller.IsInputLocked, Is.False, "Repeated taps on one tile must not start a move.");
                 QueueRelease(touchId++, point);
                 yield return null;
+                yield return null;
+                Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
             }
 
             Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(movesBefore));
@@ -114,10 +117,12 @@ namespace Match3.Presentation.Tests
                 QueuePress(i + 1, point);
                 yield return null;
                 yield return null;
-                Assert.That(controller.SelectedPosition, Is.EqualTo(expected[i]));
+                Assert.That(controller.SelectedPosition, Is.Null);
                 Assert.That(controller.IsInputLocked, Is.False);
                 QueueRelease(i + 1, point);
                 yield return null;
+                yield return null;
+                Assert.That(controller.SelectedPosition, Is.EqualTo(expected[i]));
             }
         }
 
@@ -186,9 +191,11 @@ namespace Match3.Presentation.Tests
             QueuePress(1, tilePoint);
             yield return null;
             yield return null;
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first), "The scene must receive real touch input.");
+            Assert.That(controller.SelectedPosition, Is.Null, "Press must not commit selection.");
             QueueRelease(1, tilePoint);
             yield return null;
+            yield return null;
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first), "The scene must receive the completed real touch tap.");
 
             var before = bootstrap.LevelProgress;
             var button = Read<Button>(hud, "restartButton");

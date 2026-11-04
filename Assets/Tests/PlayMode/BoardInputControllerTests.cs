@@ -13,7 +13,7 @@ using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 namespace Match3.Presentation.Tests
 {
-    public class BoardInputControllerTests
+    public partial class BoardInputControllerTests
     {
         private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic;
         // Short but non-zero, so every resolution stage lasts at least one observable frame.
@@ -143,7 +143,9 @@ namespace Match3.Presentation.Tests
             var first = new GridPosition(0, 0);
             Click(first);
 
-            controller.HandlePointerDown(inputCamera.WorldToScreenPoint(new Vector3(110f, 110f, 0f)));
+            Vector2 outside = inputCamera.WorldToScreenPoint(new Vector3(110f, 110f, 0f));
+            controller.HandlePointerDown(outside);
+            controller.HandlePointerUp(outside);
 
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             Assert.That(controller.IsInputLocked, Is.False);
@@ -180,7 +182,9 @@ namespace Match3.Presentation.Tests
             foreignObject.AddComponent<BoxCollider2D>().size = Vector2.one;
             Physics2D.SyncTransforms();
 
-            controller.HandlePointerDown(inputCamera.WorldToScreenPoint(foreignObject.transform.position));
+            Vector2 foreign = inputCamera.WorldToScreenPoint(foreignObject.transform.position);
+            controller.HandlePointerDown(foreign);
+            controller.HandlePointerUp(foreign);
 
             Assert.That(controller.SelectedPosition, Is.Null);
             Assert.That(controller.IsInputLocked, Is.False);
@@ -369,7 +373,7 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Update_MousePress_UsesPointerHandlingAndDoesNotSwapOnHeldButton()
+        public IEnumerator Update_MouseTap_SelectsOnReleaseAndDoesNotRepeatWhileHeld()
         {
             // Isolated Input System for this test only: no real devices, and input is delivered regardless of
             // Editor/Game view focus. Without it, an unfocused Editor drops the simulated mouse events.
@@ -384,15 +388,18 @@ namespace Match3.Presentation.Tests
                 var before = ReadTiles();
 
                 SendMouseState(mouse, ScreenPosition(first), 1);
-                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                Assert.That(controller.SelectedPosition, Is.Null);
 
-                SendMouseState(mouse, ScreenPosition(second), 1);
-                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                SendMouseState(mouse, ScreenPosition(first), 1);
+                Assert.That(controller.SelectedPosition, Is.Null);
                 Assert.That(controller.IsInputLocked, Is.False);
                 Assert.That(ReadTiles(), Is.EqualTo(before));
 
-                SendMouseState(mouse, ScreenPosition(second), 0);
+                SendMouseState(mouse, ScreenPosition(first), 0);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
                 SendMouseState(mouse, ScreenPosition(second), 1);
+                Assert.That(controller.IsInputLocked, Is.False);
+                SendMouseState(mouse, ScreenPosition(second), 0);
                 Assert.That(controller.IsInputLocked, Is.True);
                 Assert.That(board.GetTile(first), Is.EqualTo(before[second.X, second.Y]));
                 Assert.That(board.GetTile(second), Is.EqualTo(before[first.X, first.Y]));
@@ -409,19 +416,19 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void Update_TouchPress_SelectsOnce_AndDraggingDoesNotSwap()
+        public void Update_TouchTap_SelectsOnReleaseWithoutChangingBoard()
         {
             var touchscreen = CreateTouchscreen();
             var first = new GridPosition(0, 0);
-            var second = new GridPosition(1, 0);
             var before = ReadTiles();
 
             SendTouchState(touchscreen, 1, TouchPhase.Began, first);
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.SelectedPosition, Is.Null);
 
-            SendTouchState(touchscreen, 1, TouchPhase.Moved, second);
-            SendTouchState(touchscreen, 1, TouchPhase.Stationary, second);
-            SendTouchState(touchscreen, 1, TouchPhase.Ended, second);
+            SendTouchState(touchscreen, 1, TouchPhase.Moved, first);
+            SendTouchState(touchscreen, 1, TouchPhase.Stationary, first);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            SendTouchState(touchscreen, 1, TouchPhase.Ended, first);
 
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             Assert.That(controller.IsInputLocked, Is.False);
@@ -440,8 +447,9 @@ namespace Match3.Presentation.Tests
             SendTouchState(touchscreen, 1, TouchPhase.Began, first);
             SendTouchState(touchscreen, 1, TouchPhase.Ended, first);
             SendTouchState(touchscreen, 2, TouchPhase.Began, second);
-            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(controller.IsInputLocked, Is.False);
             SendTouchState(touchscreen, 2, TouchPhase.Ended, second);
+            Assert.That(controller.IsInputLocked, Is.True);
             yield return WaitForSwap();
 
             AssertStable();
@@ -451,6 +459,8 @@ namespace Match3.Presentation.Tests
             Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }));
 
             SendTouchState(touchscreen, 3, TouchPhase.Began, first);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            SendTouchState(touchscreen, 3, TouchPhase.Ended, first);
             Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             Assert.That(controller.IsInputLocked, Is.False);
         }
@@ -466,12 +476,8 @@ namespace Match3.Presentation.Tests
 
             // Complete the real refill routine and tap before any intervening physics step.
             Assert.That(boardView.AnimateRefill(spawns, 0f).MoveNext(), Is.False);
-            InputSystem.QueueStateEvent(touchscreen, new TouchState
-            {
-                touchId = 1, phase = TouchPhase.Began, position = ScreenPosition(cell)
-            });
-            InputSystem.Update();
-            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+            SendTouchState(touchscreen, 1, TouchPhase.Began, cell);
+            SendTouchState(touchscreen, 1, TouchPhase.Ended, cell);
 
             Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
             Assert.That(controller.IsInputLocked, Is.False);
@@ -490,8 +496,9 @@ namespace Match3.Presentation.Tests
             SendTouchState(touchscreen, 1, TouchPhase.Began, first);
             SendTouchState(touchscreen, 1, TouchPhase.Ended, first);
             SendTouchState(touchscreen, 2, TouchPhase.Began, second);
-            Assert.That(controller.IsInputLocked, Is.True);
+            Assert.That(controller.IsInputLocked, Is.False);
             SendTouchState(touchscreen, 2, TouchPhase.Ended, second);
+            Assert.That(controller.IsInputLocked, Is.True);
             yield return WaitForSwap();
 
             AssertSettled();
@@ -514,16 +521,18 @@ namespace Match3.Presentation.Tests
             SendTouchState(touchscreen, 1, TouchPhase.Ended, first);
             SendTouchState(touchscreen, 3, TouchPhase.Began, new GridPosition(0, 1));
 
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(controller.SelectedPosition, Is.Null, "Primary release waits for all fingers to lift.");
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(ReadTiles(), Is.EqualTo(before));
             Assert.That(busyChanges, Is.Empty);
 
             SendTouchState(touchscreen, 2, TouchPhase.Ended, second);
             SendTouchState(touchscreen, 3, TouchPhase.Ended, new GridPosition(0, 1));
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
             SendTouchState(touchscreen, 4, TouchPhase.Began, second);
-            Assert.That(controller.IsInputLocked, Is.True, "A fresh tap works once all earlier fingers lifted.");
+            Assert.That(controller.IsInputLocked, Is.False);
             SendTouchState(touchscreen, 4, TouchPhase.Ended, second);
+            Assert.That(controller.IsInputLocked, Is.True, "A fresh completed tap works once all earlier fingers lifted.");
             yield return WaitForSwap();
             AssertSettled();
         }
@@ -553,6 +562,8 @@ namespace Match3.Presentation.Tests
 
             SendTouchState(touchscreen, 3, TouchPhase.Ended, ignored);
             SendTouchState(touchscreen, 4, TouchPhase.Began, ignored);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            SendTouchState(touchscreen, 4, TouchPhase.Ended, ignored);
             Assert.That(controller.SelectedPosition, Is.EqualTo(ignored));
         }
 
@@ -570,7 +581,7 @@ namespace Match3.Presentation.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public void Update_SimultaneousMouseAndTouchPress_UsesOnlyTheCurrentPointer(bool mouseLast)
+        public void Update_SimultaneousMouseAndTouchTaps_UsesOnlyTheCurrentPointer(bool mouseLast)
         {
             var touchscreen = CreateTouchscreen();
             var mouse = InputSystem.AddDevice<Mouse>();
@@ -598,6 +609,21 @@ namespace Match3.Presentation.Tests
             Assert.That(touchscreen.press.wasPressedThisFrame, Is.True);
             typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
 
+            Assert.That(controller.SelectedPosition, Is.Null);
+            touchState.phase = TouchPhase.Ended;
+            mouseState.buttons = 0;
+            if (mouseLast)
+            {
+                InputSystem.QueueStateEvent(touchscreen, touchState);
+                InputSystem.QueueStateEvent(mouse, mouseState);
+            }
+            else
+            {
+                InputSystem.QueueStateEvent(mouse, mouseState);
+                InputSystem.QueueStateEvent(touchscreen, touchState);
+            }
+            InputSystem.Update();
+            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
             Assert.That(controller.SelectedPosition, Is.EqualTo(mouseLast ? mousePosition : touchPosition));
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(busyChanges, Is.Empty);
@@ -1458,7 +1484,9 @@ namespace Match3.Presentation.Tests
 
         private void Click(GridPosition position)
         {
-            controller.HandlePointerDown(ScreenPosition(position));
+            Vector2 point = ScreenPosition(position);
+            controller.HandlePointerDown(point);
+            controller.HandlePointerUp(point);
         }
 
         private Vector2 ScreenPosition(GridPosition position)
@@ -1478,7 +1506,10 @@ namespace Match3.Presentation.Tests
         {
             touchInput = new InputTestFixture();
             touchInput.Setup();
-            return InputSystem.AddDevice<Touchscreen>();
+            var touchscreen = InputSystem.AddDevice<Touchscreen>();
+            // Same-frame tests cover an initialized device, as after normal gameplay polling.
+            _ = touchscreen.press.wasPressedThisFrame;
+            return touchscreen;
         }
 
         private void SendTouchState(Touchscreen touchscreen, int id, TouchPhase phase, GridPosition position)
