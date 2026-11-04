@@ -495,6 +495,12 @@ namespace Match3.Presentation
             }
         }
 
+        // Coordinate conversion only: virtual grid cells outside the Board are allowed (e.g. to measure spacing).
+        public Vector3 GetCellWorldPosition(GridPosition position)
+        {
+            return GetWorldPosition(position);
+        }
+
         private Vector3 GetWorldPosition(GridPosition position)
         {
             Transform root = tileRoot != null ? tileRoot : transform;

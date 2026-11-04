@@ -45,6 +45,21 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
+        public void GetCellWorldPosition_ConvertsVirtualNeighboursWithoutReadingTiles()
+        {
+            boardObject.transform.position = new Vector3(3f, -2f, 1f);
+            boardObject.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            boardObject.transform.localScale = Vector3.one * 2f;
+            // No Board has been rendered. The conversion must still provide adjacent virtual centers.
+            Assert.That(Vector3.Distance(boardView.GetCellWorldPosition(new GridPosition(0, 0)),
+                new Vector3(3f, -2f, 1f)), Is.LessThan(0.0001f));
+            Assert.That(Vector3.Distance(boardView.GetCellWorldPosition(new GridPosition(1, 0)),
+                new Vector3(3f, 1f, 1f)), Is.LessThan(0.0001f));
+            Assert.That(Vector3.Distance(boardView.GetCellWorldPosition(new GridPosition(-1, 0)),
+                new Vector3(3f, -5f, 1f)), Is.LessThan(0.0001f));
+        }
+
+        [Test]
         public void PlaceSpecialViews_ReplacesConsumedViewsInPlaceAndKeepsSurvivors()
         {
             var board = CreateBoard(3, 1);
