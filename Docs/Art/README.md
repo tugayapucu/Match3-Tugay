@@ -1,5 +1,17 @@
 # Art Provenance
 
+## Phase 15 — Selection highlight
+
+`Assets/Art/Tiles/PrismaticEnergy/SelectionHighlight.png` is original geometric artwork made for this project. It uses no reference images, external artwork or third-party assets. Its reproducible source is [GenerateSelectionHighlight.py](GenerateSelectionHighlight.py), using only Python's standard library; run `python Docs/Art/GenerateSelectionHighlight.py` from the repository root.
+
+The 512×512 RGBA canvas is transparent except for four mirrored L-shaped corner brackets. Each arm is 90 px long with a 22 px overall stroke (4.30% of a cell), comprising a 14 px white core and a 4 px dark border on each side (RGB 24, 29, 39). The 10 px outer inset gives a 492×492 px visible extent: 0.9609375 world units at 512 PPU. The generator writes lossless PNG data directly; no image generation service or reference sheet is involved.
+
+Import: Sprite / Single, centred pivot, Full Rect mesh, 512 PPU, alpha transparency on, bilinear filtering, mipmaps on, no default compression. Android explicitly uses uncompressed RGBA32 at a maximum size of 512. `Tile.prefab` displays it through an inactive-by-default child SpriteRenderer on the tile's sorting layer at order 1; the normal renderer stays at order 0. It has no collider or script and selection never changes the tile root's scale or colour.
+
+Visual acceptance remains provisional: Editor review covers production tiles at 32, 48, 64 and 120 px per cell; physical S23 readability and touch approval belong to the later device steps. This asset does not establish final device approval.
+
+Step 8 review noted that Nova Gem's permanent gold corner brackets resemble the selection cue. Keep the approved artwork for now; explicitly compare selected and unselected Nova Gems during the Step 10 human S23 review, checking whether an unselected Nova reads as selected and whether the two bracket sets are confusing. Reconsider the cue shape only if that review identifies a readability problem.
+
 ## Phase 11 — Prismatic Energy tile art
 
 Custom AI-assisted artwork created specifically for this project from an original visual direction ("Prismatic Energy"). It is not copied from Royal Match or any other game.
