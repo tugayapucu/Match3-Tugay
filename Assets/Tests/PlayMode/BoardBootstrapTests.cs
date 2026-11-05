@@ -209,6 +209,17 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Start_MissingSelectionHighlight_FailsBeforeCreatingTheBoard()
+        {
+            typeof(TileView).GetField("selectionHighlight", Fields).SetValue(tileTemplate.GetComponent<TileView>(), null);
+            LogAssert.Expect(LogType.Exception, new Regex("Assign a child selection highlight"));
+            yield return StartBootstrap();
+            Assert.That(bootstrap.LevelProgress, Is.Null);
+            Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
+            Assert.That(controller.IsInputLocked, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator ValidMoveResolved_LevelStillPlaying_KeepsInputEnabled()
         {
             Set("startingMoveCount", 2);
@@ -229,10 +240,13 @@ namespace Match3.Presentation.Tests
             Set("goalTarget", 3);
             yield return StartBootstrap();
 
+            Click(new GridPosition(0, 0));
+            Assert.That(boardView.GetTileView(new GridPosition(0, 0)).transform.Find("SelectionHighlight").gameObject.activeSelf, Is.True);
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
             Assert.That(controller.enabled, Is.False);
+            AssertNoSelectionHighlights();
             Assert.That(hud.OutcomePanel.activeSelf, Is.True);
             Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
             Assert.That(hud.Goal.text, Is.EqualTo("3/3"));
@@ -245,10 +259,13 @@ namespace Match3.Presentation.Tests
             Set("goalTarget", 3);
             yield return StartBootstrap();
 
+            Click(new GridPosition(0, 0));
+            Assert.That(boardView.GetTileView(new GridPosition(0, 0)).transform.Find("SelectionHighlight").gameObject.activeSelf, Is.True);
             ReportValidMove(TileType.Green, TileType.Green, TileType.Green);
 
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
             Assert.That(controller.enabled, Is.False);
+            AssertNoSelectionHighlights();
             Assert.That(hud.OutcomePanel.activeSelf, Is.True);
             Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Out of Moves"));
             Assert.That(hud.Moves.text, Is.EqualTo("0"));
@@ -267,6 +284,7 @@ namespace Match3.Presentation.Tests
             Assert.That(firstLevel.MovesRemaining, Is.EqualTo(4));
             Click(new GridPosition(0, 0));
             Assert.That(controller.SelectedPosition, Is.Not.Null);
+            Assert.That(boardView.GetTileView(new GridPosition(0, 0)).transform.Find("SelectionHighlight").gameObject.activeSelf, Is.True);
             Assert.That(hud.Restart.interactable, Is.True, "Settled while Playing: restart is offered.");
 
             hud.Restart.onClick.Invoke();
@@ -367,6 +385,7 @@ namespace Match3.Presentation.Tests
             yield return null;
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(64));
             AssertViewsMatchBoard();
+            AssertNoSelectionHighlights();
 
             // Play continues on the recovered board through the same controller path: one more legal move.
             yield return PlayValidMove();
@@ -432,6 +451,7 @@ namespace Match3.Presentation.Tests
                 }
                 Assert.That(reports, Is.EqualTo(10));
                 Assert.That(observedRecoveryWhileLocked, Is.True, "The callback assertions must have run.");
+                AssertNoSelectionHighlights();
                 Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
                 Assert.That(controller.SelectedPosition, Is.Null);
                 Assert.That(hud.Restart.interactable, Is.True);
@@ -775,6 +795,7 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(controller.SelectedPosition, Is.Null);
 
+            AssertNoSelectionHighlights();
             Assert.That(ReadTiles(), Is.EqualTo(startingTiles), "Same seed, same starting board.");
             Assert.That(MatchFinder.FindMatches(CurrentBoard()), Is.Empty);
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true).Length, Is.EqualTo(Size * Size),
@@ -885,6 +906,14 @@ namespace Match3.Presentation.Tests
         private Board CurrentBoard()
         {
             return (Board)typeof(BoardBootstrap).GetField("board", Fields).GetValue(bootstrap);
+        }
+
+        private void AssertNoSelectionHighlights()
+        {
+            foreach (var view in boardObject.GetComponentsInChildren<TileView>(true))
+            {
+                Assert.That(view.transform.Find("SelectionHighlight").gameObject.activeInHierarchy, Is.False);
+            }
         }
 
         // The shipped level's board and palette, framed so every cell can be clicked.

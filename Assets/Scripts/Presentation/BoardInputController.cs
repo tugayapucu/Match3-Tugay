@@ -22,6 +22,8 @@ namespace Match3.Presentation
         private Action<bool> onBusyChanged;
         // Null means no selection; the controller remembers at most one logical cell.
         private GridPosition? selectedPosition;
+        // A visual cache only; never used to decide which cell is selected.
+        private TileView highlightedView;
         private bool isInputLocked;
         // A gesture is distinct from the tap selection. Null means no held gesture to finish.
         private GridPosition? gestureStartPosition;
@@ -85,6 +87,7 @@ namespace Match3.Presentation
             this.onBusyChanged = onBusyChanged;
             selectedPosition = null;
             ClearGesture();
+            RefreshSelectionCue();
         }
 
         private void OnEnable()
@@ -95,12 +98,14 @@ namespace Match3.Presentation
             {
                 _ = pointer.press.wasPressedThisFrame;
             }
+            RefreshSelectionCue();
         }
 
         private void OnDisable()
         {
             // A disabled component's running move still owns its lock and finishes its normal cleanup.
             ClearGesture();
+            RefreshSelectionCue();
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -147,6 +152,7 @@ namespace Match3.Presentation
             }
 
             // Independent from the press check: a very quick tap can have both edges in the same frame.
+            // Primary touch stays pressed until all fingers lift; extra fingers are not new taps.
             if (pointer.press.wasReleasedThisFrame)
             {
                 HandlePointerUp(pointer.position.ReadValue());
@@ -253,6 +259,25 @@ namespace Match3.Presentation
             }
 
             ClearGesture();
+            RefreshSelectionCue();
+        }
+
+        private void RefreshSelectionCue()
+        {
+            // A re-render may have deactivated/replaced or destroyed the old visual. Always discard the
+            // cache, even when Unity's destroyed-object null comparison is true; it is not selection state.
+            if (highlightedView != null)
+            {
+                highlightedView.SetSelected(false);
+            }
+            highlightedView = null;
+
+            if (boardView != null && selectedPosition.HasValue && !isInputLocked && isActiveAndEnabled)
+            {
+                var view = boardView.GetTileView(selectedPosition.Value);
+                view.SetSelected(true);
+                highlightedView = view;
+            }
         }
 
         private void ClearGesture()
@@ -293,6 +318,7 @@ namespace Match3.Presentation
             SwapAnalysis move = SwapValidator.Analyze(board, first, second);
             selectedPosition = first;
             ClearGesture();
+            RefreshSelectionCue();
             // Only an accepted adjacent swap is a move; rejected clicks above never reach this point.
             onBusyChanged(true);
             StartCoroutine(FinishSwap(move));
@@ -329,6 +355,7 @@ namespace Match3.Presentation
             // the rollback for an invalid move, or the whole cascade chain for a valid one.
             selectedPosition = null;
             isInputLocked = false;
+            RefreshSelectionCue();
             // Last, so whoever is told "not busy" sees a fully settled controller.
             onBusyChanged(false);
         }
