@@ -52,6 +52,13 @@ namespace Match3.Presentation.Tests
             // Inactive so clones start inactive too; BoardView activates them after Initialize.
             root.SetActive(false);
             var view = root.AddComponent<TileView>();
+            var highlight = new GameObject("SelectionHighlight");
+            highlight.transform.SetParent(root.transform, false);
+            var highlightRenderer = highlight.AddComponent<SpriteRenderer>();
+            highlightRenderer.sprite = SpriteFor(TileType.Red);
+            highlightRenderer.sortingOrder = 1;
+            highlight.SetActive(false);
+            typeof(TileView).GetField("selectionHighlight", Fields).SetValue(view, highlightRenderer);
             foreach (var slot in SpriteFields)
             {
                 typeof(TileView).GetField(slot.Value, Fields).SetValue(view, SpriteFor(slot.Key));

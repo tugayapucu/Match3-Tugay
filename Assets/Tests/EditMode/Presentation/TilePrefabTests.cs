@@ -53,9 +53,10 @@ namespace Match3.Presentation.Tests
         public void Prefab_HasNoTemporaryLabel()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            Assert.That(prefab.transform.childCount, Is.Zero, "The Phase 10 SpecialLabel child is gone.");
-            Assert.That(prefab.GetComponentsInChildren<Component>(true).Length, Is.EqualTo(4),
-                "Transform, SpriteRenderer, TileView and BoxCollider2D only.");
+            Assert.That(prefab.transform.childCount, Is.EqualTo(1));
+            Assert.That(prefab.transform.Find("SpecialLabel"), Is.Null);
+            Assert.That(prefab.GetComponentsInChildren<Component>(true).Length, Is.EqualTo(6),
+                "Root's four components plus the highlight's Transform and SpriteRenderer.");
             Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(prefab), Is.Zero);
         }
     }

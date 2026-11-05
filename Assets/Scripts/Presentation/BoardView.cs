@@ -41,6 +41,7 @@ namespace Match3.Presentation
             ValidateConfiguredDuration(clearDuration, nameof(clearDuration));
             ValidateConfiguredDuration(specialActivationDuration, nameof(specialActivationDuration));
             ValidateConfiguredDuration(wispFlightDuration, nameof(wispFlightDuration));
+            tilePrefab.ValidateSelectionHighlight();
 
             foreach (TileType tileType in palette)
             {

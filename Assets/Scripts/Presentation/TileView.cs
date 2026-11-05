@@ -22,6 +22,7 @@ namespace Match3.Presentation
         [SerializeField] private Sprite propellerSprite;
         [SerializeField] private Sprite tntSprite;
         [SerializeField] private Sprite lightBallSprite;
+        [SerializeField] private SpriteRenderer selectionHighlight;
 
         // Cached to avoid repeated GetComponent calls.
         private SpriteRenderer spriteRenderer;
@@ -40,7 +41,24 @@ namespace Match3.Presentation
         public void Initialize(GridPosition position, TileType tileType)
         {
             SetTileType(tileType);
+            SetSelected(false);
             Position = position;
+        }
+
+        // Only the child visual changes. The controller owns logical selection.
+        public void SetSelected(bool selected)
+        {
+            ValidateSelectionHighlight();
+            selectionHighlight.gameObject.SetActive(selected);
+        }
+
+        public void ValidateSelectionHighlight()
+        {
+            if (selectionHighlight == null || selectionHighlight.transform.parent != transform
+                || selectionHighlight.sprite == null)
+            {
+                throw new InvalidOperationException("Assign a child selection highlight with a sprite before displaying selection.");
+            }
         }
 
         public void SetTileType(TileType tileType)

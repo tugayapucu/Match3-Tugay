@@ -91,7 +91,8 @@ namespace Match3.Presentation.Tests
                 Assert.That(view.Position, Is.EqualTo(new GridPosition(2, 3)));
                 Assert.That(view.Type, Is.EqualTo(TileType.VerticalRocket));
                 Assert.That(view.GetComponent<SpriteRenderer>().sprite, Is.SameAs(TestTiles.SpriteFor(TileType.VerticalRocket)));
-                Assert.That(view.transform.childCount, Is.Zero, "No temporary label child remains.");
+                Assert.That(view.transform.childCount, Is.EqualTo(1));
+                Assert.That(view.transform.Find("SpecialLabel"), Is.Null, "No temporary label remains.");
             }
             finally
             {
