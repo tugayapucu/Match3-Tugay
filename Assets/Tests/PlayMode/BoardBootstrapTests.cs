@@ -802,9 +802,12 @@ namespace Match3.Presentation.Tests
                 "Exactly one view per cell: the previous level's views are gone.");
             AssertViewsMatchBoard();
 
-            // Playable: a click selects.
+            // Input works: select and cancel, leaving no selection for the next move helper.
             Click(new GridPosition(0, 0));
             Assert.That(controller.SelectedPosition, Is.EqualTo(new GridPosition(0, 0)));
+            Click(new GridPosition(0, 0));
+            Assert.That(controller.SelectedPosition, Is.Null);
+            AssertNoSelectionHighlights();
         }
 
         private void AssertViewsMatchBoard()

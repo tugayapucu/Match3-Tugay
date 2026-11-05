@@ -3,6 +3,7 @@ using System.Collections;
 using Match3.Core;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using TouchPhase = UnityEngine.InputSystem.TouchPhase;
@@ -41,7 +42,7 @@ namespace Match3.Presentation.Tests
             boardView.GetTileView(empty).SetTileType(TileType.Empty);
             Click(first);
             var selected = boardView.GetTileView(first);
-            foreach (var tapped in new[] { first, new GridPosition(2, 2), empty })
+            foreach (var tapped in new[] { new GridPosition(2, 2), empty })
             {
                 Click(tapped);
                 Assert.That(Cue(selected).activeInHierarchy, Is.True);
@@ -60,6 +61,76 @@ namespace Match3.Presentation.Tests
                 Assert.That(controller.IsInputLocked, Is.False);
             }
             Assert.That(busyChanges, Is.Empty);
+        }
+
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void SelectionCue_SameTileTapCancelsOnRelease_WithoutMove_AndNextTapCanSelectAnywhere(bool mouseInput, bool special)
+        {
+            var touch = CreateTouchscreen();
+            var mouse = mouseInput ? InputSystem.AddDevice<Mouse>() : null;
+            if (mouse != null)
+            {
+                _ = mouse.press.wasPressedThisFrame;
+            }
+            UseLevel(5, TileType.Green, 10);
+            SetBoard(new ScriptedRandom(2, 3, 5), "GBY", "GPO", special ? "TGG" : "RGG");
+            var first = new GridPosition(0, 0);
+            var view = boardView.GetTileView(first);
+            var before = ReadTiles();
+            int touchId = 0;
+            Action<GridPosition, bool> send = (cell, pressed) =>
+            {
+                if (mouse != null)
+                {
+                    SendMouseState(mouse, ScreenPosition(cell), (ushort)(pressed ? 1 : 0));
+                }
+                else
+                {
+                    if (pressed) { touchId++; }
+                    SendTouchState(touch, touchId, pressed ? TouchPhase.Began : TouchPhase.Ended, cell);
+                }
+            };
+
+            send(first, true);
+            send(first, false);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(Cue(view).activeInHierarchy, Is.True);
+
+            send(first, true);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first), "Press alone must not cancel.");
+            Assert.That(Cue(view).activeInHierarchy, Is.True);
+            if (mouse != null) { SendMouseState(mouse, ScreenPosition(first), 1); }
+            else { SendTouchState(touch, touchId, TouchPhase.Stationary, first); }
+            Assert.That(Cue(view).activeInHierarchy, Is.True, "Holding below the threshold keeps the cue.");
+
+            send(first, false);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            AssertNoSelectionCues();
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(busyChanges, Is.Empty);
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(boardView.GetTileView(first), Is.SameAs(view));
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
+
+            // A duplicate release cannot reselect the old tile. A fresh, distant tap can select freely.
+            controller.HandlePointerUp(ScreenPosition(first));
+            Assert.That(controller.SelectedPosition, Is.Null);
+            var next = new GridPosition(2, 2);
+            send(next, true);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            send(next, false);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(next));
+            Assert.That(Cue(boardView.GetTileView(next)).activeInHierarchy, Is.True);
+            Assert.That(Cue(view).activeSelf, Is.False);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+            Assert.That(busyChanges, Is.Empty);
+            Assert.That(reportedResults, Is.Empty);
+            AssertLevel(5, 0, 0, LevelStatus.Playing);
         }
 
         [UnityTest]

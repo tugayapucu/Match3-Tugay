@@ -71,7 +71,7 @@ dead-board recovery
 By the end of Phase 15:
 
 1. a player can swap adjacent tiles with a natural directional swipe;
-2. the existing two-tap selection/swap rules still work after tap classification, with selection and second-tap swaps now committed on release;
+2. two-tap selection/swap works on release, including the same-tile tap-to-cancel adjustment approved during Step 10;
 3. swipe and two-tap both feed the same existing swap path;
 4. the currently selected tile has a clear but small visual cue;
 5. selection feedback does not change gameplay rules;
@@ -95,7 +95,7 @@ Do not add:
 - drag-the-gem-following-the-finger visuals;
 - swipe trails;
 - haptics unless separately approved after device testing;
-- selection-rule changes;
+- selection-rule changes beyond the same-tile tap-to-cancel adjustment approved during Step 10;
 - hint systems;
 - hover states;
 - keyboard/gamepad interaction;
@@ -304,7 +304,7 @@ Return true when an animated swap attempt starts, including an invalid-match swa
 
 Commit the new logical selection and clear the cue/gesture inside the accepted shared path, before busy callbacks and animation. Do not make those changes in the caller after the method returns: callbacks and coroutine startup must already observe the correct state. This is start/rejection ordering, not a new exception-recovery mechanism.
 
-After tap classification, two-tap selection/swap rules must remain unchanged. Model B deliberately moves selection and second-tap execution from press to release.
+After tap classification, preserve two-tap selection/swap rules except for the Step 10 approved same-tile tap-to-cancel adjustment. Model B deliberately moves selection and second-tap execution from press to release.
 
 Important existing behavior:
 
@@ -665,6 +665,7 @@ Required tests:
 
 - first press does not select; release below threshold selects;
 - adjacent second press does not attempt a move; its release below threshold starts the swap;
+- a second classified tap on the selected tile clears selection and cue on release, without a move or busy notification (approved during Step 10);
 - non-adjacent tap retains original selection;
 - outside tap keeps selection;
 - valid/invalid attempted swap clears selection after completion;
@@ -832,6 +833,12 @@ If discomfort is observed, identify the concrete failure before changing layout.
 
 Do not redesign the whole board merely because generic Android guidance says 48 dp.
 
+### Approved adjustment from human review — 2026-11-06
+
+The developer found that an accidental first selection could not be cancelled. A classified tap on the already-selected tile now cancels selection on release, hides the cue, and spends no move. Press/hold alone does not cancel. Non-adjacent/outside taps and rejected swipes still retain selection; a swipe from the selected tile still follows the normal swipe path. The controller owns this rule, with no Core, prefab or layout change.
+
+Restart confirmation was also requested but explicitly deferred to a later step; it is recorded in `Docs/KnownIssues/RestartConfirmation.md` and is not implemented in this adjustment. The developer's S23 finger review confirmed same-tile cancellation works, Nova's gold corners and white selection cue are clearly different, and the first finger tap after relaunch works. Step 10 is complete with these qualitative, single-device limits; the initial automated tap miss remains documented without a claimed root-cause fix. Evidence and build details are in `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`. Step 11 has not started.
+
 ---
 
 # Step 11 — Device Regression Matrix
@@ -849,7 +856,12 @@ On the S23 verify:
 ### Two-tap
 - select on release;
 - adjacent move starts on release;
+- tapping the selected tile again cancels on release without spending a move;
 - retained selection.
+
+### First finger tap after cold launch
+
+Repeat about five cold launches on the S23. Fully close and reopen the game, wait for the board to be ready, then use a real finger for the first tile tap without a warm-up gesture. Record each result separately; where ADB is available, a changed app process ID can support that a fresh process was launched. ADB taps do not substitute for these finger checks. This follows the single automated no-cue observation from Step 10; that observation's cause is unresolved, while the developer's one finger relaunch check worked. This repeated check is planned, not yet performed.
 
 ### Selection cue
 - visible;
@@ -964,7 +976,7 @@ After validation:
 If resolved:
 - mark resolved;
 - describe cue;
-- confirm selection rules unchanged;
+- explain the same-tile cancellation approved during Step 10 and confirm the other selection rules remain unchanged;
 - mention S23 validation.
 
 Record the human-finger S23 result in the appropriate Phase documentation.
@@ -1023,7 +1035,7 @@ Phase 15 completes only when:
 - [ ] selection feedback exists;
 - [ ] child highlight is off by default and leaves the root renderer/scale unchanged;
 - [ ] highlight asset is original or compatibly licensed, with provenance recorded;
-- [ ] selection rules unchanged;
+- [ ] same-tile tap cancels selection on release without a move; other selection rules remain unchanged;
 - [ ] selection cue leaves collider/picking footprint unchanged;
 - [ ] visual cue removed before swap/special/clear animation;
 - [ ] cue clears after move/restart/outcome/re-render;

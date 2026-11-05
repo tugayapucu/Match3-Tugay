@@ -252,6 +252,11 @@ namespace Match3.Presentation
                 {
                     selectedPosition = tapped;
                 }
+                else if (selectedPosition.Value == tapped)
+                {
+                    // A second classified tap cancels selection without starting a swap or spending a move.
+                    selectedPosition = null;
+                }
                 else
                 {
                     TryStartSwap(selectedPosition.Value, tapped);

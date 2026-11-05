@@ -118,11 +118,10 @@ namespace Match3.Presentation.Tests
             Assert.That(ReadTiles(), Is.EqualTo(before));
         }
 
-        [TestCase(0, 0)]
         [TestCase(1, 1)]
         [TestCase(2, 0)]
         [TestCase(0, 2)]
-        public void HandlePointerDown_InvalidSecondSelection_KeepsFirstSelectionAndBoard(int x, int y)
+        public void HandlePointerDown_NonAdjacentSecondSelection_KeepsFirstSelectionAndBoard(int x, int y)
         {
             var first = new GridPosition(0, 0);
             var before = ReadTiles();
@@ -1208,7 +1207,9 @@ namespace Match3.Presentation.Tests
             Click(first);
             Click(new GridPosition(x, y));
 
-            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            GridPosition? expectedSelection = new GridPosition(x, y) == first ? (GridPosition?)null : first;
+            Assert.That(controller.SelectedPosition, Is.EqualTo(expectedSelection));
+            Assert.That(Cue(boardView.GetTileView(first)).activeInHierarchy, Is.EqualTo(expectedSelection.HasValue));
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(ReadTiles(), Is.EqualTo(before));
             Assert.That(reportedResults, Is.Empty);

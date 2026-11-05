@@ -90,7 +90,11 @@ namespace Match3.Presentation.Tests
                 QueueRelease(touchId++, point);
                 yield return null;
                 yield return null;
-                Assert.That(controller.SelectedPosition, Is.EqualTo(cell));
+                GridPosition? expectedAfterTap = previousSelection.HasValue ? (GridPosition?)null : cell;
+                Assert.That(controller.SelectedPosition, Is.EqualTo(expectedAfterTap),
+                    "Each corner tap must pick this cell: select it, then cancel it on the next tap.");
+                Assert.That(view.transform.Find("SelectionHighlight").gameObject.activeInHierarchy,
+                    Is.EqualTo(expectedAfterTap.HasValue));
             }
 
             Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(movesBefore));
