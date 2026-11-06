@@ -810,6 +810,10 @@ Record:
 
 Do not claim universal handset perfection.
 
+### Step 9 result — 2026-11-05
+
+The developer compared 0.20, 0.25 and 0.35 with a real finger on the S23, one development build each. They noticed no difference. At about 120 px per cell, those fractions are about 24, 30 and 42 px. All three sit between tap jitter and a deliberate swipe. 0.25 is kept as the existing default. This is a conservative choice, not a measured optimum, and it was made on one device. Details are in [the Step 9 threshold record](../Validation/PHASE15_STEP9_THRESHOLD_TUNING.md).
+
 ---
 
 # Step 10 — Human Touch Comfort Review
@@ -996,6 +1000,16 @@ If resolved:
 Record the human-finger S23 result in the appropriate Phase documentation.
 
 Do not claim all-device comfort.
+
+### Step 14 result — 2026-11-06
+
+- `SelectionFeedback.md` is marked resolved. It describes the cue, the release-time tap commit, the approved same-tile cancellation and the unchanged rules, with S23 human and device evidence.
+- `MobileLayoutAndPicking.md` records the S23 human comfort review; other devices remain unverified.
+- `LockedAfterException.md` names `TryStartSwap` as the lock site and adds the Step 12 warning about deactivating the controller mid-move.
+- The Step 12 first-tap hypothesis was corrected: `Update` also queries the pointer each frame.
+- The human-finger S23 results are recorded in the Step 9 and Step 10 results above.
+
+No code changed. Step 15 has not started.
 
 ---
 
