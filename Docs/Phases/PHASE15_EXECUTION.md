@@ -837,7 +837,7 @@ Do not redesign the whole board merely because generic Android guidance says 48 
 
 The developer found that an accidental first selection could not be cancelled. A classified tap on the already-selected tile now cancels selection on release, hides the cue, and spends no move. Press/hold alone does not cancel. Non-adjacent/outside taps and rejected swipes still retain selection; a swipe from the selected tile still follows the normal swipe path. The controller owns this rule, with no Core, prefab or layout change.
 
-Restart confirmation was also requested but explicitly deferred to a later step; it is recorded in `Docs/KnownIssues/RestartConfirmation.md` and is not implemented in this adjustment. The developer's S23 finger review confirmed same-tile cancellation works, Nova's gold corners and white selection cue are clearly different, and the first finger tap after relaunch works. Step 10 is complete with these qualitative, single-device limits; the initial automated tap miss remains documented without a claimed root-cause fix. Evidence and build details are in `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`. Step 11 has not started.
+Restart confirmation was also requested but explicitly deferred to a later step; it is recorded in `Docs/KnownIssues/RestartConfirmation.md` and is not implemented in this adjustment. The developer's S23 finger review confirmed same-tile cancellation works, Nova's gold corners and white selection cue are clearly different, and the first finger tap after relaunch works. Step 10 is complete with these qualitative, single-device limits; the initial automated tap miss remains documented without a claimed root-cause fix. Evidence and build details are in `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`. The later Step 11 results are recorded below.
 
 ---
 
@@ -861,7 +861,7 @@ On the S23 verify:
 
 ### First finger tap after cold launch
 
-Repeat about five cold launches on the S23. Fully close and reopen the game, wait for the board to be ready, then use a real finger for the first tile tap without a warm-up gesture. Record each result separately; where ADB is available, a changed app process ID can support that a fresh process was launched. ADB taps do not substitute for these finger checks. This follows the single automated no-cue observation from Step 10; that observation's cause is unresolved, while the developer's one finger relaunch check worked. This repeated check is planned, not yet performed.
+Repeat about five cold launches on the S23. Fully close and reopen the game, wait for the board to be ready, then use a real finger for the first tile tap without a warm-up gesture. Record each result separately; where ADB is available, a changed app process ID can support that a fresh process was launched. ADB taps do not substitute for these finger checks. This follows the single automated no-cue observation from Step 10; that observation's cause is unresolved, while the developer's one finger relaunch check worked. Completed on 2026-11-06: five distinct cold launches with changed process IDs, no ADB touches before the human tap, and five reports of "First tap worked". This small sample does not establish a root cause or a universal guarantee.
 
 ### Selection cue
 - visible;
@@ -886,6 +886,12 @@ A press begun while busy must remain ignored if held after unlock. A swipe that 
 On Win/Loss:
 - gestures do nothing;
 - no stale cue suggests interaction remains available.
+
+---
+
+### Step 11 result — 2026-11-06
+
+The S23 functional matrix passed: native Android swipes/taps, release timing, cancellation/retention, held-input rejection, special chains, Win/Loss and Play Again. A temporary seed-93 scene built with the current input code also passed recovery, continued play and Restart. Exact synchronous recovery ordering remains supported by the existing PlayMode callback test; device input was held across that boundary rather than injected inside it. The normal seed-42 APK and clean Windows64 Editor state were restored. No production files changed. Results, evidence paths, Android log diagnostics and validation limits are in [the Step 11 device report](../Validation/PHASE15_STEP11_DEVICE_REGRESSION.md). Stop for review; Step 12 has not started.
 
 ---
 
