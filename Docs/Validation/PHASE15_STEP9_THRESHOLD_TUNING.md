@@ -13,7 +13,7 @@ measured optimum or objectively safest value. Step 10 has not started.
 at press time. A swipe starts when the larger absolute displacement axis reaches
 that threshold. It is not a fixed pixel or dp threshold.
 
-ADB confirmed Samsung Galaxy S23 SM-S911B, serial RFCW40R6CVH, Android 16,
+ADB confirmed Samsung Galaxy S23 SM-S911B, Android 16,
 1080×2340. Reported density: physical 480, override 450. USB transport is used.
 At approximately 120 px cell spacing, the candidates below correspond to about
 24, 30 and 42 px respectively; these calculations do not establish finger comfort.
