@@ -3,6 +3,7 @@ using System.Collections;
 using Match3.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 namespace Match3.Presentation
@@ -31,6 +32,8 @@ namespace Match3.Presentation
         private Pointer gesturePointer;
         private float gestureThresholdPixels;
         private bool gestureRejectedUntilRelease;
+        private Pointer enabledPointer;
+        private uint enabledAtInputUpdate;
 
         public GridPosition? SelectedPosition => selectedPosition;
         public bool IsInputLocked => isInputLocked;
@@ -98,6 +101,9 @@ namespace Match3.Presentation
             {
                 _ = pointer.press.wasPressedThisFrame;
             }
+            // A UI onClick can enable us before Update in the same input update. Its edges belong to UI.
+            enabledPointer = pointer;
+            enabledAtInputUpdate = InputState.updateCount;
             RefreshSelectionCue();
         }
 
@@ -124,6 +130,11 @@ namespace Match3.Presentation
             }
 
             var pointer = Pointer.current;
+            if (pointer == enabledPointer && InputState.updateCount == enabledAtInputUpdate)
+            {
+                return;
+            }
+
             if (gestureStartPosition.HasValue && pointer != gesturePointer)
             {
                 ClearGesture();

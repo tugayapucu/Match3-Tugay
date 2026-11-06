@@ -12,6 +12,58 @@ namespace Match3.Presentation.Tests
 {
     public partial class BoardInputControllerTests
     {
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void Update_EnableAfterUiTapInSameInputUpdate_RequiresFreshPress(bool mouseInput, bool retainedSelection)
+        {
+            var touch = CreateTouchscreen();
+            var mouse = mouseInput ? InputSystem.AddDevice<Mouse>() : null;
+            var cell = new GridPosition(0, 0);
+            if (mouse != null) _ = mouse.press.wasPressedThisFrame;
+            if (retainedSelection) Click(cell);
+            controller.enabled = false;
+            Vector2 point = ScreenPosition(cell);
+            if (mouseInput)
+            {
+                InputSystem.QueueStateEvent(mouse, new UnityEngine.InputSystem.LowLevel.MouseState { position = point, buttons = 1 });
+                InputSystem.QueueStateEvent(mouse, new UnityEngine.InputSystem.LowLevel.MouseState { position = point, buttons = 0 });
+            }
+            else
+            {
+                InputSystem.QueueStateEvent(touch, new UnityEngine.InputSystem.LowLevel.TouchState { touchId = 1, phase = TouchPhase.Began, position = point });
+                InputSystem.QueueStateEvent(touch, new UnityEngine.InputSystem.LowLevel.TouchState { touchId = 1, phase = TouchPhase.Ended, position = point });
+            }
+            InputSystem.Update();
+            var pointer = mouseInput ? (Pointer)mouse : touch;
+            Assert.That(pointer.press.wasPressedThisFrame, Is.True);
+            Assert.That(pointer.press.wasReleasedThisFrame, Is.True);
+
+            // A UI onClick enables the board before its Update runs in this same input update.
+            controller.enabled = true;
+            typeof(BoardInputController).GetMethod("Update", Fields).Invoke(controller, null);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(retainedSelection ? (GridPosition?)cell : null),
+                "The UI's tap must neither select a tile nor cancel an existing selection.");
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(busyChanges, Is.Empty);
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(Cue(boardView.GetTileView(cell)).activeInHierarchy, Is.EqualTo(retainedSelection));
+
+            // A later fresh press/release still works.
+            if (mouseInput)
+            {
+                SendMouseState(mouse, point, 1);
+                SendMouseState(mouse, point, 0);
+            }
+            else
+            {
+                SendTouchState(touch, 2, TouchPhase.Began, cell);
+                SendTouchState(touch, 2, TouchPhase.Ended, cell);
+            }
+            Assert.That(controller.SelectedPosition, Is.EqualTo(retainedSelection ? null : (GridPosition?)cell));
+        }
+
         [Test]
         public void SelectionCue_FirstTouchReleaseShowsCue_AndDoesNotChangePickingFootprint()
         {
