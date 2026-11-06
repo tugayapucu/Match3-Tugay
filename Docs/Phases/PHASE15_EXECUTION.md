@@ -976,6 +976,10 @@ must all reach the intended controller path with no duplicate moves.
 
 Console must contain only declared expected messages.
 
+### Step 13 result — 2026-11-06
+
+Passed. EditMode 603/603; PlayMode 233 passed, 0 failed, 3 explicit frame-rate skips. The Console held only the five messages tests declare with `LogAssert.Expect`, plus test-runner housekeeping. Mouse two-click, touch two-tap and touch swipe each reach the controller's real `Update` path with exactly one attempt. The mouse test now asserts this too (`e8b2b95`, test-only). Production code is unchanged since `07f663c`. Details are in [the Step 13 regression record](../Validation/PHASE15_STEP13_FULL_REGRESSION.md). Step 14 has not started.
+
 ---
 
 # Step 14 — Documentation
