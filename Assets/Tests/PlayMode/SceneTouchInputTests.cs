@@ -56,6 +56,30 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Start_InitialDefinitionPreservesLevel1ConfigurationAndBoard()
+        {
+            var definition = Read<LevelDefinition>(bootstrap, "initialLevel");
+            Assert.That(definition.Seed, Is.EqualTo(42));
+            Assert.That(definition.StartingMoveCount, Is.EqualTo(20));
+            Assert.That(definition.GoalTileType, Is.EqualTo(TileType.Red));
+            Assert.That(definition.GoalTarget, Is.EqualTo(25));
+            Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(20));
+            Assert.That(bootstrap.LevelProgress.GoalTileType, Is.EqualTo(TileType.Red));
+            Assert.That(bootstrap.LevelProgress.GoalTarget, Is.EqualTo(25));
+            var expected = BoardGenerator.GeneratePlayable(8, 8, new[]
+            {
+                TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange
+            }, 42);
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 8; x++)
+                {
+                    var cell = new GridPosition(x, y);
+                    Assert.That(boardView.GetTileView(cell).Type, Is.EqualTo(expected.GetTile(cell)), cell.ToString());
+                }
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Picking_CellCornersAcceptTouch_WhileOutsideBoardDoesNot()
         {
             var cell = new GridPosition(0, 0);
@@ -115,7 +139,7 @@ namespace Match3.Presentation.Tests
             };
             for (int i = 0; i < offsets.Length; i++)
             {
-                bootstrap.RestartLevel();
+                bootstrap.StartLevel(Read<LevelDefinition>(bootstrap, "initialLevel"), _ => { });
                 TileView origin = boardView.GetTileView(new GridPosition(0, 0));
                 Vector2 point = inputCamera.WorldToScreenPoint(origin.transform.position + offsets[i]);
                 QueuePress(i + 1, point);
@@ -306,7 +330,7 @@ namespace Match3.Presentation.Tests
         {
             Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(before), "The real UI button must request restart.");
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(Read<int>(bootstrap, "startingMoveCount")));
+            Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(Read<LevelDefinition>(bootstrap, "initialLevel").StartingMoveCount));
             Assert.That(bootstrap.LevelProgress.Score, Is.Zero);
             Assert.That(bootstrap.LevelProgress.GoalProgress, Is.Zero);
             Assert.That(controller.enabled, Is.True);

@@ -165,13 +165,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.BoardBootstrap
   width: 8
   height: 8
-  seed: 42
+  initialLevel:
+    startingMoveCount: 20
+    goalTileType: 1
+    goalTarget: 25
+    seed: 42
   palette: 010000000200000003000000040000000500000006000000
   fallDuration: 0.15
   refillDuration: 0.15
-  startingMoveCount: 20
-  goalTileType: 1
-  goalTarget: 25
   pointsPerClearedTile: 100
   boardView: {fileID: 1255034524}
   inputController: {fileID: 1255034526}
@@ -2133,6 +2134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.BoardInputController
   swapDuration: 0.2
+  swipeThresholdFraction: 0.25
 --- !u!1 &1438188190
 GameObject:
   m_ObjectHideFlags: 0

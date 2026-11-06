@@ -17,7 +17,7 @@ namespace Match3.Presentation.Tests
     // The real composition root: configuration reaches LevelProgress, its handler ends the level's input,
     // and restart rebuilds the whole session. Exact move-by-move rules are covered with scripted boards
     // in BoardInputControllerTests.
-    public class BoardBootstrapTests
+    public partial class BoardBootstrapTests
     {
         private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic;
         private const int Size = 5;
@@ -45,6 +45,7 @@ namespace Match3.Presentation.Tests
         private BoardBootstrap bootstrap;
         private Camera inputCamera;
         private TestHud hud;
+        private LevelDefinition definition;
 
         [SetUp]
         public void SetUp()
@@ -73,6 +74,8 @@ namespace Match3.Presentation.Tests
             bootstrapObject = new GameObject("BootstrapTest");
             bootstrapObject.SetActive(false);
             bootstrap = bootstrapObject.AddComponent<BoardBootstrap>();
+            definition = new LevelDefinition(20, TileType.Red, 25, 42);
+            Set("initialLevel", definition);
             Set("boardView", boardView);
             Set("inputController", controller);
             Set("inputCamera", inputCamera);
@@ -80,7 +83,7 @@ namespace Match3.Presentation.Tests
             Set("width", Size);
             Set("height", Size);
             Set("palette", new[] { TileType.Red, TileType.Green, TileType.Blue });
-            Set("goalTileType", TileType.Red);
+            ConfigureLevel(goalTileType: TileType.Red);
             Set("fallDuration", 0.05f);
             Set("refillDuration", 0.05f);
         }
@@ -99,8 +102,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Start_CreatesALevelFromTheConfiguration()
         {
-            Set("startingMoveCount", 7);
-            Set("goalTarget", 12);
+            ConfigureLevel(startingMoveCount: 7);
+            ConfigureLevel(goalTarget: 12);
 
             yield return StartBootstrap();
 
@@ -122,8 +125,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator ValidMove_HudUpdatesWhenTheMoveFinishes_AndRestartIsUnavailableUntilThen()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             Assert.That(TryFindMove(CurrentBoard(), true, out var first, out var second), Is.True, "Expected a valid move.");
 
@@ -153,8 +156,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator InvalidMove_LeavesTheHudUnchanged()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             Assert.That(TryFindMove(CurrentBoard(), false, out var first, out var second), Is.True, "Expected an invalid swap.");
 
@@ -173,7 +176,7 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Start_GoalTypeNotInPalette_FailsBeforeCreatingTheBoard()
         {
-            Set("goalTileType", TileType.Purple);
+            ConfigureLevel(goalTileType: TileType.Purple);
             LogAssert.Expect(LogType.Exception, new Regex("Purple is not in the palette"));
 
             yield return StartBootstrap();
@@ -222,8 +225,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator ValidMoveResolved_LevelStillPlaying_KeepsInputEnabled()
         {
-            Set("startingMoveCount", 2);
-            Set("goalTarget", 5);
+            ConfigureLevel(startingMoveCount: 2);
+            ConfigureLevel(goalTarget: 5);
             yield return StartBootstrap();
 
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
@@ -236,8 +239,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator ValidMoveResolved_GoalReached_WinsAndDisablesInput()
         {
-            Set("startingMoveCount", 2);
-            Set("goalTarget", 3);
+            ConfigureLevel(startingMoveCount: 2);
+            ConfigureLevel(goalTarget: 3);
             yield return StartBootstrap();
 
             Click(new GridPosition(0, 0));
@@ -255,8 +258,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator ValidMoveResolved_LastMoveWithoutGoal_LosesAndDisablesInput()
         {
-            Set("startingMoveCount", 1);
-            Set("goalTarget", 3);
+            ConfigureLevel(startingMoveCount: 1);
+            ConfigureLevel(goalTarget: 3);
             yield return StartBootstrap();
 
             Click(new GridPosition(0, 0));
@@ -274,8 +277,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_WhilePlaying_ResetsBoardAndProgress()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
             var firstLevel = bootstrap.LevelProgress;
@@ -297,8 +300,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Start_StartingSnapshot_IsAnIndependentCopyThatPlayDoesNotChange()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
 
@@ -314,8 +317,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_RecreatesTheSameStartingBoardAndANewSnapshot()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
             var firstSnapshot = StartingSnapshot();
@@ -553,8 +556,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_AfterWon_StartsPlayableAgain()
         {
-            Set("startingMoveCount", 2);
-            Set("goalTarget", 3);
+            ConfigureLevel(startingMoveCount: 2);
+            ConfigureLevel(goalTarget: 3);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
@@ -570,8 +573,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_AfterLost_StartsPlayableAgain()
         {
-            Set("startingMoveCount", 1);
-            Set("goalTarget", 3);
+            ConfigureLevel(startingMoveCount: 1);
+            ConfigureLevel(goalTarget: 3);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Green, TileType.Green, TileType.Green);
@@ -587,8 +590,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator PlayAgain_AfterWon_UsesTheSameRestartPath()
         {
-            Set("startingMoveCount", 2);
-            Set("goalTarget", 3);
+            ConfigureLevel(startingMoveCount: 2);
+            ConfigureLevel(goalTarget: 3);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
@@ -604,13 +607,13 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_Twice_StaysCleanAndReportsEachMoveOnce()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var startingTiles = ReadTiles();
 
-            bootstrap.RestartLevel();
-            bootstrap.RestartLevel();
+            StartConfiguredLevel();
+            StartConfiguredLevel();
             yield return null;
             AssertFreshLevel(startingTiles, 5);
 
@@ -623,8 +626,8 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_DuringAMove_ThrowsAndTheMoveFinishesNormally()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var level = bootstrap.LevelProgress;
             var board = CurrentBoard();
@@ -635,7 +638,7 @@ namespace Match3.Presentation.Tests
             // The HUD never offers it; calling it anyway is a programming error and throws.
             Assert.That(hud.Restart.interactable, Is.False);
 
-            Assert.Throws<InvalidOperationException>(() => bootstrap.RestartLevel());
+            Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
 
             // Nothing was replaced: the running move still owns the same level and board.
             Assert.That(bootstrap.LevelProgress, Is.SameAs(level));
@@ -651,15 +654,15 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator RestartLevel_InvalidConfiguration_ThrowsAndKeepsTheCurrentLevel()
         {
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 50);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 50);
             yield return StartBootstrap();
             var level = bootstrap.LevelProgress;
             var board = CurrentBoard();
             var tiles = ReadTiles();
-            Set("startingMoveCount", 0);
+            ConfigureLevel(startingMoveCount: 0);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => bootstrap.RestartLevel());
+            Assert.Throws<ArgumentOutOfRangeException>(() => StartConfiguredLevel());
 
             Assert.That(bootstrap.LevelProgress, Is.SameAs(level));
             Assert.That(CurrentBoard(), Is.SameAs(board));
@@ -673,9 +676,9 @@ namespace Match3.Presentation.Tests
             var colors = new[] { TileType.Red, TileType.Green, TileType.Blue,
                 TileType.Yellow, TileType.Purple, TileType.Orange };
             Set("palette", colors);
-            Set("seed", 42);
-            Set("startingMoveCount", 5);
-            Set("goalTarget", 1000);
+            ConfigureLevel(seed: 42);
+            ConfigureLevel(startingMoveCount: 5);
+            ConfigureLevel(goalTarget: 1000);
             yield return StartBootstrap();
             var previousBoards = new List<TileType[,]>();
             var previousScores = new List<int>();
@@ -686,7 +689,7 @@ namespace Match3.Presentation.Tests
             {
                 if (session > 0)
                 {
-                    bootstrap.RestartLevel();
+                    StartConfiguredLevel();
                     yield return null;
                     Assert.That(bootstrap.LevelProgress.Score, Is.Zero);
                 }
@@ -716,7 +719,7 @@ namespace Match3.Presentation.Tests
                     Click(first);
                     Click(second);
                     Assert.That(controller.IsInputLocked, Is.True);
-                    Assert.Throws<InvalidOperationException>(() => bootstrap.RestartLevel());
+                    Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
 
                     // During the first fall, only the remote target outside takeoff has lost its old view.
                     bool observedTarget = false;
@@ -925,9 +928,9 @@ namespace Match3.Presentation.Tests
             Set("width", 8);
             Set("height", 8);
             Set("palette", new[] { TileType.Red, TileType.Green, TileType.Blue, TileType.Yellow, TileType.Purple, TileType.Orange });
-            Set("seed", 93);
-            Set("startingMoveCount", startingMoveCount);
-            Set("goalTarget", goalTarget);
+            ConfigureLevel(seed: 93);
+            ConfigureLevel(startingMoveCount: startingMoveCount);
+            ConfigureLevel(goalTarget: goalTarget);
             cameraObject.transform.position = new Vector3(203.5f, 203.5f, -10f);
             inputCamera.orthographicSize = 8f;
         }
@@ -995,6 +998,19 @@ namespace Match3.Presentation.Tests
             }
 
             return tiles;
+        }
+
+        private void ConfigureLevel(int? startingMoveCount = null, TileType? goalTileType = null,
+            int? goalTarget = null, int? seed = null)
+        {
+            definition = new LevelDefinition(startingMoveCount ?? definition.StartingMoveCount,
+                goalTileType ?? definition.GoalTileType, goalTarget ?? definition.GoalTarget, seed ?? definition.Seed);
+            Set("initialLevel", definition);
+        }
+
+        private void StartConfiguredLevel()
+        {
+            bootstrap.StartLevel(definition, _ => { });
         }
 
         private void Set(string field, object value)

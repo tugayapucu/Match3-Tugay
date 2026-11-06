@@ -11,8 +11,8 @@ namespace Match3.Presentation
         // Board generation settings, editable in the Inspector.
         [SerializeField] private int width = 8;
         [SerializeField] private int height = 8;
-        // Same seed + same palette order => same board every run.
-        [SerializeField] private int seed = 42;
+        // Standalone startup only, until GameFlow owns launch in Step 8. No current-definition copy is kept.
+        [SerializeField] private LevelDefinition initialLevel = new LevelDefinition(20, TileType.Red, 25, 42);
         [SerializeField] private TileType[] palette =
         {
             TileType.Red, TileType.Green, TileType.Blue,
@@ -23,10 +23,7 @@ namespace Match3.Presentation
         [SerializeField] private float fallDuration = 0.15f;
         [SerializeField] private float refillDuration = 0.15f;
 
-        // Level rules: how many valid moves the player has, the collection goal, and the score per cleared tile.
-        [SerializeField] private int startingMoveCount = 20;
-        [SerializeField] private TileType goalTileType = TileType.Red;
-        [SerializeField] private int goalTarget = 25;
+        // Scoring remains a game-wide rule.
         [SerializeField] private int pointsPerClearedTile = 100;
 
         // The view that will display the generated board; assign it in the Inspector.
@@ -46,9 +43,12 @@ namespace Match3.Presentation
         // only when it actually replaces a board, so a game without recovery replays exactly as before.
         private System.Random refillRandom;
         private LevelProgress levelProgress;
+        private Action<LevelStatus> onLevelEnded;
+        private bool inputAvailable = true;
 
-        // The rules state of the current level; null until Start has run, replaced on every restart.
+        // Null until a session is created; replaced on every successful StartLevel, including same-level retry.
         public LevelProgress LevelProgress => levelProgress;
+        public bool IsBusy => inputController != null && inputController.IsInputLocked;
 
         // Unity calls Start once, before the first frame, after every object's Awake.
         private void Start()
@@ -59,20 +59,38 @@ namespace Match3.Presentation
                 Application.targetFrameRate = 60;
             }
 
-            StartLevel();
+            // A caller may already have supplied a session before this component's Start.
+            if (levelProgress == null)
+            {
+                StartLevel(initialLevel, _ => { });
+            }
         }
 
-        // Starts the level again in place: a fresh board from the same seed (so the same starting board),
-        // fresh moves, score and goal, and input enabled again. Allowed whenever the board is settled,
-        // in any status (Playing, Won or Lost); rejected while a move is still animating.
-        public void RestartLevel()
+        // Flow availability is separate from the resolving move's lock. Disabling the component does not stop
+        // its coroutine; a terminal level can never be re-enabled by this gate.
+        public void SetInputAvailable(bool available)
         {
-            StartLevel();
+            if (inputController == null)
+            {
+                throw new InvalidOperationException("Assign a BoardInputController before gating input.");
+            }
+
+            inputAvailable = available;
+            ApplyInputAvailability();
         }
 
-        // Builds a complete level session. Used both at startup and on restart, so both follow the same path.
-        private void StartLevel()
+        // The same supplied definition creates a deterministic fresh session. Navigation belongs to the caller.
+        public void StartLevel(LevelDefinition definition, Action<LevelStatus> onLevelEnded)
         {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (onLevelEnded == null)
+            {
+                throw new ArgumentNullException(nameof(onLevelEnded));
+            }
             if (boardView == null)
             {
                 throw new InvalidOperationException("Assign a BoardView before starting.");
@@ -100,29 +118,33 @@ namespace Match3.Presentation
             }
 
             // A cross-setting rule only this class can check: a goal colour that never spawns could never be won.
-            if (Array.IndexOf(palette, goalTileType) < 0)
+            if (Array.IndexOf(palette, definition.GoalTileType) < 0)
             {
-                throw new InvalidOperationException($"The goal tile type {goalTileType} is not in the palette.");
+                throw new InvalidOperationException($"The goal tile type {definition.GoalTileType} is not in the palette.");
             }
 
             // Inspector values a move would otherwise read only after input locks: fail here, before the first move.
             boardView.ValidateConfiguration(palette);
 
-            // Restart clicks come back here. Assigned (not added), so restarting never stacks handlers.
-            levelHud.Initialize(RestartLevel);
-
             // Build and validate the new session first, so a bad setting fails before the current level is touched.
-            var newProgress = new LevelProgress(startingMoveCount, goalTileType, goalTarget, pointsPerClearedTile);
+            var newProgress = new LevelProgress(definition.StartingMoveCount, definition.GoalTileType,
+                definition.GoalTarget, pointsPerClearedTile);
             // Stable and playable: no match now and at least one legal move.
-            var newBoard = BoardGenerator.GeneratePlayable(width, height, palette, seed);
+            var newBoard = BoardGenerator.GeneratePlayable(width, height, palette, definition.Seed);
             var newStartingBoard = new Board(newBoard.Width, newBoard.Height);
             newStartingBoard.CopyTilesFrom(newBoard);
             // Recreate both independent streams per session: targeting draws must never advance refill.
-            var newRefillRandom = new System.Random(seed);
-            var targetingRandom = new System.Random(unchecked(seed ^ 0x5EED1234));
+            var newRefillRandom = new System.Random(definition.Seed);
+            var targetingRandom = new System.Random(unchecked(definition.Seed ^ 0x5EED1234));
             var resolution = new BoardResolutionRunner(
                 newBoard, boardView, palette, newRefillRandom, fallDuration, refillDuration, targetingRandom);
 
+            // Preserve today's standalone HUD actions until the approved flow UI replaces their routing.
+            // Both supply the same definition again; callbacks are replaced, never accumulated.
+            levelHud.Initialize(() => StartLevel(definition, onLevelEnded));
+            // Cycle enabled input so OnEnable re-arms the same-update UI-tap guard for the new session.
+            inputController.enabled = false;
+            this.onLevelEnded = onLevelEnded;
             levelProgress = newProgress;
             board = newBoard;
             startingBoard = newStartingBoard;
@@ -133,8 +155,7 @@ namespace Match3.Presentation
             // Initialize replaces the callback (it is never added twice) and clears any selection.
             inputController.Initialize(
                 board, boardView, inputCamera, resolution, HandleValidMoveResolved, HandleBusyChanged);
-            // A finished level disabled input; the new level is playable again.
-            inputController.enabled = true;
+            ApplyInputAvailability();
             levelHud.Show(levelProgress);
             levelHud.SetRestartAvailable(true);
         }
@@ -149,7 +170,9 @@ namespace Match3.Presentation
             // per-move lock; the controller still finishes its own cleanup after this returns.
             if (levelProgress.Status != LevelStatus.Playing)
             {
-                inputController.enabled = false;
+                ApplyInputAvailability();
+                // Synchronous notification while FinishSwap still owns the lock. Never navigate here.
+                onLevelEnded(levelProgress.Status);
                 return;
             }
 
@@ -167,6 +190,12 @@ namespace Match3.Presentation
         private void HandleBusyChanged(bool isBusy)
         {
             levelHud.SetRestartAvailable(!isBusy);
+        }
+
+        private void ApplyInputAvailability()
+        {
+            inputController.enabled = inputAvailable && levelProgress != null
+                && levelProgress.Status == LevelStatus.Playing;
         }
     }
 }
