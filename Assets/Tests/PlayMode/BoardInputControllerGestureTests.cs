@@ -532,6 +532,49 @@ namespace Match3.Presentation.Tests
             Assert.That(busyChanges, Is.Empty);
         }
 
+        // Only the finger that began the primary touch writes its position. If an extra finger leaked into it,
+        // these full-cell moves would read as a swipe from the origin.
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Update_SecondFingerMoving_NeverDragsTheTrackedGestureIntoASwap(bool primaryLiftsFirst)
+        {
+            var touch = CreateTouchscreen();
+            var origin = new GridPosition(0, 0);
+            Vector2 start = ScreenPosition(origin);
+            var before = ReadTiles();
+
+            SendGestureTouch(touch, 1, TouchPhase.Began, start);
+            SendGestureTouch(touch, 2, TouchPhase.Began, ScreenPosition(new GridPosition(1, 0)));
+            if (primaryLiftsFirst)
+            {
+                // The primary touch is orphaned: still pressed, its position frozen, until the last finger lifts.
+                SendGestureTouch(touch, 1, TouchPhase.Ended, start);
+            }
+
+            Vector2 last = default;
+            foreach (var cell in new[] { new GridPosition(1, 1), new GridPosition(2, 1), new GridPosition(0, 1) })
+            {
+                last = ScreenPosition(cell);
+                SendGestureTouch(touch, 2, TouchPhase.Moved, last);
+                Assert.That(controller.IsInputLocked, Is.False, "An extra finger's movement must not start a swipe.");
+                Assert.That(controller.SelectedPosition, Is.Null);
+            }
+
+            if (!primaryLiftsFirst)
+            {
+                SendGestureTouch(touch, 1, TouchPhase.Ended, start);
+                Assert.That(controller.SelectedPosition, Is.Null, "The tap waits until every finger has lifted.");
+            }
+
+            SendGestureTouch(touch, 2, TouchPhase.Ended, last);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(origin), "One tap on the primary's press-start cell.");
+            Assert.That(Cue(boardView.GetTileView(origin)).activeInHierarchy, Is.True);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(busyChanges, Is.Empty);
+            Assert.That(reportedResults, Is.Empty);
+            Assert.That(ReadTiles(), Is.EqualTo(before));
+        }
+
         [UnityTest]
         public IEnumerator Swipe_ThresholdIsCapturedAtPress_AndNextPressUsesChangedCamera()
         {
