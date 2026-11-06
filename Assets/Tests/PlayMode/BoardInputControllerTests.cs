@@ -405,7 +405,13 @@ namespace Match3.Presentation.Tests
 
                 yield return WaitForSwap();
 
+                // One idle poll after unlock: the earlier release must not start a second attempt.
+                SendMouseState(mouse, ScreenPosition(second), 0);
                 Assert.That(controller.SelectedPosition, Is.Null);
+                Assert.That(controller.IsInputLocked, Is.False);
+                Assert.That(busyChanges, Is.EqualTo(new[] { "busy", "free" }), "Exactly one attempt for one two-click.");
+                Assert.That(reportedResults, Is.Empty, "This swap makes no match, so nothing is reported.");
+                Assert.That(ReadTiles(), Is.EqualTo(before), "The invalid swap rolled back.");
                 AssertViewsMatchBoard();
             }
             finally
