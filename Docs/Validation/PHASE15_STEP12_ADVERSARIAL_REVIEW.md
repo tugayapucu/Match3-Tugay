@@ -62,16 +62,23 @@ In 1.20, the **first** query of `ButtonControl.wasPressedThisFrame` on a control
 compares the current value with the previous frame's value. A press that spans
 frames is detected. A press **and** release inside the same input update is not.
 After that first query the control tracks both edges, including same-update taps.
-`OnEnable` primes only the pointer that is `Pointer.current` at that moment.
 
-If the touch control was not primed when the first tap arrived, an ADB
-`input tap` would be missed, because its down and up land in one update. A human
-tap spans several frames, so it would work. That matches the evidence: one missed
-automated first tap, five human first taps that worked on cold launch, and later
-automated taps that worked.
+`OnEnable` primes `Pointer.current`, and `Update` queries it again on every
+unlocked frame. So a touch control can only be unprimed when the first tap arrives
+on a pointer that no earlier frame queried. One example: the touchscreen becomes
+`Pointer.current`, or is added, only with that first touch. (Correction,
+Step 14: an earlier version of this section implied that `OnEnable` was the only
+priming.)
 
-This explains the pattern; it is not a reproduced cause. Why the control might be
-unprimed on that launch is not established. For players it matters only if a
+In that situation, an ADB `input tap` would be missed, because its down and up land
+in one update. A human tap spans several frames, so it would work. That matches the
+evidence: one missed automated first tap, five human first taps that worked on cold
+launch, and later automated taps that worked. Phase 12 saw the same pattern:
+`MobileLayoutAndPicking.md` records that "the earlier fast ADB tap attempt was
+inconclusive", while deliberate 80 ms ADB presses worked.
+
+This explains the pattern; it is not a reproduced cause. Whether the S23's
+touchscreen really is unqueried before the first touch is not established. For players it matters only if a
 complete tap fits inside one long frame. No production change is proposed. To test
 the hypothesis later: on cold launch, send about five first taps by ADB and see
 whether only automated first taps miss.
