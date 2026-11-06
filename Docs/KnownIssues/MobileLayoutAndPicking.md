@@ -1,6 +1,6 @@
 # Mobile layout and tile picking
 
-Status: Layout implemented and picking reviewed in Phase 12 Steps 3–5; basic S23 device checks passed in Step 10. Human touch-comfort review remains.
+Status: Layout implemented and picking reviewed in Phase 12 Steps 3–5; basic S23 device checks passed in Phase 12 Step 10. The human touch-comfort review was completed on the S23 in Phase 15 Step 10; other devices remain unverified.
 
 - Layout: SafeAreaLayout positions the HUD inside the usable screen area. BoardCameraFitter frames the fixed 8.2×8.2 world envelope between the actual HUD/Restart edges. Portrait camera clipping from the old fixed-size camera is resolved.
 - Picking: retain the 64 BoxCollider2D targets and the shared mouse/primary-touch Physics2D raycast. Tile.prefab now uses root scale 1 and a centred 1×1 collider, covering each full cell without dead gaps. Transparent sprite padding still separates the visible gems. Real-scene touch tests verify cell corners, points just inside either side of shared borders, and outside-board rejection. A point exactly on a shared border may select either neighbour; no particular winner is promised. No measured picking problem justifies replacing this with grid mapping.
@@ -18,8 +18,14 @@ Win/Loss panels and Play Again were checked on the device, and the real cutout
 reservation was visible. Core-predicted normal cells matched 1,916 observations
 over two deterministic phone routes.
 
-Finger comfort at every corner, one-handed Restart comfort, and other devices
-remain unverified. Keep the full-cell colliders and per-permitted-press sync;
+Phase 15 Step 10 added the human finger review on the S23. Centre, edge and corner
+cells, two-tap, swipes and one-handed use were reported comfortable. Restart was
+easy to reach, possibly too easy; a confirmation is deferred in
+[RestartConfirmation.md](RestartConfirmation.md). This is one person on one device,
+and other devices remain unverified. Details:
+`Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`.
+
+Keep the full-cell colliders and per-permitted-press sync;
 `Physics2D.SyncTransforms` cost was not profiled. The cosmetic
 [tall-screen composition](TallScreenComposition.md) and
 [outcome dimmer strips](OutcomeDimSafeArea.md) remain deferred to UI polish.
