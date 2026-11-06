@@ -1042,48 +1042,63 @@ No test counts/tuning logs in notebook.
 
 Phase 15 completes only when:
 
-- [ ] swipe semantics defined;
-- [ ] threshold representation documented;
-- [ ] screen-space cell spacing measured at press time through a read-only Presentation seam;
-- [ ] dominant-axis threshold uses >=, with horizontal direction on exact dx/dy ties;
-- [ ] dominant direction deterministic;
-- [ ] one swipe triggers at most one attempt;
-- [ ] swipe routes into existing swap path;
-- [ ] shared helper rejects out-of-bounds positions before locking and reports whether an animated attempt started;
-- [ ] rejected attempts preserve selection/cue; accepted attempts commit selection and clear cue/gesture before callbacks/animation;
-- [ ] Core has no swipe dependency;
-- [ ] valid swipe works;
-- [ ] invalid swipe uses existing rollback;
-- [ ] special swipe uses existing rules;
-- [ ] two-tap still works;
-- [ ] first selection and adjacent second-tap swap commit on release;
-- [ ] release-frame displacement can produce a swipe without an intermediate movement poll;
-- [ ] same-frame press/release behavior defined and tested without relying on ADB observations;
-- [ ] mouse still works;
-- [ ] selection feedback exists;
-- [ ] child highlight is off by default and leaves the root renderer/scale unchanged;
-- [ ] highlight asset is original or compatibly licensed, with provenance recorded;
-- [ ] same-tile tap cancels selection on release without a move; other selection rules remain unchanged;
-- [ ] selection cue leaves collider/picking footprint unchanged;
-- [ ] visual cue removed before swap/special/clear animation;
-- [ ] cue clears after move/restart/outcome/re-render;
-- [ ] busy/terminal states block swipe;
-- [ ] move start clears gesture state; no consumed flag persists through lock; no-active-gesture release does nothing;
-- [ ] busy-started presses and held pointers after unlock require a fresh press; only off-board gestures remain consumed until release;
-- [ ] Initialize/Restart, disable/outcome, focus loss and pointer-device change cancel gestures;
-- [ ] dead-board recovery remains compatible;
-- [ ] S23 threshold tuned with a real finger using at least three serialized candidate fractions / development builds;
-- [ ] S23 human touch comfort reviewed;
-- [ ] edges/corners checked;
-- [ ] second-finger robustness checked without adding multi-touch gameplay;
-- [ ] Claude adversarial review complete;
-- [ ] full EditMode passes;
-- [ ] full PlayMode passes;
-- [ ] Console has no unexplained errors/warnings;
-- [ ] documentation updated;
-- [ ] human reviewed final diff.
+- [x] swipe semantics defined;
+- [x] threshold representation documented;
+- [x] screen-space cell spacing measured at press time through a read-only Presentation seam;
+- [x] dominant-axis threshold uses >=, with horizontal direction on exact dx/dy ties;
+- [x] dominant direction deterministic;
+- [x] one swipe triggers at most one attempt;
+- [x] swipe routes into existing swap path;
+- [x] shared helper rejects out-of-bounds positions before locking and reports whether an animated attempt started;
+- [x] rejected attempts preserve selection/cue; accepted attempts commit selection and clear cue/gesture before callbacks/animation;
+- [x] Core has no swipe dependency;
+- [x] valid swipe works;
+- [x] invalid swipe uses existing rollback;
+- [x] special swipe uses existing rules;
+- [x] two-tap still works;
+- [x] first selection and adjacent second-tap swap commit on release;
+- [x] release-frame displacement can produce a swipe without an intermediate movement poll;
+- [x] same-frame press/release behavior defined and tested without relying on ADB observations;
+- [x] mouse still works;
+- [x] selection feedback exists;
+- [x] child highlight is off by default and leaves the root renderer/scale unchanged;
+- [x] highlight asset is original or compatibly licensed, with provenance recorded;
+- [x] same-tile tap cancels selection on release without a move; other selection rules remain unchanged;
+- [x] selection cue leaves collider/picking footprint unchanged;
+- [x] visual cue removed before swap/special/clear animation;
+- [x] cue clears after move/restart/outcome/re-render;
+- [x] busy/terminal states block swipe;
+- [x] move start clears gesture state; no consumed flag persists through lock; no-active-gesture release does nothing;
+- [x] busy-started presses and held pointers after unlock require a fresh press; only off-board gestures remain consumed until release;
+- [x] Initialize/Restart, disable/outcome, focus loss and pointer-device change cancel gestures;
+- [x] dead-board recovery remains compatible;
+- [x] S23 threshold tuned with a real finger using at least three serialized candidate fractions / development builds;
+- [x] S23 human touch comfort reviewed;
+- [x] edges/corners checked;
+- [x] second-finger robustness checked without adding multi-touch gameplay;
+- [x] Claude adversarial review complete;
+- [x] full EditMode passes;
+- [x] full PlayMode passes;
+- [x] Console has no unexplained errors/warnings;
+- [x] documentation updated;
+- [x] human reviewed final diff.
 
 Do not start Phase 16 automatically.
+
+### Step 16 result — 2026-11-06
+
+Phase 15 is complete: every item is met. The evidence:
+
+- **Design (semantics, threshold, spacing seam, `>=` and tie rule):** Step 3 and the Step 9 record.
+- **Code (shared path, lock, gesture lifetime, cancellation, cue):** checked against `BoardInputController` at `82e64b5`. Production code is unchanged since `07f663c`.
+- **Core independence:** `Match3.Core` keeps `noEngineReferences` and has no gesture or pointer code.
+- **Device:** S23 threshold (Step 9), human comfort (Step 10), device matrix (Step 11) and the two-finger check (Step 12).
+- **Tests and Console:** Step 13. No asset changed afterwards, and the Console still held only the declared messages.
+- **Documentation:** Step 14.
+
+- **Human review:** the developer reviewed the Phase 15 diff from `78393a0` (this plan) and reported that it looks good on the S23.
+
+Phase 16 has not started.
 
 ---
 
