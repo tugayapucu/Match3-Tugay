@@ -4,7 +4,7 @@ Status: Reviewed in Phase 14 and kept as SHOULD, with accepted risk. No normal-p
 
 ## Mechanism
 
-`BoardInputController.HandlePointerDown` sets `isInputLocked` on the second press of a move, before the Board changes. Only the end of `FinishSwap` clears it. An exception anywhere in between stops that sequence, and `isInputLocked` stays `true` for the rest of the session. That covers:
+`BoardInputController.TryStartSwap` sets `isInputLocked` when a move attempt starts, before the Board changes. Since Phase 15, that happens on the release of the second tap, or when a swipe crosses its threshold. Before Phase 15, it happened in `HandlePointerDown`, on the second press. Only the end of `FinishSwap` clears it. An exception anywhere in between stops that sequence, and `isInputLocked` stays `true` for the rest of the session. That covers:
 
 - the swap and its analysis;
 - the swap or rollback animation;
@@ -65,6 +65,14 @@ The evidence does not justify any of these:
 Unlocking after a caught exception would let play continue on a board that may be inconsistent with its views.
 
 A plain `try`/`finally` around the move is unlikely to be enough. The move yields nested coroutines, which Unity runs itself, so an exception inside one may not reach a `try` in the outer routine. This is unproven reasoning, not established Unity behaviour, and it was not tested.
+
+## Another way to stay locked: deactivating mid-move (Phase 15 Step 12)
+
+Calling `SetActive(false)` on the controller's GameObject during a move stops every coroutine on it, `FinishSwap` included. Input then stays locked, exactly as after an exception.
+
+Disabling only the component is safe: a disabled MonoBehaviour's running coroutines continue, and `FinishSwap` still unlocks. The bootstrap uses `enabled = false` when the level ends. No production code deactivates the GameObject today.
+
+Keep it that way. If later game flow (Phase 16 menus) hides the board, it should wait until the controller is not busy, or disable the component rather than deactivate the GameObject.
 
 ## Accepted risk and when to revisit
 
