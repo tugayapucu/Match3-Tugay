@@ -939,6 +939,10 @@ theoretical only → document
 
 No generic gesture/multi-touch framework.
 
+### Step 12 result — 2026-11-06
+
+No concrete bug was found. The one reproducible gap was a second finger moving during a primary touch. It is now covered by a focused PlayMode test, with no production change; full PlayMode passed 233 with 3 explicit timing skips. Three theoretical edges and an unverified hypothesis for Step 10's automated first-tap miss are documented. The developer's two-finger check on the S23 matched: the first tile was selected and nothing swapped. Details are in [the Step 12 review record](../Validation/PHASE15_STEP12_ADVERSARIAL_REVIEW.md). Step 13 has not started.
+
 ---
 
 # Step 13 — Full Regression Validation
