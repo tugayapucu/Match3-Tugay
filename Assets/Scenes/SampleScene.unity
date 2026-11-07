@@ -165,11 +165,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.BoardBootstrap
   width: 8
   height: 8
-  initialLevel:
-    startingMoveCount: 20
-    goalTileType: 1
-    goalTarget: 25
-    seed: 42
   palette: 010000000200000003000000040000000500000006000000
   fallDuration: 0.15
   refillDuration: 0.15
@@ -1802,6 +1797,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 955792120}
   m_CullTransparentMesh: 1
+--- !u!1 &1045085549
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1045085550}
+  - component: {fileID: 1045085551}
+  m_Layer: 0
+  m_Name: GameFlow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1045085550
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1045085549}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1438188191}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1045085551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1045085549}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 061cf1fc54e13c24f8043d99c4f9f398, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.GameFlowController
+  catalog: {fileID: 11400000, guid: a8727d291a54aaa448fbd17fda7a9c5e, type: 2}
+  bootstrap: {fileID: 87030285}
+  hud: {fileID: 1621617756}
 --- !u!1 &1098740179
 GameObject:
   m_ObjectHideFlags: 0
@@ -2166,6 +2208,7 @@ Transform:
   m_Children:
   - {fileID: 1255034525}
   - {fileID: 87030284}
+  - {fileID: 1045085550}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1488758439
@@ -2514,6 +2557,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1621617755}
   - component: {fileID: 1621617756}
+  - component: {fileID: 1621617757}
   m_Layer: 0
   m_Name: LevelHud
   m_TagString: Untagged
@@ -2563,6 +2607,7 @@ MonoBehaviour:
   outcomeTitleText: {fileID: 578707962}
   outcomeScoreText: {fileID: 1983103859}
   playAgainButton: {fileID: 1976944516}
+  outcomeActionText: {fileID: 224799968}
   goalIcon: {fileID: 1553525677}
   redGoalSprite: {fileID: 21300000, guid: 0bb7ff5fdd2c81548b8b5c44ca7a25e8, type: 3}
   greenGoalSprite: {fileID: 21300000, guid: e84b6dd113ca07b469c32bab702691d5, type: 3}
@@ -2570,6 +2615,18 @@ MonoBehaviour:
   yellowGoalSprite: {fileID: 21300000, guid: 86b3b18f8d22ff44ea505f47f1a54b59, type: 3}
   purpleGoalSprite: {fileID: 21300000, guid: 8bbd790c374271a49a45a2c9ed0b1c70, type: 3}
   orangeGoalSprite: {fileID: 21300000, guid: 032415d0552c3c741a228256602ac2bd, type: 3}
+--- !u!225 &1621617757
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621617754}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1958419929
 GameObject:
   m_ObjectHideFlags: 0

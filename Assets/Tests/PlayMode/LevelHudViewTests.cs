@@ -127,8 +127,8 @@ namespace Match3.Presentation.Tests
         {
             int oldCalls = 0;
             int newCalls = 0;
-            hud.View.Initialize(() => oldCalls++);
-            hud.View.Initialize(() => newCalls++);
+            hud.View.Initialize(() => oldCalls++, () => { });
+            hud.View.Initialize(() => newCalls++, () => { });
 
             hud.Restart.onClick.Invoke();
 
@@ -137,19 +137,18 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void PlayAgainClick_UsesTheSameRestartHandler_ExactlyOnce()
+        public void OutcomeAndRestartClicks_HaveSeparateHandlers_ReplacedExactlyOnce()
         {
-            int oldCalls = 0;
-            int newCalls = 0;
-            hud.View.Initialize(() => oldCalls++);
-            hud.View.Initialize(() => newCalls++);
-
+            int oldCalls = 0, restartCalls = 0, outcomeCalls = 0;
+            hud.View.Initialize(() => oldCalls++, () => oldCalls++);
+            hud.View.Initialize(() => restartCalls++, () => outcomeCalls++);
             hud.PlayAgain.onClick.Invoke();
-            Assert.That(newCalls, Is.EqualTo(1));
+            Assert.That(outcomeCalls, Is.EqualTo(1));
+            Assert.That(restartCalls, Is.Zero);
             hud.Restart.onClick.Invoke();
-
+            Assert.That(restartCalls, Is.EqualTo(1));
+            Assert.That(outcomeCalls, Is.EqualTo(1));
             Assert.That(oldCalls, Is.Zero);
-            Assert.That(newCalls, Is.EqualTo(2), "Both buttons reach the one restart callback.");
         }
 
         [Test]
@@ -167,7 +166,8 @@ namespace Match3.Presentation.Tests
         [Test]
         public void InvalidArguments_Throw()
         {
-            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null));
+            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null, () => { }));
+            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(() => { }, null));
             Assert.Throws<ArgumentNullException>(() => hud.View.Show(null));
         }
 
@@ -178,12 +178,13 @@ namespace Match3.Presentation.Tests
         [TestCase("outcomeTitleText")]
         [TestCase("outcomeScoreText")]
         [TestCase("playAgainButton")]
+        [TestCase("outcomeActionText")]
         public void Initialize_MissingReference_Throws(string field)
         {
             typeof(LevelHudView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(hud.View, null);
 
-            Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }));
+            Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }));
         }
     }
 }

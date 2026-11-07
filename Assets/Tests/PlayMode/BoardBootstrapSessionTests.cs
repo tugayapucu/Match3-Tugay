@@ -59,13 +59,14 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator StartLevel_BeforeUnityStart_IsNotReplacedByStandaloneStartup()
+        public IEnumerator StartLevel_BeforeUnityStart_IsPreserved()
         {
             var supplied = new LevelDefinition(9, TileType.Green, 17, 123);
             bootstrap.StartLevel(supplied, _ => { });
             var progress = bootstrap.LevelProgress;
             var board = CurrentBoard();
-            yield return StartBootstrap();
+            bootstrapObject.SetActive(true);
+            yield return null;
             Assert.That(bootstrap.LevelProgress, Is.SameAs(progress));
             Assert.That(CurrentBoard(), Is.SameAs(board));
             Assert.That(progress.MovesRemaining, Is.EqualTo(9));

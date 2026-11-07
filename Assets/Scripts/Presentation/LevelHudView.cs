@@ -7,8 +7,9 @@ using UnityEngine.UI;
 namespace Match3.Presentation
 {
     // Shows the current level's numbers and outcome, and forwards Restart / Play Again clicks. It owns no rules:
-    // LevelProgress calculates every value, and BoardBootstrap decides when to show it and what Restart does.
+    // LevelProgress calculates values, Bootstrap shows them, and GameFlow supplies navigation callbacks.
     // The scene owns the static labels (MOVES, GOAL, SCORE, FINAL SCORE); this view writes only the changing values.
+    [RequireComponent(typeof(CanvasGroup))]
     public sealed class LevelHudView : MonoBehaviour
     {
         [SerializeField] private TMP_Text movesText;
@@ -21,6 +22,7 @@ namespace Match3.Presentation
         [SerializeField] private TMP_Text outcomeTitleText;
         [SerializeField] private TMP_Text outcomeScoreText;
         [SerializeField] private Button playAgainButton;
+        [SerializeField] private TMP_Text outcomeActionText;
 
         // Shows which gem to collect. The HUD keeps its own references to the same PNGs as the tiles,
         // so it does not depend on TileView just to borrow its sprite mapping.
@@ -34,16 +36,29 @@ namespace Match3.Presentation
 
         // What a Restart click does; replaced (never added to) on every Initialize.
         private Action onRestartRequested;
+        private Action onOutcomeRequested;
+        private CanvasGroup visibility;
 
-        public void Initialize(Action onRestartRequested)
+        public void Initialize(Action onRestartRequested, Action onOutcomeRequested)
         {
             if (onRestartRequested == null)
             {
                 throw new ArgumentNullException(nameof(onRestartRequested));
             }
+            if (onOutcomeRequested == null)
+            {
+                throw new ArgumentNullException(nameof(onOutcomeRequested));
+            }
+            ValidateConfiguration();
+            this.onRestartRequested = onRestartRequested;
+            this.onOutcomeRequested = onOutcomeRequested;
+        }
 
+        public void ValidateConfiguration()
+        {
             if (movesText == null || scoreText == null || goalText == null || restartButton == null || goalIcon == null
-                || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null)
+                || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null
+                || outcomeActionText == null)
             {
                 throw new InvalidOperationException(
                     "Assign every HUD text, the goal icon, both buttons and the outcome panel before initializing.");
@@ -55,14 +70,13 @@ namespace Match3.Presentation
             {
                 throw new InvalidOperationException("Assign all six goal sprites before initializing.");
             }
-
-            this.onRestartRequested = onRestartRequested;
         }
 
         // Unity calls Awake once per component, so each button listener is added exactly once,
-        // however many times the level restarts. Play Again is just a second way to ask for the same restart.
+        // however many times the level restarts. Restart and the contextual outcome action are separate routes.
         private void Awake()
         {
+            visibility = GetComponent<CanvasGroup>();
             if (restartButton != null)
             {
                 restartButton.onClick.AddListener(HandleRestartClicked);
@@ -70,7 +84,7 @@ namespace Match3.Presentation
 
             if (playAgainButton != null)
             {
-                playAgainButton.onClick.AddListener(HandleRestartClicked);
+                playAgainButton.onClick.AddListener(HandleOutcomeClicked);
             }
         }
 
@@ -83,7 +97,7 @@ namespace Match3.Presentation
 
             if (playAgainButton != null)
             {
-                playAgainButton.onClick.RemoveListener(HandleRestartClicked);
+                playAgainButton.onClick.RemoveListener(HandleOutcomeClicked);
             }
         }
 
@@ -128,6 +142,24 @@ namespace Match3.Presentation
         private void HandleRestartClicked()
         {
             onRestartRequested?.Invoke();
+        }
+
+        private void HandleOutcomeClicked()
+        {
+            onOutcomeRequested?.Invoke();
+        }
+
+        public void SetOutcomeActionLabel(string label)
+        {
+            outcomeActionText.text = label;
+        }
+
+        // Keep layout objects active: the camera fitter still reads their rectangles behind flow UI.
+        public void SetVisible(bool visible)
+        {
+            visibility.alpha = visible ? 1f : 0f;
+            visibility.interactable = visible;
+            visibility.blocksRaycasts = visible;
         }
 
         // LevelProgress only accepts a normal color as the goal, so anything else is a programming error.

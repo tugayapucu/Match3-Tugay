@@ -30,7 +30,6 @@ namespace Match3.Presentation.Tests
             Set("width", CatalogBoardWidth);
             Set("height", CatalogBoardHeight);
             Set("palette", CatalogPalette);
-            Set("initialLevel", definition);
             inputCamera.transform.position = new Vector3(203.5f, 203.5f, -10f);
             inputCamera.orthographicSize = 8f;
             yield return StartBootstrap();

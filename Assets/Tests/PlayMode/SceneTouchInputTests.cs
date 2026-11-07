@@ -25,6 +25,9 @@ namespace Match3.Presentation.Tests
         private BoardView boardView;
         private LevelHudView hud;
         private Camera inputCamera;
+        private GameFlowController flow;
+        private string progressKey;
+        private UnityEngine.Events.UnityAction<Scene, LoadSceneMode> sceneLoaded;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -32,7 +35,18 @@ namespace Match3.Presentation.Tests
             input = new InputTestFixture();
             input.Setup();
             touchscreen = InputSystem.AddDevice<Touchscreen>();
+            progressKey = "Match3.Tests.SceneFlow." + Guid.NewGuid().ToString("N");
+            // sceneLoaded runs before Start: inject an isolated store before production startup can save.
+            sceneLoaded = (loaded, mode) =>
+            {
+                if (loaded.name != "SampleScene") return;
+                flow = loaded.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<GameFlowController>(true)).Single();
+                flow.Initialize(new ProgressionStore(Read<LevelCatalog>(flow, "catalog").Count, progressKey));
+            };
+            SceneManager.sceneLoaded += sceneLoaded;
             yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Additive);
+            SceneManager.sceneLoaded -= sceneLoaded;
             scene = SceneManager.GetSceneAt(SceneManager.sceneCount - 1);
             bootstrap = scene.GetRootGameObjects()
                 .SelectMany(root => root.GetComponentsInChildren<BoardBootstrap>(true)).Single();
@@ -40,6 +54,12 @@ namespace Match3.Presentation.Tests
             boardView = Read<BoardView>(bootstrap, "boardView");
             hud = Read<LevelHudView>(bootstrap, "levelHud");
             inputCamera = Read<Camera>(bootstrap, "inputCamera");
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            Assert.That(bootstrap.LevelProgress, Is.Null, "Bootstrap must not autostart a session.");
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(hud.GetComponentInParent<SafeAreaLayout>().TopBar.gameObject.activeInHierarchy, Is.True,
+                "Hidden flow HUD must retain active layout objects for camera framing.");
+            Assert.That(flow.Play(), Is.True);
             yield return null;
             Physics2D.SyncTransforms();
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
@@ -48,11 +68,13 @@ namespace Match3.Presentation.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            SceneManager.sceneLoaded -= sceneLoaded;
             if (scene.IsValid() && scene.isLoaded)
             {
                 yield return SceneManager.UnloadSceneAsync(scene);
             }
             input?.TearDown();
+            if (progressKey != null) { PlayerPrefs.DeleteKey(progressKey); PlayerPrefs.Save(); }
         }
 
         [UnityTest]
@@ -65,7 +87,7 @@ namespace Match3.Presentation.Tests
             Assert.That(Read<TileType[]>(bootstrap, "palette"), Is.EqualTo(BoardBootstrapTests.CatalogPalette),
                 "Palette order affects seeded generation; catalog tests must use the production order.");
 #endif
-            var definition = Read<LevelDefinition>(bootstrap, "initialLevel");
+            var definition = Read<LevelCatalog>(flow, "catalog")[0];
             Assert.That(definition.Seed, Is.EqualTo(42));
             Assert.That(definition.StartingMoveCount, Is.EqualTo(20));
             Assert.That(definition.GoalTileType, Is.EqualTo(TileType.Red));
@@ -146,7 +168,7 @@ namespace Match3.Presentation.Tests
             };
             for (int i = 0; i < offsets.Length; i++)
             {
-                bootstrap.StartLevel(Read<LevelDefinition>(bootstrap, "initialLevel"), _ => { });
+                Assert.That(flow.Restart(), Is.True);
                 TileView origin = boardView.GetTileView(new GridPosition(0, 0));
                 Vector2 point = inputCamera.WorldToScreenPoint(origin.transform.position + offsets[i]);
                 QueuePress(i + 1, point);
@@ -290,14 +312,14 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator PlayAgain_TouchAfterWon_RestartsWithoutSelectingTheBoardUnderneath()
+        public IEnumerator OutcomeAction_TouchAfterWon_StartsNextWithoutSelectingTheBoardUnderneath()
         {
             // Outcome calculation is already tested elsewhere. Supply the same resolved-move facts that
             // the controller reports to Bootstrap, then test the real touchscreen/UI restart path.
             var progress = bootstrap.LevelProgress;
             ReportMove(new ResolutionResult(Enumerable.Repeat(progress.GoalTileType, progress.GoalTarget)));
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
-            yield return VerifyPlayAgainTouch();
+            yield return VerifyOutcomeTouch(1);
         }
 
         [UnityTest]
@@ -309,10 +331,10 @@ namespace Match3.Presentation.Tests
                 ReportMove(new ResolutionResult(Array.Empty<TileType>()));
             }
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
-            yield return VerifyPlayAgainTouch();
+            yield return VerifyOutcomeTouch(0);
         }
 
-        private IEnumerator VerifyPlayAgainTouch()
+        private IEnumerator VerifyOutcomeTouch(int expectedLevelIndex)
         {
             var before = bootstrap.LevelProgress;
             Assert.That(controller.enabled, Is.False);
@@ -331,13 +353,15 @@ namespace Match3.Presentation.Tests
             yield return null;
             yield return null;
             AssertFreshLevel(before);
+            Assert.That(flow.CurrentLevelIndex, Is.EqualTo(expectedLevelIndex));
         }
 
         private void AssertFreshLevel(LevelProgress before)
         {
-            Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(before), "The real UI button must request restart.");
+            Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(before), "The real UI button must request a fresh session.");
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(Read<LevelDefinition>(bootstrap, "initialLevel").StartingMoveCount));
+            Assert.That(bootstrap.LevelProgress.MovesRemaining,
+                Is.EqualTo(Read<LevelCatalog>(flow, "catalog")[flow.CurrentLevelIndex].StartingMoveCount));
             Assert.That(bootstrap.LevelProgress.Score, Is.Zero);
             Assert.That(bootstrap.LevelProgress.GoalProgress, Is.Zero);
             Assert.That(controller.enabled, Is.True);

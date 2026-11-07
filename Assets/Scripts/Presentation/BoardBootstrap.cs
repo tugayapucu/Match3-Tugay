@@ -11,8 +11,6 @@ namespace Match3.Presentation
         // Board generation settings, editable in the Inspector.
         [SerializeField] private int width = 8;
         [SerializeField] private int height = 8;
-        // Standalone startup only, until GameFlow owns launch in Step 8. No current-definition copy is kept.
-        [SerializeField] private LevelDefinition initialLevel = new LevelDefinition(20, TileType.Red, 25, 42);
         [SerializeField] private TileType[] palette =
         {
             TileType.Red, TileType.Green, TileType.Blue,
@@ -59,11 +57,8 @@ namespace Match3.Presentation
                 Application.targetFrameRate = 60;
             }
 
-            // A caller may already have supplied a session before this component's Start.
-            if (levelProgress == null)
-            {
-                StartLevel(initialLevel, _ => { });
-            }
+            // GameFlow owns launch. With no supplied session, board input stays unavailable.
+            ApplyInputAvailability();
         }
 
         // Flow availability is separate from the resolving move's lock. Disabling the component does not stop
@@ -125,6 +120,7 @@ namespace Match3.Presentation
 
             // Inspector values a move would otherwise read only after input locks: fail here, before the first move.
             boardView.ValidateConfiguration(palette);
+            levelHud.ValidateConfiguration();
 
             // Build and validate the new session first, so a bad setting fails before the current level is touched.
             var newProgress = new LevelProgress(definition.StartingMoveCount, definition.GoalTileType,
@@ -139,9 +135,6 @@ namespace Match3.Presentation
             var resolution = new BoardResolutionRunner(
                 newBoard, boardView, palette, newRefillRandom, fallDuration, refillDuration, targetingRandom);
 
-            // Preserve today's standalone HUD actions until the approved flow UI replaces their routing.
-            // Both supply the same definition again; callbacks are replaced, never accumulated.
-            levelHud.Initialize(() => StartLevel(definition, onLevelEnded));
             // Cycle enabled input so OnEnable re-arms the same-update UI-tap guard for the new session.
             inputController.enabled = false;
             this.onLevelEnded = onLevelEnded;

@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Match3.Core;
 using NUnit.Framework;
 using UnityEngine;
@@ -69,13 +68,14 @@ namespace Match3.Presentation.Tests
             inputCamera.orthographicSize = 4f;
 
             hud = TestHud.Create();
+            // This session-only fixture supplies its own HUD routes; production GameFlow owns them.
+            hud.View.Initialize(StartConfiguredLevel, StartConfiguredLevel);
 
             // Inactive until configured, so Start runs only after every field below is set.
             bootstrapObject = new GameObject("BootstrapTest");
             bootstrapObject.SetActive(false);
             bootstrap = bootstrapObject.AddComponent<BoardBootstrap>();
             definition = new LevelDefinition(20, TileType.Red, 25, 42);
-            Set("initialLevel", definition);
             Set("boardView", boardView);
             Set("inputController", controller);
             Set("inputCamera", inputCamera);
@@ -177,9 +177,11 @@ namespace Match3.Presentation.Tests
         public IEnumerator Start_GoalTypeNotInPalette_FailsBeforeCreatingTheBoard()
         {
             ConfigureLevel(goalTileType: TileType.Purple);
-            LogAssert.Expect(LogType.Exception, new Regex("Purple is not in the palette"));
 
-            yield return StartBootstrap();
+            bootstrapObject.SetActive(true);
+            var error = Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
+            Assert.That(error.Message, Does.Contain("Purple is not in the palette"));
+            yield return null;
 
             Assert.That(bootstrap.LevelProgress, Is.Null);
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
@@ -190,9 +192,11 @@ namespace Match3.Presentation.Tests
         {
             // Read only by the clear animation, so without the startup check the first match would hit it mid-move.
             typeof(BoardView).GetField("clearDuration", Fields).SetValue(boardView, -1f);
-            LogAssert.Expect(LogType.Exception, new Regex("clearDuration must be finite and nonnegative"));
 
-            yield return StartBootstrap();
+            bootstrapObject.SetActive(true);
+            var error = Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
+            Assert.That(error.Message, Does.Contain("clearDuration must be finite and nonnegative"));
+            yield return null;
 
             Assert.That(bootstrap.LevelProgress, Is.Null);
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
@@ -203,9 +207,11 @@ namespace Match3.Presentation.Tests
         {
             // A starting board holds no specials, so without the startup check only a move could reach this sprite.
             typeof(TileView).GetField("tntSprite", Fields).SetValue(tileTemplate.GetComponent<TileView>(), null);
-            LogAssert.Expect(LogType.Exception, new Regex("Assign the TNT sprite"));
 
-            yield return StartBootstrap();
+            bootstrapObject.SetActive(true);
+            var error = Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
+            Assert.That(error.Message, Does.Contain("Assign the TNT sprite"));
+            yield return null;
 
             Assert.That(bootstrap.LevelProgress, Is.Null);
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
@@ -215,8 +221,10 @@ namespace Match3.Presentation.Tests
         public IEnumerator Start_MissingSelectionHighlight_FailsBeforeCreatingTheBoard()
         {
             typeof(TileView).GetField("selectionHighlight", Fields).SetValue(tileTemplate.GetComponent<TileView>(), null);
-            LogAssert.Expect(LogType.Exception, new Regex("Assign a child selection highlight"));
-            yield return StartBootstrap();
+            bootstrapObject.SetActive(true);
+            var error = Assert.Throws<InvalidOperationException>(() => StartConfiguredLevel());
+            Assert.That(error.Message, Does.Contain("Assign a child selection highlight"));
+            yield return null;
             Assert.That(bootstrap.LevelProgress, Is.Null);
             Assert.That(boardObject.GetComponentsInChildren<TileView>(true), Is.Empty);
             Assert.That(controller.IsInputLocked, Is.False);
@@ -767,7 +775,7 @@ namespace Match3.Presentation.Tests
         private IEnumerator StartBootstrap()
         {
             bootstrapObject.SetActive(true);
-            // Unity calls Start before the next frame's updates.
+            StartConfiguredLevel();
             yield return null;
         }
 
@@ -1005,7 +1013,6 @@ namespace Match3.Presentation.Tests
         {
             definition = new LevelDefinition(startingMoveCount ?? definition.StartingMoveCount,
                 goalTileType ?? definition.GoalTileType, goalTarget ?? definition.GoalTarget, seed ?? definition.Seed);
-            Set("initialLevel", definition);
         }
 
         private void StartConfiguredLevel()
