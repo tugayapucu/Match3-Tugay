@@ -58,6 +58,13 @@ namespace Match3.Presentation.Tests
         [UnityTest]
         public IEnumerator Start_InitialDefinitionPreservesLevel1ConfigurationAndBoard()
         {
+#if UNITY_EDITOR
+            Assert.That(Read<int>(bootstrap, "width"), Is.EqualTo(BoardBootstrapTests.CatalogBoardWidth),
+                "The catalog session fixture must match production board dimensions.");
+            Assert.That(Read<int>(bootstrap, "height"), Is.EqualTo(BoardBootstrapTests.CatalogBoardHeight));
+            Assert.That(Read<TileType[]>(bootstrap, "palette"), Is.EqualTo(BoardBootstrapTests.CatalogPalette),
+                "Palette order affects seeded generation; catalog tests must use the production order.");
+#endif
             var definition = Read<LevelDefinition>(bootstrap, "initialLevel");
             Assert.That(definition.Seed, Is.EqualTo(42));
             Assert.That(definition.StartingMoveCount, Is.EqualTo(20));
