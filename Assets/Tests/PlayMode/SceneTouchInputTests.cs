@@ -78,6 +78,49 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainMenu_CoversScreen_BlocksBoardTouches_AndPlayStartsFreshWithoutLeakingATap()
+        {
+            var before = bootstrap.LevelProgress;
+            Assert.That(flow.ReturnToMenu(), Is.True);
+            var menu = Read<MainMenuView>(flow, "mainMenu");
+            var controls = Read<GameObject>(menu, "controls");
+            var button = Read<Button>(menu, "playButton");
+            yield return null;
+            Rect background = ScreenRect((RectTransform)menu.transform);
+            Assert.That(background.xMin, Is.EqualTo(0f).Within(0.1f));
+            Assert.That(background.yMin, Is.EqualTo(0f).Within(0.1f));
+            Assert.That(background.width, Is.EqualTo(Screen.width).Within(0.1f));
+            Assert.That(background.height, Is.EqualTo(Screen.height).Within(0.1f));
+            Assert.That(menu.GetComponent<Image>().color.a, Is.EqualTo(1f));
+            var safe = hud.GetComponentInParent<SafeAreaLayout>();
+            Rect safeRect = ScreenRect(safe.SafeAreaRoot);
+            Rect buttonRect = ScreenRect((RectTransform)button.transform);
+            Assert.That(safeRect.Contains(buttonRect.min) && safeRect.Contains(buttonRect.max), Is.True);
+            Assert.That(controls.activeInHierarchy, Is.True);
+            Assert.That(controller.gameObject.activeInHierarchy, Is.True);
+
+            // A press on a covered tile outside the menu button must not select or spend a move.
+            Vector2 coveredTile = inputCamera.WorldToScreenPoint(boardView.GetTileView(new GridPosition(0, 0)).transform.position);
+            Assert.That(buttonRect.Contains(coveredTile), Is.False);
+            QueuePress(10, coveredTile); yield return null; yield return null;
+            QueueRelease(10, coveredTile); yield return null; yield return null;
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(before));
+            Assert.That(before.MovesRemaining, Is.EqualTo(20));
+
+            Vector2 buttonPoint = ButtonPoint(button);
+            QueuePress(11, buttonPoint); yield return null; yield return null;
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            QueueRelease(11, buttonPoint); yield return null; yield return null;
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Playing));
+            Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(before));
+            Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(20));
+            Assert.That(controller.SelectedPosition, Is.Null, "The menu release must not select the board behind it.");
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(menu.gameObject.activeSelf || controls.activeSelf, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator Start_InitialDefinitionPreservesLevel1ConfigurationAndBoard()
         {
 #if UNITY_EDITOR

@@ -12,6 +12,7 @@ namespace Match3.Presentation
         [SerializeField] private LevelCatalog catalog;
         [SerializeField] private BoardBootstrap bootstrap;
         [SerializeField] private LevelHudView hud;
+        [SerializeField] private MainMenuView mainMenu;
 
         private ProgressionStore store;
         private LevelStatus outcome;
@@ -32,16 +33,18 @@ namespace Match3.Presentation
         {
             if (Mode != GameFlowMode.Uninitialized)
                 throw new InvalidOperationException("Game flow is already initialized.");
-            if (catalog == null || bootstrap == null || hud == null)
-                throw new InvalidOperationException("Assign the catalog, Bootstrap and HUD before starting game flow.");
+            if (catalog == null || bootstrap == null || hud == null || mainMenu == null)
+                throw new InvalidOperationException("Assign the catalog, Bootstrap, HUD and Main Menu before starting game flow.");
             catalog.Validate();
             store = progressionStore ?? new ProgressionStore(catalog.Count);
             int loaded = store.Load();
             hud.Initialize(() => Restart(), HandleOutcomeAction);
+            mainMenu.Initialize(() => Play());
             bootstrap.SetInputAvailable(false);
             Progression = loaded;
             Mode = GameFlowMode.MainMenu;
             hud.SetVisible(false);
+            mainMenu.Show(MainMenuActionLabel);
         }
 
         public bool Play()
@@ -87,6 +90,7 @@ namespace Match3.Presentation
             bootstrap.SetInputAvailable(false);
             Mode = GameFlowMode.MainMenu;
             hud.SetVisible(false);
+            mainMenu.Show(MainMenuActionLabel);
             return true;
         }
 
@@ -96,6 +100,7 @@ namespace Match3.Presentation
             bootstrap.StartLevel(catalog[index], HandleLevelEnded);
             CurrentLevelIndex = index;
             Mode = GameFlowMode.Playing;
+            mainMenu.Hide();
             hud.SetVisible(true);
             bootstrap.SetInputAvailable(true);
         }

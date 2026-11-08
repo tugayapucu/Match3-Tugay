@@ -14,6 +14,7 @@ namespace Match3.Presentation.Tests
         private GameFlowController flow;
         private LevelCatalog flowCatalog;
         private string flowKey;
+        private TestMainMenu menu;
         private static readonly int[] StoredFlowProgress = { -1, 0, 1, 2, 99 };
 
         private void PrepareFlow(int saved = 0, bool emptyCatalog = false)
@@ -33,6 +34,8 @@ namespace Match3.Presentation.Tests
             typeof(GameFlowController).GetField("catalog", Fields).SetValue(flow, flowCatalog);
             typeof(GameFlowController).GetField("bootstrap", Fields).SetValue(flow, bootstrap);
             typeof(GameFlowController).GetField("hud", Fields).SetValue(flow, hud.View);
+            menu = TestMainMenu.Create(bootstrapObject.transform);
+            typeof(GameFlowController).GetField("mainMenu", Fields).SetValue(flow, menu.View);
         }
 
         private void InitializeFlow()
@@ -62,7 +65,11 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.enabled, Is.False);
             Assert.That(hud.Root.GetComponent<CanvasGroup>().alpha, Is.Zero);
             Assert.That(boardObject.activeInHierarchy, Is.True);
-            Assert.That(flow.Play(), Is.True);
+            Assert.That(menu.Background.activeInHierarchy && menu.Controls.activeInHierarchy, Is.True);
+            Assert.That(menu.Label.text, Is.EqualTo(flow.MainMenuActionLabel));
+            menu.Play.onClick.Invoke();
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Playing));
+            Assert.That(menu.Background.activeSelf || menu.Controls.activeSelf, Is.False);
             var board = CurrentBoard();
             Assert.That(flow.CurrentLevelIndex, Is.EqualTo(expected == 2 ? 0 : expected));
             Assert.That(bootstrap.LevelProgress.GoalTileType, Is.EqualTo(flowCatalog[flow.CurrentLevelIndex].GoalTileType));
@@ -151,6 +158,8 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.ReturnToMenu(), Is.True);
             Assert.That(controller.enabled, Is.False);
             Assert.That(boardObject.activeInHierarchy, Is.True);
+            Assert.That(menu.Background.activeInHierarchy && menu.Controls.activeInHierarchy, Is.True);
+            Assert.That(menu.Label.text, Is.EqualTo("Continue"));
             Assert.That(flow.ReturnToMenu(), Is.False);
             Assert.That(flow.Play(), Is.True);
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
