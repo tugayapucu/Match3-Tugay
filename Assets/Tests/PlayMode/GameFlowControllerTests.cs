@@ -115,6 +115,7 @@ namespace Match3.Presentation.Tests
                 Assert.That(hud.OutcomeAction.text, Is.EqualTo("Next Level"));
                 Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
                 Assert.That(hud.PlayAgain.interactable, Is.False);
+                Assert.That(hud.OutcomeMenu.interactable, Is.False);
                 Assert.That(hud.Restart.interactable, Is.False);
                 Assert.That(flow.Next() || flow.Retry() || flow.PlayAgain() || flow.ReturnToMenu() || flow.Restart(), Is.False);
                 observedLockedOutcome = true;
@@ -126,11 +127,15 @@ namespace Match3.Presentation.Tests
             Assert.That(observedLockedOutcome, Is.True, "Assertions in a coroutine callback must actually be reached.");
             Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(hud.PlayAgain.interactable, Is.True);
+            Assert.That(hud.OutcomeMenu.interactable, Is.True);
             Assert.That(hud.Restart.interactable, Is.False);
             // A duplicate terminal callback cannot advance twice or reinterpret the outcome.
             original(LevelStatus.Won);
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));
-            Assert.That(flow.Next(), Is.True);
+            hud.PlayAgain.onClick.Invoke();
+            var nextBoard = CurrentBoard();
+            hud.PlayAgain.onClick.Invoke();
+            Assert.That(CurrentBoard(), Is.SameAs(nextBoard), "A duplicate outcome click cannot start another session.");
             Assert.That(flow.Next(), Is.False);
             Assert.That(flow.CurrentLevelIndex, Is.EqualTo(1));
             Assert.That(CurrentBoard(), Is.Not.SameAs(board));
@@ -203,7 +208,7 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.OutcomeAction.text, Is.EqualTo("Play Again"));
             Assert.That(hud.OutcomeTitle.text, Is.EqualTo("All Levels Complete"));
             Assert.That(flow.Next(), Is.False);
-            Assert.That(flow.PlayAgain(), Is.True);
+            hud.PlayAgain.onClick.Invoke();
             Assert.That(flow.PlayAgain(), Is.False);
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(2));
@@ -211,6 +216,38 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.MainMenuActionLabel, Is.EqualTo("Play Again"));
             Assert.That(flow.Play(), Is.True);
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator GameFlow_OutcomeMenu_ReturnsWithoutSavingOrReplacingTheSession(
+            [Values(0, 1, 2)] int ending)
+        {
+            // Loss, non-final Win, final Win: the same Menu button has no level-specific navigation rule.
+            PrepareFlow(ending == 2 ? 1 : 0); InitializeFlow(); flow.Play();
+            yield return null;
+            if (ending == 0) { ReportValidMove(TileType.Green); ReportValidMove(TileType.Green); }
+            else ReportValidMove(ending == 2 ? TileType.Blue : TileType.Red);
+
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Outcome));
+            Assert.That(hud.OutcomeAction.text, Is.EqualTo(ending == 0 ? "Retry" : ending == 1 ? "Next Level" : "Play Again"));
+            Assert.That(hud.OutcomeMenu.interactable, Is.True);
+            Assert.That(hud.Restart.interactable, Is.False);
+            var finishedBoard = CurrentBoard();
+            var finishedProgress = bootstrap.LevelProgress;
+            int saved = PlayerPrefs.GetInt(flowKey);
+            hud.OutcomeMenu.onClick.Invoke();
+            hud.OutcomeMenu.onClick.Invoke();
+
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(CurrentBoard(), Is.SameAs(finishedBoard));
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(finishedProgress));
+            Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(saved));
+            Assert.That(menu.Label.text, Is.EqualTo(ending == 0 ? "Play" : ending == 1 ? "Continue" : "Play Again"));
+            Assert.That(menu.Background.activeInHierarchy && menu.Controls.activeInHierarchy, Is.True);
+            Assert.That(boardObject.activeInHierarchy, Is.True);
+            Assert.That(hud.Root.GetComponent<CanvasGroup>().alpha, Is.Zero);
+            Assert.That(flow.Retry() || flow.Next() || flow.PlayAgain(), Is.False);
         }
 
         [TestCase(false, "Play")]

@@ -23,6 +23,7 @@ namespace Match3.Presentation.Tests
         public TMP_Text OutcomeScore;
         public Button PlayAgain;
         public TMP_Text OutcomeAction;
+        public Button OutcomeMenu;
 
         public static TestHud Create()
         {
@@ -43,6 +44,7 @@ namespace Match3.Presentation.Tests
             hud.OutcomeScore = AddText(hud.OutcomePanel, "OutcomeScore");
             hud.PlayAgain = AddButton(hud.OutcomePanel, "PlayAgain");
             hud.OutcomeAction = AddText(hud.PlayAgain.gameObject, "OutcomeAction");
+            hud.OutcomeMenu = AddButton(hud.OutcomePanel, "Menu");
 
             hud.View = hud.Root.AddComponent<LevelHudView>();
             Set(hud.View, "movesText", hud.Moves);
@@ -54,6 +56,7 @@ namespace Match3.Presentation.Tests
             Set(hud.View, "outcomeScoreText", hud.OutcomeScore);
             Set(hud.View, "playAgainButton", hud.PlayAgain);
             Set(hud.View, "outcomeActionText", hud.OutcomeAction);
+            Set(hud.View, "outcomeMenuButton", hud.OutcomeMenu);
             Set(hud.View, "goalIcon", hud.GoalIcon);
             // The same distinct generated sprite per color that the tile tests use.
             Set(hud.View, "redGoalSprite", TestTiles.SpriteFor(TileType.Red));

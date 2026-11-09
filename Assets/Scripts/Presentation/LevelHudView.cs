@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Match3.Presentation
 {
-    // Shows the current level's numbers and outcome, and forwards Restart / Play Again clicks. It owns no rules:
+    // Shows the current level's numbers and outcome, and forwards navigation clicks. It owns no rules:
     // LevelProgress calculates values, Bootstrap shows them, and GameFlow supplies navigation callbacks.
     // The scene owns the static labels (MOVES, GOAL, SCORE, FINAL SCORE); this view writes only the changing values.
     [RequireComponent(typeof(CanvasGroup))]
@@ -23,6 +23,7 @@ namespace Match3.Presentation
         [SerializeField] private TMP_Text outcomeScoreText;
         [SerializeField] private Button playAgainButton;
         [SerializeField] private TMP_Text outcomeActionText;
+        [SerializeField] private Button outcomeMenuButton;
 
         // Shows which gem to collect. The HUD keeps its own references to the same PNGs as the tiles,
         // so it does not depend on TileView just to borrow its sprite mapping.
@@ -37,11 +38,12 @@ namespace Match3.Presentation
         // What a Restart click does; replaced (never added to) on every Initialize.
         private Action onRestartRequested;
         private Action onOutcomeRequested;
+        private Action onMenuRequested;
         private CanvasGroup visibility;
         private bool actionsAvailable = true;
         private bool levelOver;
 
-        public void Initialize(Action onRestartRequested, Action onOutcomeRequested)
+        public void Initialize(Action onRestartRequested, Action onOutcomeRequested, Action onMenuRequested)
         {
             if (onRestartRequested == null)
             {
@@ -51,19 +53,24 @@ namespace Match3.Presentation
             {
                 throw new ArgumentNullException(nameof(onOutcomeRequested));
             }
+            if (onMenuRequested == null)
+            {
+                throw new ArgumentNullException(nameof(onMenuRequested));
+            }
             ValidateConfiguration();
             this.onRestartRequested = onRestartRequested;
             this.onOutcomeRequested = onOutcomeRequested;
+            this.onMenuRequested = onMenuRequested;
         }
 
         public void ValidateConfiguration()
         {
             if (movesText == null || scoreText == null || goalText == null || restartButton == null || goalIcon == null
                 || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null
-                || outcomeActionText == null)
+                || outcomeActionText == null || outcomeMenuButton == null)
             {
                 throw new InvalidOperationException(
-                    "Assign every HUD text, the goal icon, both buttons and the outcome panel before initializing.");
+                    "Assign every HUD text, the goal icon, all three buttons and the outcome panel before initializing.");
             }
 
             // Every goal color is checked now, so a missing sprite fails at startup rather than on some later level.
@@ -88,6 +95,10 @@ namespace Match3.Presentation
             {
                 playAgainButton.onClick.AddListener(HandleOutcomeClicked);
             }
+            if (outcomeMenuButton != null)
+            {
+                outcomeMenuButton.onClick.AddListener(HandleMenuClicked);
+            }
         }
 
         private void OnDestroy()
@@ -100,6 +111,10 @@ namespace Match3.Presentation
             if (playAgainButton != null)
             {
                 playAgainButton.onClick.RemoveListener(HandleOutcomeClicked);
+            }
+            if (outcomeMenuButton != null)
+            {
+                outcomeMenuButton.onClick.RemoveListener(HandleMenuClicked);
             }
         }
 
@@ -146,6 +161,7 @@ namespace Match3.Presentation
         {
             restartButton.interactable = actionsAvailable && !levelOver;
             playAgainButton.interactable = actionsAvailable && levelOver;
+            outcomeMenuButton.interactable = actionsAvailable && levelOver;
         }
 
         private void HandleRestartClicked()
@@ -156,6 +172,11 @@ namespace Match3.Presentation
         private void HandleOutcomeClicked()
         {
             onOutcomeRequested?.Invoke();
+        }
+
+        private void HandleMenuClicked()
+        {
+            onMenuRequested?.Invoke();
         }
 
         // Flow knows the catalog position; this view does not decide whether the final level was won.

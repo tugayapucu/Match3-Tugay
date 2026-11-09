@@ -69,7 +69,7 @@ namespace Match3.Presentation.Tests
 
             hud = TestHud.Create();
             // This session-only fixture supplies its own HUD routes; production GameFlow owns them.
-            hud.View.Initialize(StartConfiguredLevel, StartConfiguredLevel);
+            hud.View.Initialize(StartConfiguredLevel, StartConfiguredLevel, () => { });
 
             // Inactive until configured, so Start runs only after every field below is set.
             bootstrapObject = new GameObject("BootstrapTest");

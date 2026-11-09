@@ -366,7 +366,7 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator PlayAgain_TouchAfterLost_RestartsWithoutSelectingTheBoardUnderneath()
+        public IEnumerator Retry_TouchAfterLost_RestartsWithoutSelectingTheBoardUnderneath()
         {
             int moves = bootstrap.LevelProgress.MovesRemaining;
             for (int i = 0; i < moves; i++)
@@ -393,6 +393,43 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.Next(), Is.False);
             yield return VerifyOutcomeTouch(0);
             Assert.That(PlayerPrefs.GetInt(progressKey), Is.EqualTo(count));
+        }
+
+        [UnityTest]
+        public IEnumerator OutcomeMenuTouch_ReturnsToMenuWithoutLeakingInputOrChangingTheSession(
+            [Values(false, true)] bool won)
+        {
+            var progress = bootstrap.LevelProgress;
+            if (won) ReportMove(new ResolutionResult(Enumerable.Repeat(progress.GoalTileType, progress.GoalTarget)));
+            else
+                for (int i = 0, moves = progress.MovesRemaining; i < moves; i++)
+                    ReportMove(new ResolutionResult(Array.Empty<TileType>()));
+            yield return null;
+            var button = Read<Button>(hud, "outcomeMenuButton");
+            var primary = Read<Button>(hud, "playAgainButton");
+            var safe = hud.GetComponentInParent<SafeAreaLayout>();
+            Rect safeRect = ScreenRect(safe.SafeAreaRoot);
+            Rect buttonRect = ScreenRect((RectTransform)button.transform);
+            Assert.That(safeRect.Contains(buttonRect.min) && safeRect.Contains(buttonRect.max), Is.True);
+            Assert.That(buttonRect.Overlaps(ScreenRect((RectTransform)primary.transform)), Is.False);
+            Assert.That(button.gameObject.activeInHierarchy && button.interactable, Is.True);
+            Assert.That(Read<Button>(hud, "restartButton").interactable, Is.False);
+            int saved = PlayerPrefs.GetInt(progressKey, 0);
+            Vector2 point = ButtonPoint(button);
+            QueuePress(1, point); yield return null; yield return null;
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Outcome), "Menu acts on release.");
+            QueueRelease(1, point); yield return null; yield return null;
+
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(progress));
+            Assert.That(PlayerPrefs.GetInt(progressKey, 0), Is.EqualTo(saved));
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            var menu = Read<MainMenuView>(flow, "mainMenu");
+            Assert.That(menu.gameObject.activeInHierarchy, Is.True);
+            Assert.That(Read<TMPro.TMP_Text>(menu, "playLabel").text, Is.EqualTo(won ? "Continue" : "Play"));
+            Assert.That(controller.gameObject.activeInHierarchy, Is.True);
         }
 
         private IEnumerator VerifyOutcomeTouch(int expectedLevelIndex)

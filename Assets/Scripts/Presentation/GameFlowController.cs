@@ -38,7 +38,7 @@ namespace Match3.Presentation
             catalog.Validate();
             store = progressionStore ?? new ProgressionStore(catalog.Count);
             int loaded = store.Load();
-            hud.Initialize(() => Restart(), HandleOutcomeAction);
+            hud.Initialize(() => Restart(), HandleOutcomeAction, () => ReturnToMenu());
             mainMenu.Initialize(() => Play());
             bootstrap.SetInputAvailable(false);
             Progression = loaded;

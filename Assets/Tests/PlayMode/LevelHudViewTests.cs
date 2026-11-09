@@ -127,8 +127,8 @@ namespace Match3.Presentation.Tests
         {
             int oldCalls = 0;
             int newCalls = 0;
-            hud.View.Initialize(() => oldCalls++, () => { });
-            hud.View.Initialize(() => newCalls++, () => { });
+            hud.View.Initialize(() => oldCalls++, () => { }, () => { });
+            hud.View.Initialize(() => newCalls++, () => { }, () => { });
 
             hud.Restart.onClick.Invoke();
 
@@ -137,15 +137,19 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void OutcomeAndRestartClicks_HaveSeparateHandlers_ReplacedExactlyOnce()
+        public void OutcomeRestartAndMenuClicks_HaveSeparateHandlers_ReplacedExactlyOnce()
         {
-            int oldCalls = 0, restartCalls = 0, outcomeCalls = 0;
-            hud.View.Initialize(() => oldCalls++, () => oldCalls++);
-            hud.View.Initialize(() => restartCalls++, () => outcomeCalls++);
+            int oldCalls = 0, restartCalls = 0, outcomeCalls = 0, menuCalls = 0;
+            hud.View.Initialize(() => oldCalls++, () => oldCalls++, () => oldCalls++);
+            hud.View.Initialize(() => restartCalls++, () => outcomeCalls++, () => menuCalls++);
             hud.PlayAgain.onClick.Invoke();
             Assert.That(outcomeCalls, Is.EqualTo(1));
             Assert.That(restartCalls, Is.Zero);
             hud.Restart.onClick.Invoke();
+            Assert.That(restartCalls, Is.EqualTo(1));
+            Assert.That(outcomeCalls, Is.EqualTo(1));
+            hud.OutcomeMenu.onClick.Invoke();
+            Assert.That(menuCalls, Is.EqualTo(1));
             Assert.That(restartCalls, Is.EqualTo(1));
             Assert.That(outcomeCalls, Is.EqualTo(1));
             Assert.That(oldCalls, Is.Zero);
@@ -158,10 +162,12 @@ namespace Match3.Presentation.Tests
             hud.View.SetRestartAvailable(false);
             Assert.That(hud.Restart.interactable, Is.False);
             Assert.That(hud.PlayAgain.interactable, Is.False);
+            Assert.That(hud.OutcomeMenu.interactable, Is.False);
 
             hud.View.SetRestartAvailable(true);
             Assert.That(hud.Restart.interactable, Is.True);
             Assert.That(hud.PlayAgain.interactable, Is.False);
+            Assert.That(hud.OutcomeMenu.interactable, Is.False);
 
             // The outcome can appear inside the locked callback, before cleanup releases the busy gate.
             hud.View.SetRestartAvailable(false);
@@ -170,13 +176,16 @@ namespace Match3.Presentation.Tests
             hud.View.Show(finished);
             Assert.That(hud.Restart.interactable, Is.False);
             Assert.That(hud.PlayAgain.interactable, Is.False);
+            Assert.That(hud.OutcomeMenu.interactable, Is.False);
             hud.View.SetRestartAvailable(true);
             Assert.That(hud.Restart.interactable, Is.False);
             Assert.That(hud.PlayAgain.interactable, Is.True);
+            Assert.That(hud.OutcomeMenu.interactable, Is.True);
 
             hud.View.Show(new LevelProgress(2, TileType.Red, 3, 100));
             Assert.That(hud.Restart.interactable, Is.True);
             Assert.That(hud.PlayAgain.interactable, Is.False);
+            Assert.That(hud.OutcomeMenu.interactable, Is.False);
         }
 
         [Test]
@@ -196,8 +205,9 @@ namespace Match3.Presentation.Tests
         [Test]
         public void InvalidArguments_Throw()
         {
-            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null, () => { }));
-            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(() => { }, null));
+            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null, () => { }, () => { }));
+            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(() => { }, null, () => { }));
+            Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(() => { }, () => { }, null));
             Assert.Throws<ArgumentNullException>(() => hud.View.Show(null));
         }
 
@@ -209,12 +219,13 @@ namespace Match3.Presentation.Tests
         [TestCase("outcomeScoreText")]
         [TestCase("playAgainButton")]
         [TestCase("outcomeActionText")]
+        [TestCase("outcomeMenuButton")]
         public void Initialize_MissingReference_Throws(string field)
         {
             typeof(LevelHudView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(hud.View, null);
 
-            Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }));
+            Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }, () => { }));
         }
     }
 }
