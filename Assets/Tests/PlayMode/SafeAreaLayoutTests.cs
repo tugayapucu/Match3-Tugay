@@ -25,11 +25,11 @@ namespace Match3.Presentation.Tests
             topBar.anchoredPosition = new Vector2(0f, -24f);
             topBar.sizeDelta = new Vector2(900f, 96f);
 
-            var restart = CreateRect("RestartButton", hud);
+            var restart = CreateRect("BottomControls", hud);
             restart.anchorMin = restart.anchorMax = new Vector2(0.5f, 0f);
             restart.pivot = new Vector2(0.5f, 0f);
             restart.anchoredPosition = new Vector2(0f, 48f);
-            restart.sizeDelta = new Vector2(300f, 128f);
+            restart.sizeDelta = new Vector2(640f, 128f);
 
             var outcome = CreateRect("OutcomePanel", hud);
             var card = CreateRect("Card", outcome);
@@ -41,7 +41,7 @@ namespace Match3.Presentation.Tests
             layout = safeRoot.gameObject.AddComponent<SafeAreaLayout>();
             typeof(SafeAreaLayout).GetField("topBar", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(layout, topBar);
-            typeof(SafeAreaLayout).GetField("restartButton", BindingFlags.Instance | BindingFlags.NonPublic)
+            typeof(SafeAreaLayout).GetField("bottomControls", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(layout, restart);
             canvasObject.SetActive(true);
         }
@@ -65,7 +65,7 @@ namespace Match3.Presentation.Tests
 
             var root = layout.SafeAreaRoot;
             var topBar = layout.TopBar;
-            var restart = layout.RestartButton;
+            var restart = layout.BottomControls;
             var card = (RectTransform)root.Find("LevelHud/OutcomePanel/Card");
             var playAgain = (RectTransform)card.Find("PlayAgainButton");
 
@@ -79,7 +79,7 @@ namespace Match3.Presentation.Tests
             Assert.That(topBar.sizeDelta.x, Is.EqualTo(expectedBarWidth).Within(0.01f));
             Assert.That(topBar.sizeDelta.y, Is.EqualTo(96f));
             Assert.That(topBar.anchoredPosition, Is.EqualTo(new Vector2(0f, -24f)));
-            Assert.That(restart.sizeDelta, Is.EqualTo(new Vector2(300f, 128f)));
+            Assert.That(restart.sizeDelta, Is.EqualTo(new Vector2(640f, 128f)));
             Assert.That(restart.anchoredPosition, Is.EqualTo(new Vector2(0f, 48f)));
             Assert.That(card.sizeDelta, Is.EqualTo(new Vector2(640f, 400f)));
 

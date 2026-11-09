@@ -257,7 +257,7 @@ namespace Match3.Presentation.Tests
             layout.enabled = false;
 
             LogAssert.Expect(LogType.Warning,
-                "Board camera fitting paused: the HUD and Restart leave no room. Keeping the current camera until the layout changes.");
+                "Board camera fitting paused: the HUD and bottom controls leave no room. Keeping the current camera until the layout changes.");
             layout.ApplyLayout(new Rect(0f, 0f, Screen.width, 200f * scale), screenSize, scale);
             for (int frame = 0; frame < 4; frame++)
             {
@@ -320,7 +320,7 @@ namespace Match3.Presentation.Tests
             var canvas = layout.GetComponentInParent<Canvas>();
             Rect safe = ScreenRect(layout.SafeAreaRoot);
             Rect top = ScreenRect(layout.TopBar);
-            Rect restart = ScreenRect(layout.RestartButton);
+            Rect restart = ScreenRect(layout.BottomControls);
             float margin = layout.SideMargin * canvas.scaleFactor;
             float gap = SafeAreaLayout.BoardControlGap * canvas.scaleFactor;
 

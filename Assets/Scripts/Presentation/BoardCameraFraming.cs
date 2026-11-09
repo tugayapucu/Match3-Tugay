@@ -8,21 +8,21 @@ namespace Match3.Presentation
     {
         public const float BoardEnvelopeSize = 8.2f;
 
-        public static Rect ContentRegion(Rect safeArea, float topBarBottom, float restartTop,
+        public static Rect ContentRegion(Rect safeArea, float topBarBottom, float bottomControlsTop,
             float sideMargin, float controlGap)
         {
             if (safeArea.width <= 0f || safeArea.height <= 0f || sideMargin < 0f || controlGap < 0f
-                || float.IsNaN(topBarBottom) || float.IsNaN(restartTop)
+                || float.IsNaN(topBarBottom) || float.IsNaN(bottomControlsTop)
                 || float.IsNaN(sideMargin) || float.IsNaN(controlGap))
             {
                 throw new ArgumentOutOfRangeException(nameof(safeArea), "The safe area and margins must be finite and usable.");
             }
 
-            Rect region = Rect.MinMaxRect(safeArea.xMin + sideMargin, restartTop + controlGap,
+            Rect region = Rect.MinMaxRect(safeArea.xMin + sideMargin, bottomControlsTop + controlGap,
                 safeArea.xMax - sideMargin, topBarBottom - controlGap);
             if (region.width <= 0f || region.height <= 0f)
             {
-                throw new ArgumentException("The HUD and Restart leave no room for the board.", nameof(safeArea));
+                throw new ArgumentException("The HUD and bottom controls leave no room for the board.", nameof(safeArea));
             }
 
             return region;

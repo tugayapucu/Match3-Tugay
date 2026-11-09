@@ -51,24 +51,24 @@ namespace Match3.Presentation
 
             Rect safeArea = ScreenRect(hudLayout.SafeAreaRoot);
             Rect topBar = ScreenRect(hudLayout.TopBar);
-            Rect restart = ScreenRect(hudLayout.RestartButton);
+            Rect bottomControls = ScreenRect(hudLayout.BottomControls);
             float sideMargin = hudLayout.SideMargin * canvasScale;
             float controlGap = SafeAreaLayout.BoardControlGap * canvasScale;
             if (safeArea.xMax - sideMargin <= safeArea.xMin + sideMargin
-                || topBar.yMin - controlGap <= restart.yMax + controlGap)
+                || topBar.yMin - controlGap <= bottomControls.yMax + controlGap)
             {
                 // Remember failed attempts too; the same unusable layout must not retry every frame.
                 RememberLayoutInputs(screenSize, canvasScale);
                 if (!warnedNoRoom)
                 {
-                    Debug.LogWarning("Board camera fitting paused: the HUD and Restart leave no room. Keeping the current camera until the layout changes.", this);
+                    Debug.LogWarning("Board camera fitting paused: the HUD and bottom controls leave no room. Keeping the current camera until the layout changes.", this);
                     warnedNoRoom = true;
                 }
 
                 return;
             }
 
-            Rect region = BoardCameraFraming.ContentRegion(safeArea, topBar.yMin, restart.yMax,
+            Rect region = BoardCameraFraming.ContentRegion(safeArea, topBar.yMin, bottomControls.yMax,
                 sideMargin, controlGap);
             // The fixed 8x8 grid starts at BoardRoot (-3.5, -3.5), so its world centre is (0, 0).
             BoardCameraFraming.CalculateCamera(region, screenSize, Vector2.zero,
