@@ -152,15 +152,31 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
-        public void SetRestartAvailable_ControlsBothRestartAndPlayAgain()
+        public void SetRestartAvailable_UsesOneBusyGate_AndOnlyOffersActionsForTheCurrentStatus()
         {
+            hud.View.Show(new LevelProgress(2, TileType.Red, 3, 100));
             hud.View.SetRestartAvailable(false);
             Assert.That(hud.Restart.interactable, Is.False);
             Assert.That(hud.PlayAgain.interactable, Is.False);
 
             hud.View.SetRestartAvailable(true);
             Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.PlayAgain.interactable, Is.False);
+
+            // The outcome can appear inside the locked callback, before cleanup releases the busy gate.
+            hud.View.SetRestartAvailable(false);
+            var finished = new LevelProgress(1, TileType.Red, 3, 100);
+            finished.ApplyValidMove(new ResolutionResult(new[] { TileType.Red, TileType.Red, TileType.Red }));
+            hud.View.Show(finished);
+            Assert.That(hud.Restart.interactable, Is.False);
+            Assert.That(hud.PlayAgain.interactable, Is.False);
+            hud.View.SetRestartAvailable(true);
+            Assert.That(hud.Restart.interactable, Is.False);
             Assert.That(hud.PlayAgain.interactable, Is.True);
+
+            hud.View.Show(new LevelProgress(2, TileType.Red, 3, 100));
+            Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.PlayAgain.interactable, Is.False);
         }
 
         [Test]

@@ -114,7 +114,7 @@ namespace Match3.Presentation.Tests
             yield return WaitUntilUnlocked();
             Assert.That(bootstrap.LevelProgress.MovesRemaining, Is.EqualTo(19));
             Assert.That(hud.Restart.interactable, Is.True, "The busy gate reports completion independently of the board flow gate.");
-            Assert.That(hud.PlayAgain.interactable, Is.True);
+            Assert.That(hud.PlayAgain.interactable, Is.False, "No outcome action is offered while Playing.");
             Assert.That(controller.enabled, Is.False);
             AssertViewsMatchBoard();
             bootstrap.SetInputAvailable(true);
@@ -157,7 +157,8 @@ namespace Match3.Presentation.Tests
                 Assert.That(bootstrap.LevelProgress, Is.SameAs(progress));
                 Assert.That(controller.enabled, Is.False, "The flow gate cannot revive terminal input.");
                 Assert.That(bootstrap.IsBusy, Is.False);
-                Assert.That(hud.Restart.interactable && hud.PlayAgain.interactable, Is.True);
+                Assert.That(hud.Restart.interactable, Is.False, "Restart stays unavailable on a terminal level.");
+                Assert.That(hud.PlayAgain.interactable, Is.True);
                 bootstrap.SetInputAvailable(false);
                 bootstrap.SetInputAvailable(true);
                 Assert.That(controller.enabled, Is.False);

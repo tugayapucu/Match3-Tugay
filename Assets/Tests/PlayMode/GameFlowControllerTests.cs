@@ -126,6 +126,7 @@ namespace Match3.Presentation.Tests
             Assert.That(observedLockedOutcome, Is.True, "Assertions in a coroutine callback must actually be reached.");
             Assert.That(callbacks, Is.EqualTo(1));
             Assert.That(hud.PlayAgain.interactable, Is.True);
+            Assert.That(hud.Restart.interactable, Is.False);
             // A duplicate terminal callback cannot advance twice or reinterpret the outcome.
             original(LevelStatus.Won);
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));

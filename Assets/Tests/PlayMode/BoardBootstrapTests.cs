@@ -562,7 +562,7 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator RestartLevel_AfterWon_StartsPlayableAgain()
+        public IEnumerator StartLevel_AfterWon_StartsPlayableAgain()
         {
             ConfigureLevel(startingMoveCount: 2);
             ConfigureLevel(goalTarget: 3);
@@ -570,16 +570,16 @@ namespace Match3.Presentation.Tests
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Red, TileType.Red, TileType.Red);
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Won));
-            Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.Restart.interactable, Is.False, "Outcomes use the contextual action, not Restart.");
 
-            hud.Restart.onClick.Invoke();
+            StartConfiguredLevel();
             yield return null;
 
             AssertFreshLevel(startingTiles, 2);
         }
 
         [UnityTest]
-        public IEnumerator RestartLevel_AfterLost_StartsPlayableAgain()
+        public IEnumerator StartLevel_AfterLost_StartsPlayableAgain()
         {
             ConfigureLevel(startingMoveCount: 1);
             ConfigureLevel(goalTarget: 3);
@@ -587,9 +587,9 @@ namespace Match3.Presentation.Tests
             var startingTiles = ReadTiles();
             ReportValidMove(TileType.Green, TileType.Green, TileType.Green);
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Lost));
-            Assert.That(hud.Restart.interactable, Is.True);
+            Assert.That(hud.Restart.interactable, Is.False, "Outcomes use Retry, not Restart.");
 
-            hud.Restart.onClick.Invoke();
+            StartConfiguredLevel();
             yield return null;
 
             AssertFreshLevel(startingTiles, 1);

@@ -38,6 +38,8 @@ namespace Match3.Presentation
         private Action onRestartRequested;
         private Action onOutcomeRequested;
         private CanvasGroup visibility;
+        private bool actionsAvailable = true;
+        private bool levelOver;
 
         public void Initialize(Action onRestartRequested, Action onOutcomeRequested)
         {
@@ -121,7 +123,7 @@ namespace Match3.Presentation
             goalText.text = $"{progress.GoalProgress}/{progress.GoalTarget}";
             goalIcon.sprite = goalSprite;
 
-            bool levelOver = progress.Status != LevelStatus.Playing;
+            levelOver = progress.Status != LevelStatus.Playing;
             if (levelOver)
             {
                 outcomeTitleText.text = OutcomeTitle(progress.Status);
@@ -129,14 +131,21 @@ namespace Match3.Presentation
             }
 
             outcomePanel.SetActive(levelOver);
+            RefreshActionAvailability();
         }
 
         // False while a move is animating, so a player click can never ask for a restart mid-move.
-        // Both buttons follow the same gate.
+        // One busy gate covers every action; Restart also requires a Playing level.
         public void SetRestartAvailable(bool isAvailable)
         {
-            restartButton.interactable = isAvailable;
-            playAgainButton.interactable = isAvailable;
+            actionsAvailable = isAvailable;
+            RefreshActionAvailability();
+        }
+
+        private void RefreshActionAvailability()
+        {
+            restartButton.interactable = actionsAvailable && !levelOver;
+            playAgainButton.interactable = actionsAvailable && levelOver;
         }
 
         private void HandleRestartClicked()
