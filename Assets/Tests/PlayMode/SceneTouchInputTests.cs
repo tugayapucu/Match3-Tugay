@@ -82,6 +82,7 @@ namespace Match3.Presentation.Tests
         {
             var before = bootstrap.LevelProgress;
             Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             var menu = Read<MainMenuView>(flow, "mainMenu");
             var controls = Read<GameObject>(menu, "controls");
             var button = Read<Button>(menu, "playButton");
@@ -212,6 +213,7 @@ namespace Match3.Presentation.Tests
             for (int i = 0; i < offsets.Length; i++)
             {
                 Assert.That(flow.Restart(), Is.True);
+                Assert.That(flow.Confirm(), Is.True);
                 TileView origin = boardView.GetTileView(new GridPosition(0, 0));
                 Vector2 point = inputCamera.WorldToScreenPoint(origin.transform.position + offsets[i]);
                 QueuePress(i + 1, point);
@@ -284,7 +286,9 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Restart_TouchPreservesSelectionOnPress_ThenRestartsOnRelease()
+        public IEnumerator GameplayConfirmation_TouchOpensOnRelease_ThenCancelsOrConfirmsWithoutLeaking(
+            [Values(ConfirmationIntent.Restart, ConfirmationIntent.Leave)] ConfirmationIntent intent,
+            [Values(false, true)] bool confirm)
         {
             var first = new GridPosition(0, 0);
             Vector2 tilePoint = inputCamera.WorldToScreenPoint(boardView.GetTileView(first).transform.position);
@@ -298,10 +302,10 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.SelectedPosition, Is.EqualTo(first), "The scene must receive the completed real touch tap.");
 
             var before = bootstrap.LevelProgress;
-            var button = Read<Button>(hud, "restartButton");
+            var button = Read<Button>(hud, intent == ConfirmationIntent.Restart ? "restartButton" : "gameplayMenuButton");
             Vector2 point = ButtonPoint(button);
             Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(point)).collider, Is.Null,
-                "Camera fitting must leave Restart clear of board colliders.");
+                "Camera fitting must leave both gameplay controls clear of board colliders.");
             QueuePress(2, point);
             yield return null;
             yield return null;
@@ -311,7 +315,54 @@ namespace Match3.Presentation.Tests
             QueueRelease(2, point);
             yield return null;
             yield return null;
-            AssertFreshLevel(before);
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Confirmation));
+            Assert.That(flow.PendingConfirmation, Is.EqualTo(intent));
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(before));
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(boardView.GetTileView(first).transform.Find("SelectionHighlight").gameObject.activeSelf, Is.False);
+            Assert.That(Read<Button>(hud, "restartButton").interactable
+                || Read<Button>(hud, "gameplayMenuButton").interactable, Is.False);
+            var prompt = Read<ConfirmationView>(flow, "confirmation");
+            Rect dim = ScreenRect((RectTransform)prompt.transform);
+            Assert.That(dim.min, Is.EqualTo(Vector2.zero));
+            Assert.That(dim.width, Is.EqualTo(Screen.width).Within(0.1f));
+            Assert.That(dim.height, Is.EqualTo(Screen.height).Within(0.1f));
+            var card = Read<GameObject>(prompt, "card");
+            var safe = hud.GetComponentInParent<SafeAreaLayout>();
+            Rect safeRect = ScreenRect(safe.SafeAreaRoot);
+            Rect cardRect = ScreenRect((RectTransform)card.transform);
+            Assert.That(safeRect.Contains(cardRect.min) && safeRect.Contains(cardRect.max), Is.True);
+
+            // The raw board picker must stay gated even where the full-screen dimmer covers a collider.
+            QueuePress(3, tilePoint); yield return null; yield return null;
+            QueueRelease(3, tilePoint); yield return null; yield return null;
+            Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(before));
+            var decision = Read<Button>(prompt, confirm ? "confirmButton" : "cancelButton");
+            Vector2 decisionPoint = ButtonPoint(decision);
+            QueuePress(4, decisionPoint); yield return null; yield return null;
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Confirmation), "A decision is also made on release.");
+            QueueRelease(4, decisionPoint); yield return null; yield return null;
+            Assert.That(prompt.gameObject.activeSelf || card.activeSelf, Is.False);
+            Assert.That(flow.PendingConfirmation, Is.Null);
+            if (!confirm)
+            {
+                Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Playing));
+                Assert.That(bootstrap.LevelProgress, Is.SameAs(before));
+                Assert.That(controller.enabled, Is.True);
+                Assert.That(controller.SelectedPosition, Is.EqualTo(first));
+                Assert.That(boardView.GetTileView(first).transform.Find("SelectionHighlight").gameObject.activeSelf, Is.True);
+                Assert.That(controller.IsInputLocked, Is.False);
+            }
+            else if (intent == ConfirmationIntent.Restart) AssertFreshLevel(before);
+            else
+            {
+                Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+                Assert.That(bootstrap.LevelProgress, Is.SameAs(before));
+                Assert.That(controller.enabled, Is.False);
+                Assert.That(Read<MainMenuView>(flow, "mainMenu").gameObject.activeInHierarchy, Is.True);
+            }
         }
 
         private void AssertCameraFitAndPicking()

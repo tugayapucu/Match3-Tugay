@@ -15,6 +15,7 @@ namespace Match3.Presentation.Tests
         private LevelCatalog flowCatalog;
         private string flowKey;
         private TestMainMenu menu;
+        private TestConfirmation prompt;
         private static readonly int[] StoredFlowProgress = { -1, 0, 1, 2, 99 };
 
         private void PrepareFlow(int saved = 0, bool emptyCatalog = false)
@@ -36,6 +37,8 @@ namespace Match3.Presentation.Tests
             typeof(GameFlowController).GetField("hud", Fields).SetValue(flow, hud.View);
             menu = TestMainMenu.Create(bootstrapObject.transform);
             typeof(GameFlowController).GetField("mainMenu", Fields).SetValue(flow, menu.View);
+            prompt = TestConfirmation.Create(bootstrapObject.transform);
+            typeof(GameFlowController).GetField("confirmation", Fields).SetValue(flow, prompt.View);
         }
 
         private void InitializeFlow()
@@ -160,9 +163,11 @@ namespace Match3.Presentation.Tests
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             var retry = CurrentBoard();
             Assert.That(flow.Restart(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             Assert.That(CurrentBoard(), Is.Not.SameAs(retry));
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             Assert.That(controller.enabled, Is.False);
             Assert.That(boardObject.activeInHierarchy, Is.True);
             Assert.That(menu.Background.activeInHierarchy && menu.Controls.activeInHierarchy, Is.True);
@@ -188,8 +193,10 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.Retry(), Is.True);
             Assert.That(PlayerPrefs.HasKey(flowKey), Is.False);
             Assert.That(flow.Restart(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             Assert.That(PlayerPrefs.HasKey(flowKey), Is.False);
             Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             Assert.That(PlayerPrefs.HasKey(flowKey), Is.False);
         }
 
@@ -213,6 +220,7 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(2));
             Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
             Assert.That(flow.MainMenuActionLabel, Is.EqualTo("Play Again"));
             Assert.That(flow.Play(), Is.True);
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
@@ -276,11 +284,12 @@ namespace Match3.Presentation.Tests
                     if (action == "Next") ReportValidMove(TileType.Red);
                     if (action == "PlayAgain") ReportValidMove(TileType.Blue);
                     if (action == "Retry") { ReportValidMove(TileType.Green); ReportValidMove(TileType.Green); }
+                    if (action == "Restart") Assert.That(flow.Restart(), Is.True);
                 }
                 // All fixture levels have the same board geometry, before and after session replacement.
                 Vector2 point = inputCamera.WorldToScreenPoint(boardObject.transform.position);
                 QueueUiTap(touch, mouse, point, 1); InputSystem.Update();
-                bool started = action == "Play" ? flow.Play() : action == "Restart" ? flow.Restart()
+                bool started = action == "Play" ? flow.Play() : action == "Restart" ? flow.Confirm()
                     : action == "Next" ? flow.Next() : action == "Retry" ? flow.Retry() : flow.PlayAgain();
                 Assert.That(started, Is.True);
                 PollInput(); PollInput();
