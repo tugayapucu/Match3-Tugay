@@ -164,6 +164,20 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
+        public void SetOutcomePresentation_DisplaysFlowSuppliedFinalTitleAndAction_WithoutChangingTheScore()
+        {
+            var finished = new LevelProgress(1, TileType.Red, 3, 100);
+            finished.ApplyValidMove(new ResolutionResult(new[] { TileType.Red, TileType.Red, TileType.Red }));
+            hud.View.Show(finished);
+            hud.View.SetOutcomePresentation("All Levels Complete", "Play Again");
+
+            Assert.That(hud.OutcomeTitle.text, Is.EqualTo("All Levels Complete"));
+            Assert.That(hud.OutcomeAction.text, Is.EqualTo("Play Again"));
+            Assert.That(hud.OutcomeScore.text, Is.EqualTo("300"));
+            Assert.That(hud.OutcomePanel.activeSelf, Is.True);
+        }
+
+        [Test]
         public void InvalidArguments_Throw()
         {
             Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null, () => { }));

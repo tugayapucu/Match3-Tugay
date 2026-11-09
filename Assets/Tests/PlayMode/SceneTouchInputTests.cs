@@ -377,6 +377,24 @@ namespace Match3.Presentation.Tests
             yield return VerifyOutcomeTouch(0);
         }
 
+        [UnityTest]
+        public IEnumerator FinalOutcome_PlayAgainTouch_StartsLevelOneAndKeepsCompletedProgress()
+        {
+            int count = Read<LevelCatalog>(flow, "catalog").Count;
+            for (int index = 0; index < count; index++)
+            {
+                var progress = bootstrap.LevelProgress;
+                ReportMove(new ResolutionResult(Enumerable.Repeat(progress.GoalTileType, progress.GoalTarget)));
+                if (index + 1 < count) Assert.That(flow.Next(), Is.True);
+            }
+            yield return null;
+            Assert.That(Read<TMPro.TMP_Text>(hud, "outcomeTitleText").text, Is.EqualTo("All Levels Complete"));
+            Assert.That(Read<TMPro.TMP_Text>(hud, "outcomeActionText").text, Is.EqualTo("Play Again"));
+            Assert.That(flow.Next(), Is.False);
+            yield return VerifyOutcomeTouch(0);
+            Assert.That(PlayerPrefs.GetInt(progressKey), Is.EqualTo(count));
+        }
+
         private IEnumerator VerifyOutcomeTouch(int expectedLevelIndex)
         {
             var before = bootstrap.LevelProgress;

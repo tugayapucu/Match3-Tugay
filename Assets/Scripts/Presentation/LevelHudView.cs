@@ -149,9 +149,11 @@ namespace Match3.Presentation
             onOutcomeRequested?.Invoke();
         }
 
-        public void SetOutcomeActionLabel(string label)
+        // Flow knows the catalog position; this view does not decide whether the final level was won.
+        public void SetOutcomePresentation(string title, string actionLabel)
         {
-            outcomeActionText.text = label;
+            outcomeTitleText.text = title;
+            outcomeActionText.text = actionLabel;
         }
 
         // Keep layout objects active: the camera fitter still reads their rectangles behind flow UI.

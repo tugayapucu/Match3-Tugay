@@ -113,6 +113,7 @@ namespace Match3.Presentation.Tests
                 Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));
                 Assert.That(CurrentBoard(), Is.SameAs(board));
                 Assert.That(hud.OutcomeAction.text, Is.EqualTo("Next Level"));
+                Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
                 Assert.That(hud.PlayAgain.interactable, Is.False);
                 Assert.That(hud.Restart.interactable, Is.False);
                 Assert.That(flow.Next() || flow.Retry() || flow.PlayAgain() || flow.ReturnToMenu() || flow.Restart(), Is.False);
@@ -199,6 +200,7 @@ namespace Match3.Presentation.Tests
             ReportValidMove(TileType.Blue);
             Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Outcome));
             Assert.That(hud.OutcomeAction.text, Is.EqualTo("Play Again"));
+            Assert.That(hud.OutcomeTitle.text, Is.EqualTo("All Levels Complete"));
             Assert.That(flow.Next(), Is.False);
             Assert.That(flow.PlayAgain(), Is.True);
             Assert.That(flow.PlayAgain(), Is.False);

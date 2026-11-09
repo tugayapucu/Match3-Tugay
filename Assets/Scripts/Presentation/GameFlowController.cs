@@ -115,7 +115,9 @@ namespace Match3.Presentation
             outcome = status;
             Mode = GameFlowMode.Outcome;
             bootstrap.SetInputAvailable(false);
-            hud.SetOutcomeActionLabel(status == LevelStatus.Lost ? "Retry"
+            hud.SetOutcomePresentation(status == LevelStatus.Lost ? "Out of Moves"
+                : CurrentLevelIndex + 1 < catalog.Count ? "Level Complete!" : "All Levels Complete",
+                status == LevelStatus.Lost ? "Retry"
                 : CurrentLevelIndex + 1 < catalog.Count ? "Next Level" : "Play Again");
             // Bootstrap's existing busy callback enables the outcome action only after FinishSwap unlocks.
         }
