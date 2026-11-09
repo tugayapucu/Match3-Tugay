@@ -150,6 +150,8 @@ namespace Match3.Presentation.Tests
             Assert.That(outcomeCalls, Is.EqualTo(1));
             hud.OutcomeMenu.onClick.Invoke();
             Assert.That(menuCalls, Is.EqualTo(1));
+            hud.GameplayMenu.onClick.Invoke();
+            Assert.That(menuCalls, Is.EqualTo(2), "Both Menu buttons forward the same navigation request.");
             Assert.That(restartCalls, Is.EqualTo(1));
             Assert.That(outcomeCalls, Is.EqualTo(1));
             Assert.That(oldCalls, Is.Zero);
@@ -203,6 +205,28 @@ namespace Match3.Presentation.Tests
         }
 
         [Test]
+        public void GameplayActions_PromptGateNeverOverridesBusyOrTerminalState()
+        {
+            hud.View.Show(new LevelProgress(2, TileType.Red, 1, 100));
+            hud.View.SetRestartAvailable(true);
+            Assert.That(hud.Restart.interactable && hud.GameplayMenu.interactable, Is.True);
+            hud.View.SetGameplayActionsAvailable(false);
+            hud.View.SetRestartAvailable(true);
+            Assert.That(hud.Restart.interactable || hud.GameplayMenu.interactable, Is.False);
+            hud.View.SetRestartAvailable(false);
+            hud.View.SetGameplayActionsAvailable(true);
+            Assert.That(hud.Restart.interactable || hud.GameplayMenu.interactable, Is.False);
+            hud.View.SetRestartAvailable(true);
+            Assert.That(hud.Restart.interactable && hud.GameplayMenu.interactable, Is.True);
+
+            var won = new LevelProgress(2, TileType.Red, 1, 100);
+            won.ApplyValidMove(new ResolutionResult(new[] { TileType.Red }));
+            hud.View.Show(won);
+            Assert.That(hud.Restart.interactable || hud.GameplayMenu.interactable, Is.False);
+            Assert.That(hud.PlayAgain.interactable && hud.OutcomeMenu.interactable, Is.True);
+        }
+
+        [Test]
         public void InvalidArguments_Throw()
         {
             Assert.Throws<ArgumentNullException>(() => hud.View.Initialize(null, () => { }, () => { }));
@@ -220,6 +244,7 @@ namespace Match3.Presentation.Tests
         [TestCase("playAgainButton")]
         [TestCase("outcomeActionText")]
         [TestCase("outcomeMenuButton")]
+        [TestCase("gameplayMenuButton")]
         public void Initialize_MissingReference_Throws(string field)
         {
             typeof(LevelHudView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)

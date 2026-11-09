@@ -336,6 +336,14 @@ namespace Match3.Presentation.Tests
 
             var restartCenter = new Vector2(restart.center.x, restart.center.y);
             Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(restartCenter)).collider, Is.Null);
+            foreach (string field in new[] { "restartButton", "gameplayMenuButton" })
+            {
+                Rect control = ScreenRect((RectTransform)Read<Button>(hud, field).transform);
+                Assert.That(control.xMin, Is.GreaterThanOrEqualTo(restart.xMin - 0.1f));
+                Assert.That(control.xMax, Is.LessThanOrEqualTo(restart.xMax + 0.1f));
+                Assert.That(control.yMax, Is.LessThanOrEqualTo(restart.yMax + 0.1f));
+                Assert.That(Physics2D.GetRayIntersection(inputCamera.ScreenPointToRay(control.center)).collider, Is.Null);
+            }
             foreach (var cell in new[] { new GridPosition(0, 0), new GridPosition(7, 7) })
             {
                 TileView view = boardView.GetTileView(cell);

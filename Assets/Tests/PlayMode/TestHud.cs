@@ -17,6 +17,7 @@ namespace Match3.Presentation.Tests
         public TMP_Text Score;
         public TMP_Text Goal;
         public Button Restart;
+        public Button GameplayMenu;
         public Image GoalIcon;
         public GameObject OutcomePanel;
         public TMP_Text OutcomeTitle;
@@ -35,6 +36,7 @@ namespace Match3.Presentation.Tests
             hud.Score = AddText(hud.Root, "Score");
             hud.Goal = AddText(hud.Root, "Goal");
             hud.Restart = AddButton(hud.Root, "Restart");
+            hud.GameplayMenu = AddButton(hud.Root, "GameplayMenu");
             var iconObject = new GameObject("GoalIcon");
             iconObject.transform.SetParent(hud.Root.transform);
             hud.GoalIcon = iconObject.AddComponent<Image>();
@@ -51,6 +53,7 @@ namespace Match3.Presentation.Tests
             Set(hud.View, "scoreText", hud.Score);
             Set(hud.View, "goalText", hud.Goal);
             Set(hud.View, "restartButton", hud.Restart);
+            Set(hud.View, "gameplayMenuButton", hud.GameplayMenu);
             Set(hud.View, "outcomePanel", hud.OutcomePanel);
             Set(hud.View, "outcomeTitleText", hud.OutcomeTitle);
             Set(hud.View, "outcomeScoreText", hud.OutcomeScore);

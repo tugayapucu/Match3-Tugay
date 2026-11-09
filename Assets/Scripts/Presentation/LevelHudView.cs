@@ -16,6 +16,7 @@ namespace Match3.Presentation
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text goalText;
         [SerializeField] private Button restartButton;
+        [SerializeField] private Button gameplayMenuButton;
 
         // One shared panel for both outcomes: hidden while Playing, titled by LevelProgress's status otherwise.
         [SerializeField] private GameObject outcomePanel;
@@ -41,6 +42,7 @@ namespace Match3.Presentation
         private Action onMenuRequested;
         private CanvasGroup visibility;
         private bool actionsAvailable = true;
+        private bool gameplayActionsAvailable = true;
         private bool levelOver;
 
         public void Initialize(Action onRestartRequested, Action onOutcomeRequested, Action onMenuRequested)
@@ -65,12 +67,12 @@ namespace Match3.Presentation
 
         public void ValidateConfiguration()
         {
-            if (movesText == null || scoreText == null || goalText == null || restartButton == null || goalIcon == null
+            if (movesText == null || scoreText == null || goalText == null || restartButton == null || gameplayMenuButton == null || goalIcon == null
                 || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null
                 || outcomeActionText == null || outcomeMenuButton == null)
             {
                 throw new InvalidOperationException(
-                    "Assign every HUD text, the goal icon, all three buttons and the outcome panel before initializing.");
+                    "Assign every HUD text, the goal icon, all four buttons and the outcome panel before initializing.");
             }
 
             // Every goal color is checked now, so a missing sprite fails at startup rather than on some later level.
@@ -99,6 +101,10 @@ namespace Match3.Presentation
             {
                 outcomeMenuButton.onClick.AddListener(HandleMenuClicked);
             }
+            if (gameplayMenuButton != null)
+            {
+                gameplayMenuButton.onClick.AddListener(HandleMenuClicked);
+            }
         }
 
         private void OnDestroy()
@@ -115,6 +121,10 @@ namespace Match3.Presentation
             if (outcomeMenuButton != null)
             {
                 outcomeMenuButton.onClick.RemoveListener(HandleMenuClicked);
+            }
+            if (gameplayMenuButton != null)
+            {
+                gameplayMenuButton.onClick.RemoveListener(HandleMenuClicked);
             }
         }
 
@@ -159,9 +169,17 @@ namespace Match3.Presentation
 
         private void RefreshActionAvailability()
         {
-            restartButton.interactable = actionsAvailable && !levelOver;
+            restartButton.interactable = actionsAvailable && !levelOver && gameplayActionsAvailable;
+            gameplayMenuButton.interactable = actionsAvailable && !levelOver && gameplayActionsAvailable;
             playAgainButton.interactable = actionsAvailable && levelOver;
             outcomeMenuButton.interactable = actionsAvailable && levelOver;
+        }
+
+        // Flow can suppress gameplay commands for a prompt without changing the move's existing busy gate.
+        public void SetGameplayActionsAvailable(bool isAvailable)
+        {
+            gameplayActionsAvailable = isAvailable;
+            RefreshActionAvailability();
         }
 
         private void HandleRestartClicked()
