@@ -1,19 +1,21 @@
-# Restart has no confirmation
+# Restart confirmation
 
-Status: Deferred by the developer during Phase 15 Step 10 on 2026-11-06.
-Schedule a later game-flow/UI step; no implementation phase has been selected.
+Status: Implemented and reviewer-approved in Phase 16 Step 11 on 2026-11-10;
+automated and Editor validation passed. The planned S23 check remains pending.
 
-Restart is easy to reach on the S23, but an accidental press immediately discards
-the current session's progress. The developer reported this concern during the
+Restart was easy to reach on the S23, and an accidental press would immediately
+discard the current session's progress. The developer reported this concern during the
 human comfort review; an actual accidental-restart incident was not reported.
-`LevelHudView.HandleRestartClicked` directly invokes the restart callback.
+The HUD now forwards that request to GameFlow, which opens a Restart confirmation.
 
-The agreed direction is a small Cancel / Restart confirmation during play.
-Cancel must preserve the session; Confirm must call the existing restart path
-once. Block board input while the confirmation is open and preserve the existing
-busy gate. Keep Play Again after a terminal outcome immediate. Do not introduce
-a generic dialog framework merely for this prompt.
+The implemented Cancel / Restart prompt gates board input through Bootstrap,
+preserves the logical selection and session on Cancel, and restarts the same
+level once on Confirm. It cannot open during a move. A separate Leave intent
+uses the same view for the in-game Menu action. Terminal Retry / Play Again stay
+immediate; no generic dialog framework was introduced.
 
-The developer explicitly chose to defer this work. The existing Restart behavior
-is unchanged. Revisit before adding menus/game-flow UI or declaring release
-usability complete. See `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`.
+The original deferral is recorded in
+`Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`. Implementation, tests and
+manual setup are recorded in `Docs/Validation/PHASE16_STEP11_CONFIRMATIONS.md`.
+Recheck the physical touch experience during Phase 16's device review and revisit
+this status in its final known-issue review.
