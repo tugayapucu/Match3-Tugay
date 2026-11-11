@@ -1,6 +1,7 @@
 using System;
 using Match3.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Match3.Presentation
 {
@@ -17,6 +18,7 @@ namespace Match3.Presentation
 
         private ProgressionStore store;
         private LevelStatus outcome;
+        private InputAction backAction;
 
         public GameFlowMode Mode { get; private set; }
         public int CurrentLevelIndex { get; private set; } = -1;
@@ -24,6 +26,38 @@ namespace Match3.Presentation
         public ConfirmationIntent? PendingConfirmation { get; private set; }
         public string MainMenuActionLabel => Progression == 0 ? "Play"
             : Progression == catalog.Count ? "Play Again" : "Continue";
+
+        private void Awake()
+        {
+            // Keep native Back intercepted: changing this flag during a Back event can also background the new menu.
+            if (Application.platform == RuntimePlatform.Android) UnityEngine.Input.backButtonLeavesApp = false;
+            backAction = new InputAction("Back", InputActionType.Button, "<Keyboard>/escape");
+            backAction.performed += HandleBackPerformed;
+        }
+
+        private void OnEnable() => backAction.Enable();
+        private void OnDisable() => backAction.Disable();
+        private void OnDestroy() => backAction?.Dispose();
+
+        private void HandleBackPerformed(InputAction.CallbackContext context) => HandleBack();
+
+        // In-game Back reuses guarded UI commands; only a separate Main Menu Back backgrounds Android.
+        public bool HandleBack()
+        {
+            if (Mode == GameFlowMode.Uninitialized || bootstrap.IsBusy) return false;
+            switch (Mode)
+            {
+                case GameFlowMode.MainMenu:
+                    if (Application.platform != RuntimePlatform.Android) return false;
+                    using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                    using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                        return activity.Call<bool>("moveTaskToBack", true);
+                case GameFlowMode.Playing: return ReturnToMenu();
+                case GameFlowMode.Confirmation: return CancelConfirmation();
+                case GameFlowMode.Outcome: return ReturnToMenu();
+                default: return false;
+            }
+        }
 
         private void Start()
         {
