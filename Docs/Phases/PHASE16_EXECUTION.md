@@ -1485,6 +1485,7 @@ On the S23 test:
 - cold launch → Main Menu → Play / Continue → first real finger tap on the Board works;
 - ordinary swipe;
 - Restart → Cancel;
+- with a tile selected, open Restart and double-tap Cancel; record whether the second, fresh tap reaches the board and attempts a swap with the retained selection;
 - Restart → Confirm;
 - Lose → Retry;
 - Win → Next Level;
@@ -1494,6 +1495,7 @@ On the S23 test:
 - Back during settled gameplay;
 - Back during resolution;
 - Back on outcome;
+- background/resume with a confirmation open and during a move; verify the prompt/session remains consistent, the board settles, and a fresh touch works after resume; note any animation jump;
 - final-level behavior if practical;
 - safe-area/layout on menu, gameplay, confirmation and outcome.
 
