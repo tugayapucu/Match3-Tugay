@@ -107,6 +107,8 @@ budgets yet.
 | Codex post-adjustment focused checks | `1161850` | `LevelCatalogTests` 5 / 5 | `CatalogLevel_` and Level 1 scene: 7 / 7 |
 | Step 17 full rerun | `1161850` | 632 / 632 | 344 passed, 0 failed, 3 skipped |
 | Level 5–6 budget adjustment, tested before committing the same asset bytes | `fec0d76` | `LevelCatalogTests` 5 / 5 | Six `CatalogLevel_` cases and Level 1 scene: 7 / 7 |
+| `SafeAreaLayout` serialization cleanup (focused) | `c95861c` | — | `SafeAreaLayoutTests` + `SceneTouchInputTests` 20 / 20 |
+| Step 19 gate, full suites | `c95861c` | 632 / 632 | 344 passed, 0 failed, 3 skipped |
 
 - **Skips:** the three skips are always the `[Explicit]` real-frame-rate tests in `FrameRateTimingTests` (30, 60, 120 fps).
 - **Step 16 Console:** apart from tooling and Test Framework housekeeping lines, it held only the declared camera-fitting warning from
@@ -114,8 +116,9 @@ budgets yet.
 - **Step 17 Console:** after the rerun it held one Unity MCP bridge line ("WebSocket is not initialised"), with no project errors or warnings.
 - **Editor state:** after each run, SampleScene was active and clean, Play Mode was stopped, and the platform was StandaloneWindows64.
 
-The full-suite rows above predate the Level 5–6 budget adjustment. Do not present
-them as a new full run against the modified catalog. No tests were added or
+The Step 16 and Step 17 full-suite rows predate the Level 5–6 budget adjustment.
+The Step 19 row is the full run against the final catalog and code; its Console
+held only the declared camera-fitting warning plus test-runner and tool housekeeping. No tests were added or
 changed for the two-value content adjustment.
 
 Follow-up jobs: EditMode `2f6aa88ad3d745728c3fb6c69fa3ce8f`, PlayMode
@@ -146,9 +149,11 @@ Resolved in this phase: Restart confirmation (`KnownIssues/RestartConfirmation.m
 - A replay of Levels 3–4 at their new budgets to confirm the feel. This is optional, but
   the difficulty is otherwise unverified.
 - Rebuild the APK before claiming any phone result for the adjusted catalog.
-- End-of-phase code cleanup: remove `[FormerlySerializedAs("restartButton")]` from
-  `SafeAreaLayout`.
-- Step 18 learning review, then human review of the final diff (Step 19).
+- Developer confirmation of the Step 18 learning review, then human review of the
+  final diff (Step 19).
+
+Done since Step 17: the `[FormerlySerializedAs("restartButton")]` bridge was removed
+from `SafeAreaLayout` in `c95861c`, and the full suites passed at that commit (Step 19).
 
 ## Sources
 
