@@ -23,7 +23,7 @@ cells, two-tap, swipes and one-handed use were reported comfortable. Restart was
 easy to reach, possibly too easy; a confirmation is deferred in
 [RestartConfirmation.md](RestartConfirmation.md). This is one person on one device,
 and other devices remain unverified. Details:
-`Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`.
+`Docs/Validation/PHASE15_SUMMARY.md`.
 
 Keep the full-cell colliders and per-permitted-press sync;
 `Physics2D.SyncTransforms` cost was not profiled. The cosmetic

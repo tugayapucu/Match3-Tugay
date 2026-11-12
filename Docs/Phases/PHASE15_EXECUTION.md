@@ -1,5 +1,7 @@
 # Phase 15 Execution Plan — Mobile Interaction Polish
 
+> **Status: completed 2026-11-06.** This is the original plan, kept as history. For what was built and validated, read `Docs/Validation/PHASE15_SUMMARY.md`.
+
 Phase 15 makes the existing Match-3 interaction feel natural and understandable on a phone.
 
 The two release requirements are already approved:
@@ -812,7 +814,7 @@ Do not claim universal handset perfection.
 
 ### Step 9 result — 2026-11-05
 
-The developer compared 0.20, 0.25 and 0.35 with a real finger on the S23, one development build each. They noticed no difference. At about 120 px per cell, those fractions are about 24, 30 and 42 px. All three sit between tap jitter and a deliberate swipe. 0.25 is kept as the existing default. This is a conservative choice, not a measured optimum, and it was made on one device. Details are in [the Step 9 threshold record](../Validation/PHASE15_STEP9_THRESHOLD_TUNING.md).
+The developer compared 0.20, 0.25 and 0.35 with a real finger on the S23, one development build each. They noticed no difference. At about 120 px per cell, those fractions are about 24, 30 and 42 px. All three sit between tap jitter and a deliberate swipe. 0.25 is kept as the existing default. This is a conservative choice, not a measured optimum, and it was made on one device. Details are in [the Step 9 threshold record (now in the Phase 15 summary)](../Validation/PHASE15_SUMMARY.md).
 
 ---
 
@@ -841,7 +843,7 @@ Do not redesign the whole board merely because generic Android guidance says 48 
 
 The developer found that an accidental first selection could not be cancelled. A classified tap on the already-selected tile now cancels selection on release, hides the cue, and spends no move. Press/hold alone does not cancel. Non-adjacent/outside taps and rejected swipes still retain selection; a swipe from the selected tile still follows the normal swipe path. The controller owns this rule, with no Core, prefab or layout change.
 
-Restart confirmation was also requested but explicitly deferred to a later step; it is recorded in `Docs/KnownIssues/RestartConfirmation.md` and is not implemented in this adjustment. The developer's S23 finger review confirmed same-tile cancellation works, Nova's gold corners and white selection cue are clearly different, and the first finger tap after relaunch works. Step 10 is complete with these qualitative, single-device limits; the initial automated tap miss remains documented without a claimed root-cause fix. Evidence and build details are in `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`. The later Step 11 results are recorded below.
+Restart confirmation was also requested but explicitly deferred to a later step; it is recorded in `Docs/KnownIssues/RestartConfirmation.md` and is not implemented in this adjustment. The developer's S23 finger review confirmed same-tile cancellation works, Nova's gold corners and white selection cue are clearly different, and the first finger tap after relaunch works. Step 10 is complete with these qualitative, single-device limits; the initial automated tap miss remains documented without a claimed root-cause fix. Evidence is summarized in `Docs/Validation/PHASE15_SUMMARY.md`. The later Step 11 results are recorded below.
 
 ---
 
@@ -895,7 +897,7 @@ On Win/Loss:
 
 ### Step 11 result — 2026-11-06
 
-The S23 functional matrix passed: native Android swipes/taps, release timing, cancellation/retention, held-input rejection, special chains, Win/Loss and Play Again. A temporary seed-93 scene built with the current input code also passed recovery, continued play and Restart. Exact synchronous recovery ordering remains supported by the existing PlayMode callback test; device input was held across that boundary rather than injected inside it. The normal seed-42 APK and clean Windows64 Editor state were restored. No production files changed. Results, evidence paths, Android log diagnostics and validation limits are in [the Step 11 device report](../Validation/PHASE15_STEP11_DEVICE_REGRESSION.md). Stop for review; Step 12 has not started.
+The S23 functional matrix passed: native Android swipes/taps, release timing, cancellation/retention, held-input rejection, special chains, Win/Loss and Play Again. A temporary seed-93 scene built with the current input code also passed recovery, continued play and Restart. Exact synchronous recovery ordering remains supported by the existing PlayMode callback test; device input was held across that boundary rather than injected inside it. The normal seed-42 APK and clean Windows64 Editor state were restored. No production files changed. Results, evidence paths, Android log diagnostics and validation limits are in [the Step 11 device report (now in the Phase 15 summary)](../Validation/PHASE15_SUMMARY.md). Stop for review; Step 12 has not started.
 
 ---
 
@@ -945,7 +947,7 @@ No generic gesture/multi-touch framework.
 
 ### Step 12 result — 2026-11-06
 
-No concrete bug was found. The one reproducible gap was a second finger moving during a primary touch. It is now covered by a focused PlayMode test, with no production change; full PlayMode passed 233 with 3 explicit timing skips. Three theoretical edges and an unverified hypothesis for Step 10's automated first-tap miss are documented. The developer's two-finger check on the S23 matched: the first tile was selected and nothing swapped. Details are in [the Step 12 review record](../Validation/PHASE15_STEP12_ADVERSARIAL_REVIEW.md). Step 13 has not started.
+No concrete bug was found. The one reproducible gap was a second finger moving during a primary touch. It is now covered by a focused PlayMode test, with no production change; full PlayMode passed 233 with 3 explicit timing skips. Three theoretical edges and an unverified hypothesis for Step 10's automated first-tap miss are documented. The developer's two-finger check on the S23 matched: the first tile was selected and nothing swapped. Details are in [the Step 12 review record (now in the Phase 15 summary)](../Validation/PHASE15_SUMMARY.md). Step 13 has not started.
 
 ---
 
@@ -982,7 +984,7 @@ Console must contain only declared expected messages.
 
 ### Step 13 result — 2026-11-06
 
-Passed. EditMode 603/603; PlayMode 233 passed, 0 failed, 3 explicit frame-rate skips. The Console held only the five messages tests declare with `LogAssert.Expect`, plus test-runner housekeeping. Mouse two-click, touch two-tap and touch swipe each reach the controller's real `Update` path with exactly one attempt. The mouse test now asserts this too (`e8b2b95`, test-only). Production code is unchanged since `07f663c`. Details are in [the Step 13 regression record](../Validation/PHASE15_STEP13_FULL_REGRESSION.md). Step 14 has not started.
+Passed. EditMode 603/603; PlayMode 233 passed, 0 failed, 3 explicit frame-rate skips. The Console held only the five messages tests declare with `LogAssert.Expect`, plus test-runner housekeeping. Mouse two-click, touch two-tap and touch swipe each reach the controller's real `Update` path with exactly one attempt. The mouse test now asserts this too (`e8b2b95`, test-only). Production code is unchanged since `07f663c`. Details are in [the Step 13 regression record (now in the Phase 15 summary)](../Validation/PHASE15_SUMMARY.md). Step 14 has not started.
 
 ---
 

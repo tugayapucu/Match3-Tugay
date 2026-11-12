@@ -1,5 +1,7 @@
 # Phase 16 Execution Plan — Level System & Game Flow
 
+> **Status: completed 2026-11-12.** This is the original plan, kept as history. For what was built and validated, read `Docs/Validation/PHASE16_SUMMARY.md`.
+
 Phase 16 turns the current single-level board into a small complete game flow.
 
 The phase adds:
@@ -1699,15 +1701,15 @@ Phase 16 is complete only when:
 - [x] full PlayMode passes;
 - [x] Console has no unexplained errors/warnings;
 - [x] docs/known issues reflect final behavior;
-- [ ] developer can explain gameplay-session vs game-flow ownership;
-- [ ] human reviewed the final diff.
+- [x] developer can explain gameplay-session vs game-flow ownership;
+- [x] human reviewed the final diff.
 
 Do not start Phase 17 automatically.
 
 ### Step 19 result — 2026-11-12
 
-Every technical and device item is met. Phase 16 closes when the three human items
-below are confirmed. Evidence for the ticked items:
+**Phase 16 is complete:** every item is met. Evidence (details in
+`Docs/Validation/PHASE16_SUMMARY.md`):
 
 - **Product and data (menu, levels, catalog, Level 1, LevelDefinition):**
   - Steps 6 and 9;
@@ -1728,13 +1730,9 @@ below are confirmed. Evidence for the ticked items:
   - full PlayMode 344 passed, 0 failed, 3 skipped (the `[Explicit]` frame-rate tests);
   - Console limited to the declared camera-fitting warning plus test-runner and tool housekeeping;
   - SampleScene clean, Play Mode stopped.
-- **Documentation:** Step 17 and `Docs/Validation/PHASE16_VALIDATION_RECORD.md`.
+- **Documentation:** Step 17 and `Docs/Validation/PHASE16_SUMMARY.md`.
 
-Open, for the developer to confirm:
-
-- normal human playthroughs of Levels 5–6 at their adjusted budgets (a phone result needs a rebuilt APK);
-- the developer can explain gameplay-session vs game-flow ownership (Step 18);
-- human review of the final Phase 16 diff.
+- **Human confirmations (2026-11-12):** the developer played Levels 5–6 at their adjusted budgets ("they are good"), completed the Step 18 learning review, and reviewed the final Phase 16 diff.
 
 ---
 

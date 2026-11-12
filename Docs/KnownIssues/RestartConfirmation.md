@@ -10,7 +10,7 @@ Restart was easy to reach on the S23, and an accidental press would immediately
 discard the current session's progress. The developer reported this concern during the
 human comfort review; an actual accidental-restart incident was not reported.
 The original deferral is recorded in
-`Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md`.
+`Docs/Validation/PHASE15_SUMMARY.md`.
 
 ## Final behavior
 
@@ -34,14 +34,10 @@ covers the full screen; the card stays inside the safe area.
 
 ## Evidence
 
-- Implementation, tests and manual scene setup:
-  `Docs/Validation/PHASE16_STEP11_CONFIRMATIONS.md`.
-- Back on the prompt: `Docs/Validation/PHASE16_STEP12_ANDROID_BACK.md`.
-- Adversarial ordering (busy, double Confirm, Back + tap in one frame):
-  `Docs/Validation/PHASE16_STEP14_NAVIGATION_ADVERSARIAL.md`.
-- S23 Restart → Cancel, Restart → Confirm, Leave, Back-to-cancel, and
-  background/resume with the prompt open, all passed:
-  `Docs/Validation/PHASE16_STEP15_S23_GAME_FLOW.md`.
+`Docs/Validation/PHASE16_SUMMARY.md` covers the implementation (`ac300e5`), the
+tests (`Confirmation_`, `ConfirmationViewTests`, Back and adversarial ordering) and
+the S23 checks. On the S23, these all passed: Restart → Cancel, Restart → Confirm,
+Leave, Back-to-cancel, and background/resume with the prompt open.
 
 ## Residual edge (theoretical, not a defect)
 

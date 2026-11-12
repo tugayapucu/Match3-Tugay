@@ -64,7 +64,6 @@ Swipes use the same swap path. A rejected swipe keeps the existing selection.
   - it is absent in sampled move frames;
   - no cue remains after a win or loss.
 
-Records: `Docs/Validation/PHASE15_STEP10_HUMAN_TOUCH_COMFORT.md` and
-`Docs/Validation/PHASE15_STEP11_DEVICE_REGRESSION.md`.
+Record: `Docs/Validation/PHASE15_SUMMARY.md`.
 
 Phase 18 may restyle the cue; it should not change these rules.
