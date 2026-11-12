@@ -1,6 +1,6 @@
 # Phase 16 Step 15 — S23 game-flow smoke test
 
-Date: 2026-11-12. Status: reviewed and approved by Claude; double-tap observation clarified as inconclusive. No new production defect was reproduced and no production fix was needed. The user approved committing this smoke-test record after review.
+Date: 2026-11-12. Status: reviewed and approved by Claude; double-tap observation clarified as inconclusive. No new production defect was reproduced and no production fix was needed. The user approved committing this record and the later content adjustment.
 
 ## Device and build
 
@@ -39,7 +39,7 @@ In this sitting all taps, swipes, Back and Home/resume checks were performed by 
 | Background/resume on confirmation | User went Home for about five seconds with Restart open, reopened Match3 and confirmed the prompt and HUD were preserved. Cancel and a fresh finger selection worked afterward; the resulting gameplay screenshot was captured. The prompt's intermediate native lifecycle was human-observed, not frame-instrumented. |
 | Background/resume during a move | User went Home while the first swipe's animation ran. On reopening, the animation continued where it left off; the user reports everything working and good. Settled screenshot is 19 / 9/25 / 3500. No obvious visual glitch was reported; this is a human observation, not frame-time instrumentation. The subsequent fresh-selection and real swipe checks also passed. |
 | Menu/gameplay/confirmation/outcome safe-area appearance | Inspected full-screen menu, gameplay, both confirmations, Won and Lost screenshots. HUD, board, bottom controls, cards and buttons are visible/separated; no clipping or text overflow observed. User found the Won card readable and Lost buttons correct. The outcome dimmer still leaves the known bright top strip, while the confirmation dimmer covers the whole screen. |
-| Six independent human level playthroughs | Levels 1–2 have smoke-session human wins recorded below. After the review, the user also reported completing Levels 3–4 at the original budgets, both between medium and hard. Levels 5–6 remain unplayed before the phase gate. Machine-assisted winning routes do not close these requirements. |
+| Six independent human level playthroughs | Levels 1–2 have smoke-session human wins recorded below. After the review, the user also reported completing Levels 3–4 at the original budgets, both between medium and hard; see the follow-up below. Levels 5–6 remain unplayed, and the feel of the adjusted Level 3–4 budgets remains unverified. Machine-assisted winning routes do not close these requirements. |
 
 ## Human content observations
 
@@ -68,6 +68,25 @@ Read-only Editor checks: SampleScene active and not dirty, Play Mode off, compil
 
 No frozen input, visible duplicate navigation/session, stale outcome/selection leakage or old score/move leakage was observed in these checks. This is user/screenshot evidence, not a frame-by-frame Android Board/View audit or object-identity proof; those stronger invariants have earlier Editor tests. No frame-rate, allocation, or SyncTransforms-cost measurement is claimed here.
 
-At the smoke-test checkpoint the phone was left in fresh Level 3 after Retry, with saved progression 2; no more automated phone input was scheduled. Later user-reported play is recorded in the human-content table above; those later preference values were not read back. Final six-level completion was not physically replayed. Tall-screen whitespace, outcome dimmer strips, and the known startup exception remain as documented.
+At the smoke-test checkpoint the phone was left in fresh Level 3 after Retry, with saved progression 2; no more automated phone input was scheduled. Later user-reported play is recorded separately below; those later preference values were not read back. Final six-level completion was not physically replayed. Tall-screen whitespace, outcome dimmer strips, and the known startup exception remain as documented.
 
 At the approved Step 15 checkpoint this Markdown was the only repository addition; no Assets, scene, prefab, catalog, settings, packages, or test-source changes were part of that smoke test. The double-tap clarification needed no phone retest or suite rerun. Step 16 subsequently passed and was reviewed separately. Local screenshots, preference backups, logs and the single-action helper remain ignored under Builds.
+
+## Post-review difficulty adjustment — 2026-11-12
+
+After Step 16 validation, the user reported completing the Blue level and gave the same between-medium-and-hard assessment for Yellow. Levels 5–6 have not been played. The requested direction is easy, but not too easy. Exact winning counters/routes for these later attempts were not captured.
+
+The first tuning pass changes only two move budgets in `Assets/Levels/InitialLevelCatalog.asset`:
+
+| Level | Original moves | Adjusted moves | Goal and seed |
+| --- | ---: | ---: | --- |
+| 3 | 20 | 24 | Blue 25, seed 73 |
+| 4 | 22 | 26 | Yellow 24, seed 111 |
+
+Four extra moves give more room for ordinary play while preserving the opening board, goal and seed-derived random streams. Levels 1–2 retain the human-approved settings. Levels 5–6 are unchanged pending feedback; no difficulty is inferred from their larger goal numbers alone. There is no adaptive difficulty or gameplay-rule change.
+
+The user accepted these move budgets. Their new subjective difficulty remains unverified; another playthrough can assess the feel. Levels 5–6 still need normal play before the phase gate. The reused Step 12 APK remains valid historical smoke evidence for the original configuration; it does not contain these later changes. Rebuild before claiming a phone result for the adjusted catalog. The earlier full Step 16 results also predate this content adjustment.
+
+Post-adjustment validation: `LevelCatalogTests` EditMode 5/5 passed (job `e01697ff782840b09c805e89a63f008b`); the six `CatalogLevel_` PlayMode cases plus the Level 1 real-scene check passed 7/7 (job `f7ce7b95fb3c44a3ad32a0888c7f1413`). No tests were added or changed. These validate configuration, stable/playable deterministic starts and session replacement, not subjective difficulty. Full suites were not rerun for this two-value adjustment; the earlier full regression predates it.
+
+Final Editor check: SampleScene clean and active, Play Mode off, not compiling, StandaloneWindows64, Run In Background false, host progression still 2. Console contains only four test-runner/tool housekeeping entries, with no unexpected project errors/warnings. The catalog diff contains exactly the two move-budget changes; no scenes, prefabs, scripts, settings or packages changed. `git diff --check` passes. No APK was rebuilt/installed. The user accepted these provisional budgets and requested commits. No push was requested.

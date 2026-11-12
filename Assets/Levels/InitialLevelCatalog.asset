@@ -21,11 +21,11 @@ MonoBehaviour:
     goalTileType: 2
     goalTarget: 22
     seed: 17
-  - startingMoveCount: 20
+  - startingMoveCount: 24
     goalTileType: 3
     goalTarget: 25
     seed: 73
-  - startingMoveCount: 22
+  - startingMoveCount: 26
     goalTileType: 4
     goalTarget: 24
     seed: 111
