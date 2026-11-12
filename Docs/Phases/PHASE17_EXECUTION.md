@@ -228,7 +228,7 @@ STOP if Phase 16 is not actually closed.
 | App vs game | Game |
 | Free vs paid | Free. If the human might ever charge for the base app: **STOP before Create app.** |
 | Contact email | Supplied by the human; never invented |
-| Google Play Games on PC | Review the default distribution state. If PC isn't in scope, record the choice and opt out where Play allows. No PC work in Phase 17. |
+| Google Play Games on PC | Official sources conflict: the Android submission guide describes PC as opt-in, while Play's app-creation help says free games appear on PC by default. **Check the actual state in Console.** If PC isn't in scope, record the choice and opt out where Play allows. No PC work in Phase 17. |
 
 ---
 
@@ -250,17 +250,22 @@ Configuring a custom keystore in Unity writes local information into the committ
 - `AndroidKeyaliasName`;
 - `androidUseCustomKeystore`.
 
+**Original values (recorded in Phase 17 Step 1):** `androidUseCustomKeystore: 0`, `AndroidKeystoreName:` empty, `AndroidKeyaliasName:` empty.
+
 **Approved Phase 17 approach:**
 
 ```text
 set custom keystore for the build session
 → build / sign
-→ inspect the ProjectSettings diff
-→ restore the local keystore path / alias / custom-keystore serialization
+→ restore all three fields to their original values in the Unity Editor
+  (custom-keystore flag off, keystore path cleared, alias cleared)
+→ inspect the exact serialized diff of ProjectSettings.asset
 → never commit local machine paths or signing configuration that exposes them
 ```
 
-The restore step also runs after a **failed or cancelled** build. Unity has already written the fields by then.
+- The restore step also runs after a **failed or cancelled** build. Unity has already written the fields by then.
+- **Unticking the checkbox alone is not evidence.** The diff must show all three fields back at their original values.
+- **No blanket file restore.** `ProjectSettings.asset` also holds approved release changes, such as version and `productName`. Reverting the whole file, or `git checkout` while the Editor is open, can discard them, or Unity can write its in-memory values back.
 
 - **Passwords and private keys:** never serialized or committed.
 - **No build script yet:** no Editor build script or environment-variable framework in Phase 17. Reconsider only if repetition later makes it worthwhile.
@@ -281,15 +286,30 @@ Do not proceed on "I'll back it up later."
 
 ```text
 Build App Bundle (.aab): ON      Development Build: OFF     Script Debugging: OFF
-IL2CPP · ARM64 · portrait        target API ≥ 36             min API 26 unless evidence requires change
+IL2CPP (Release) · ARM64 · portrait   target API 36 (pinned)   min API 26 unless evidence requires change
+Debug Symbols: Level Public · Format Include in bundle
 signed with the upload key (Step 3 session approach)
 ```
 
+**Platform switch (a scheduled state change):** Unity's active build target is currently **Windows Standalone**, and the Phase 16 tests ran there.
+- Switching to Android re-imports assets and changes local Editor state. Explain it first (Teaching Protocol), then inspect tracked-file dirtiness afterwards.
+- Record whether tests are run on the Android or the Windows target.
+
+**Editor-local build toggles:** App Bundle, Development, Script Debugging and Debug Symbols live in the untracked `Library/BuildProfiles`, not in the repo.
+- Record their exact values per artifact in the ledger.
+- No tracked Build Profile asset for now, since there's no demonstrated need. The clean clone (Step 5) sets them by hand.
+
 **Decisions to make:**
-- **Target SDK:** either keep Automatic and prove `targetSdk ≥ 36` from the AAB, or serialize API 36 explicitly for reproducibility. Prefer the smallest setting that gives deterministic evidence.
+- **Target SDK:** **pin API 36.** Unity's bundled SDK also contains android-37.0, so Automatic is not guaranteed to stay at 36. Pinning keeps the target Phase 16 tested.
 - **Version:** use the approved convention (`0.1.0 (1)`), and only if code 1 is unused.
-- **Native debug symbols:** for IL2CPP, evaluate generating native symbols for test releases so Play's crash/ANR reports can be symbolicated.
-  - Preferred: **Create symbols.zip = Public** (Unity Android build setting). Upload the zip with the AAB where Play accepts it, and record which artifact and version it belongs to.
+- **Unity Diagnostics (before Release A):** the [Phase 13 audit](PHASE13_RELEASE_READINESS_AUDIT.md) calls this decision a hard blocker before the first Play test AAB.
+  - `InsightsSettings.m_EngineDiagnosticsEnabled: 1` is set, but the project isn't linked to Unity Cloud. Unity documents a Cloud link as a collection prerequisite.
+  - Recommendation for human approval: **disable Diagnostics Data** in Project Settings → Services → Diagnostics, and check that the Android Build Profile doesn't override it.
+  - The enabled flag doesn't prove collection, and disabling it doesn't prove `INTERNET` will disappear. Step 9 still investigates from the actual artifact.
+  - If it's kept enabled, Data Safety must follow Unity's Diagnostics disclosure, unless build and documentation evidence show that no collection happens.
+- **Native debug symbols:** use **Level Public, Format Include in bundle**.
+  - This embeds the symbol tables in the AAB, so Play can symbolicate IL2CPP crash/ANR reports.
+  - Record which artifact and `versionCode` the symbols belong to. Adding Zip for a local copy is optional.
   - A deferral needs an explicit, concrete reason.
   - Symbol files never go into source control.
 - **`productName` rename:** replace `agentic-match3-unity` with the approved launcher name before closed testing.
@@ -325,6 +345,8 @@ The clone needs no committed keystore. Configure signing locally, or use debug s
 - the version;
 - `package.json`;
 - a source-content diff or checksum (excluding VCS and cache noise).
+
+**Lockfile:** the committed `packages-lock.json` records MCP as `"source": "embedded"`, while `manifest.json` points to the git URL. Expect the clone to resolve from git and rewrite the lockfile. Record the difference and decide separately which lockfile state should be committed.
 
 No material difference → document and close. A material difference → determine which copy is authoritative. Never auto-commit the embedded package.
 
@@ -366,18 +388,26 @@ Inspect the **actual AAB**; never infer from older APK evidence. Use bundletool,
 | **Predictive Back opt-out** | The **effective** value for the launcher activity is `false`: either the activity declares `android:enableOnBackInvokedCallback="false"`, or it declares nothing and `<application>` declares `false`. An activity-level `true` overrides an application-level `false` and **fails** the check. Read the built manifest, not PlayerSettings. This proves configuration only; the S23 Back checks (Steps 8, 17) prove behavior. |
 | Permissions | the full list, especially `INTERNET`; no unexpected entries |
 | Components | no unexpected services, providers, receivers or SDK metadata |
+| Player assemblies / startup hooks | Read `assets/bin/Data/ScriptingAssemblies.json` and `RuntimeInitializeOnLoads.json`. The `Unity.Pipeline` server should be absent, and MCP must have no startup hook. Their absence doesn't prove the build does no networking. |
 | App category | game (`android:appCategory`), if present |
-| Signature | signed by the intended upload certificate; record its fingerprint |
+| Signature | `jarsigner -verify` passes on the AAB; `keytool -printcert -jarfile` shows the intended upload certificate; record its fingerprint |
+| Hash | `Get-FileHash -Algorithm SHA256` (PowerShell) |
 
 ## 16 KB validation
-Follow [Android's page-size guide](https://developer.android.com/guide/practices/page-sizes). Static checks:
+Follow [Android's page-size guide](https://developer.android.com/guide/practices/page-sizes). Android accepts either **uncompressed, 16 KB zip-aligned** native libraries or **compressed, extracted** ones. Unity's earlier APKs used the compressed option (`extractNativeLibs=true`). Decide which applies from the APKs **generated from the actual AAB**, not from the AAB's entry compression alone.
 
-1. **Bundle packaging:** `bundletool dump config --bundle=<aab>` shows `PAGE_ALIGNMENT_16K`. `PAGE_ALIGNMENT_4K` fails the check.
-2. **ELF `LOAD` alignment:** run `llvm-objdump -p` or `llvm-readelf -Wl` (NDK) on **every `.so`**. Every `LOAD` segment must have align ≥ `2**14` (`0x4000`).
-3. **RELRO:** for every `.so` with a `GNU_RELRO` segment, one of these must hold:
+Static checks:
+
+1. **ELF `LOAD` alignment (always):** run `llvm-objdump -p` or `llvm-readelf -Wl` (NDK) on **every shipped `.so`**. Every `LOAD` segment must have align ≥ `2**14` (`0x4000`).
+2. **RELRO (always):** for every `.so` with a `GNU_RELRO` segment, one of these must hold:
    - `(VirtAddr + MemSiz) % 0x4000 == 0`;
    - or RELRO ends exactly where its containing `LOAD` segment ends.
-4. **Generated APKs:** build the arm64 device APKs from the AAB with `bundletool build-apks`. Run `zipalign -c -P 16 -v 4` (Build-Tools 35+) on each APK that contains `.so` files, and expect "Verification successful".
+3. **Generated APKs:** build the arm64 device APKs from the AAB with `bundletool build-apks --device-spec` (arm64-v8a, SDK 36). For each APK that contains `.so` entries, record whether they are stored uncompressed or compressed, and the manifest's `extractNativeLibs`. Then apply the matching packaging check:
+   - **Uncompressed `.so` entries:** `zipalign -c -P 16 -v 4` (Build-Tools 35+) must report "Verification successful", and `bundletool dump config` should show `PAGE_ALIGNMENT_16K`. `PAGE_ALIGNMENT_4K` with uncompressed libraries fails.
+   - **Compressed `.so` entries with `extractNativeLibs=true`:** zip alignment doesn't apply. Record the packaging mode and `bundletool dump config` output; checks 1–2 carry the result.
+   - Anything mixed or unclear goes to Codex before upload.
+
+The earlier Phase 13 APK passed checks 1–2. That is preliminary evidence only, not AAB or runtime validation.
 
 **Independent confirmation:** after upload, Play Console's App Bundle Explorer must show no 16 KB issue. Play's result confirms the local checks; it doesn't replace them.
 
@@ -413,7 +443,8 @@ Follow [Android's page-size guide](https://developer.android.com/guide/practices
 
 The human approves the release.
 
-**S23 pre-check (before installing A):** check whether `com.tugaykapucu.match3` is already installed, and with which signing certificate.
+**S23 pre-check (before installing A):** read, with the phone connected, whether `com.tugaykapucu.match3` is installed and with which signing certificate.
+- Every local APK so far is signed `CN=Android Debug`, but that is history, not a reading of the phone. **Don't decide on an uninstall until the installed certificate has been read.**
 - A locally built (debug or upload-key) install can't be updated by the Play-signed A.
 - If an uninstall is needed, the human explicitly approves it and acknowledges that the S23's saved progression is lost.
 - This is the only planned uninstall. A → B must stay an in-place update.
@@ -441,7 +472,7 @@ The human approves the release.
 
 **Goal:** evidence for the Data Safety answers, gathered after the real release AAB exists.
 
-**Start here:** Player Settings → **Internet Access = Auto** (`ForceInternetPermission: 0`). Yet the build declares `android.permission.INTERNET`. Find out why:
+**Start here:** Player Settings → **Internet Access = Auto** (`ForceInternetPermission: 0`), plus the Step 4 Diagnostics decision as built. If the build still declares `android.permission.INTERNET`, find out why:
 
 - which assemblies or packages in the **player build** reference networking APIs (`UnityWebRequest`, sockets, HTTP clients, networking modules);
 - how Unity's generated manifest decides to add the permission under Auto;
@@ -478,7 +509,7 @@ If the evidence supports "no user data collected or shared by the app", say exac
 - the human chooses a public HTTPS host with a stable URL;
 - no login, no geoblock;
 - a normal web page, not a PDF;
-- GitHub Pages is acceptable if deliberately configured.
+- GitHub Pages is acceptable if deliberately configured. With GitHub Free, Pages needs a public repository. A separate policy-only public repository works without making the game repository public. The human chooses.
 
 **Verify** in a logged-out/private browser:
 - the page loads over valid HTTPS;
@@ -760,29 +791,30 @@ Phase 17 is complete when every applicable item is true. Details live in the ref
 **Signing and versioning (Steps 3–4)**
 - [ ] Upload key outside the repo; backup and separate password storage verified; fingerprint recorded.
 - [ ] `*.jks` / `*.keystore` gitignore defense in place.
-- [ ] Keystore path/alias serialization restored after every build, including failed or cancelled builds; no local paths or secrets committed.
+- [ ] After every build, including failed or cancelled ones, the keystore flag, path and alias are restored to their original values, as shown by the exact `ProjectSettings.asset` diff. No blanket file restore; no local paths or secrets committed.
+- [ ] Diagnostics decision approved and applied before Release A.
+- [ ] Target API pinned to 36; Android platform switch done as an explained state change; Editor-local build toggles recorded per artifact.
 - [ ] Play App Signing accepted; certificate metadata recorded.
 - [ ] Versioning convention applied; first code verified unused.
-- [ ] Native-symbol decision made and applied (or deferral justified).
+- [ ] Debug symbols Level Public, Format Include in bundle, tied to the artifact and version (or deferral justified).
 - [ ] `productName` / `companyName` decision applied; Editor path change noted.
 
 **Reproducibility (Step 5)**
-- [ ] Clean clone resolves packages and builds; MCP copy compared; no hidden local dependency.
+- [ ] Clean clone resolves packages and builds; MCP copy and lockfile difference compared; no hidden local dependency.
 
 **Release artifacts (Steps 6, 12)** — for every uploaded AAB:
 - [ ] Release config (no Development Build or Script Debugging), IL2CPP, ARM64, `targetSdk ≥ 36`, min SDK, package and version confirmed from the AAB.
-- [ ] Upload signature confirmed; bundle validation passes.
+- [ ] `jarsigner -verify` passes and the upload certificate is confirmed; bundle validation passes; player assemblies and startup hooks reviewed.
 - [ ] **16 KB static validation passes:**
-  - `bundletool` reports `PAGE_ALIGNMENT_16K`;
-  - every `.so` passes the `LOAD` alignment and RELRO checks;
-  - the generated APKs pass `zipalign -c -P 16`;
+  - every shipped `.so` passes the `LOAD` alignment and RELRO checks;
+  - the packaging mode of the generated APKs is recorded, and the matching check passes (uncompressed: `zipalign -c -P 16` plus `PAGE_ALIGNMENT_16K`; compressed: `extractNativeLibs=true` recorded);
   - App Bundle Explorer shows no issue;
   - runtime 16 KB testing is recorded as done or explicitly not done.
 - [ ] **Effective Predictive Back value is `false` for the launcher activity**: no activity-level `true` overrides the application value.
 - [ ] Permissions/components reviewed; `INTERNET` documented; SHA-256 recorded in the ledger.
 
 **Internal and update path (Steps 7, 8, 12)**
-- [ ] App created; Release A accepted; S23 prior-install certificate checked, with any uninstall approved by the human; S23 installed from Play; smoke passes, including Android Back.
+- [ ] App created; Release A accepted; the S23's installed certificate read from the phone, not inferred, with any uninstall approved by the human; S23 installed from Play; smoke passes, including Android Back.
 - [ ] No unexpected permission prompt; cold-start log reviewed; `AssetPackManager` triaged.
 - [ ] Release A → B updated through Play: higher code, same upload key, progression kept, no signature mismatch.
 
