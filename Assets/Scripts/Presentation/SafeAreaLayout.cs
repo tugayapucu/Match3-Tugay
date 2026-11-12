@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Match3.Presentation
 {
@@ -9,7 +8,6 @@ namespace Match3.Presentation
     public sealed class SafeAreaLayout : MonoBehaviour
     {
         [SerializeField] private RectTransform topBar;
-        [FormerlySerializedAs("restartButton")]
         [SerializeField] private RectTransform bottomControls;
         [SerializeField] private float sideMargin = 48f;
 
