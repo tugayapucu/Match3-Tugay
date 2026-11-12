@@ -9,3 +9,5 @@ Cause: `OutcomePanel` contains the dimming Image and stretches to fill `LevelHud
 Decision: record the limitation and leave the layout unchanged for Step 8. Revisit in a focused UI polish pass, informed by device review.
 
 Possible fix: separate the dimming Image into a full-screen backdrop under the Canvas while keeping the card inside SafeArea. Show and hide both together through the existing outcome presentation path. Verify draw order, UI raycasts, both outcomes and Play Again; keep gameplay rules and board framing unchanged.
+
+Phase 16 update (2026-11-12): still deferred; the S23 Step 15 screenshots show the same top strip on Won and Lost. The Phase 16 confirmation prompt already uses this split (full-screen `ConfirmationDimmer` under the Canvas, `ConfirmationCard` under SafeArea with its own sorting Canvas) and covers the whole S23 screen. It is the in-repo reference if this is fixed.
