@@ -1653,56 +1653,88 @@ Keep notebook notes short and tied to implemented classes/methods.
 
 Phase 16 is complete only when:
 
-- [ ] Main Menu exists and app no longer launches directly into an isolated board;
-- [ ] Main Menu has only real actions;
-- [ ] exact initial level count is chosen;
-- [ ] approximately 5–10 intentional LevelDefinitions exist;
-- [ ] LevelDefinition is configuration, not Board logic;
-- [ ] catalog list index is the level order/identity, with no duplicate gameplay validation;
-- [ ] Level 1 reproduces seed 42 / 20 moves / Red / 25;
-- [ ] one production scene; no `SceneManager` navigation or `DontDestroyOnLoad`;
-- [ ] BoardBootstrap starts a supplied/current definition;
-- [ ] Restart repeats the current level definition deterministically;
-- [ ] current level/progression ownership is outside Core board rules;
-- [ ] Win progression is defined;
-- [ ] Loss retry is defined;
-- [ ] Next Level is defined;
-- [ ] Menu return is defined;
-- [ ] final-level behavior is defined;
-- [ ] no navigation starts from the outcome callback; outcome buttons wait for the busy gate;
-- [ ] progression is one stored integer `0 .. levelCount`, saved on accepted `Won`;
-- [ ] final completion shows `Play Again`, starts Level 1 and keeps the completion sentinel;
-- [ ] active Board/session state is not persisted;
-- [ ] fresh-install behavior works;
-- [ ] invalid persisted progress is handled safely;
-- [ ] `LockedAfterException` persistence review is recorded;
-- [ ] `BoardBootstrap` is the only production writer of `inputController.enabled`; blocking UI gates board input and never re-enables a terminal session;
-- [ ] one level cannot leak Board/View/progress/RNG/selection state into another;
-- [ ] Restart confirmation is implemented or explicitly re-deferred with evidence;
-- [ ] gameplay Menu opens a Leave Level confirmation when settled and is unavailable while resolving;
-- [ ] Cancel preserves the active session, including logical selection and its re-derived cue;
-- [ ] Confirm restarts exactly once; Leave returns to Main Menu; neither mode can run the other's action;
-- [ ] final-level Win shows `All Levels Complete` with `Play Again` and `Menu`, and no `Next Level`;
-- [ ] the flow gate stays separate from `IsInputLocked` and enables input only while `LevelProgress.Status == Playing`;
-- [ ] Android Back behavior is defined for Main Menu;
-- [ ] Android Back behavior is defined for settled gameplay;
-- [ ] Back during resolution is safe;
-- [ ] Back behavior is defined for confirmation;
-- [ ] Back behavior is defined for Win/Loss;
-- [ ] Back behavior is verified on the S23 for every state above;
-- [ ] no navigation deactivates a running coroutine host mid-move;
-- [ ] no generic pause/navigation/dialog framework was added without need;
-- [ ] menu/gameplay/confirmation/outcome respect mobile safe areas;
-- [ ] S23 game-flow smoke test completed;
-- [ ] cold launch → Main Menu → Play / Continue → first real finger tap on the Board rechecked;
-- [ ] full EditMode passes;
-- [ ] full PlayMode passes;
-- [ ] Console has no unexplained errors/warnings;
-- [ ] docs/known issues reflect final behavior;
+- [x] Main Menu exists and app no longer launches directly into an isolated board;
+- [x] Main Menu has only real actions;
+- [x] exact initial level count is chosen;
+- [x] approximately 5–10 intentional LevelDefinitions exist;
+- [x] LevelDefinition is configuration, not Board logic;
+- [x] catalog list index is the level order/identity, with no duplicate gameplay validation;
+- [x] Level 1 reproduces seed 42 / 20 moves / Red / 25;
+- [x] one production scene; no `SceneManager` navigation or `DontDestroyOnLoad`;
+- [x] BoardBootstrap starts a supplied/current definition;
+- [x] Restart repeats the current level definition deterministically;
+- [x] current level/progression ownership is outside Core board rules;
+- [x] Win progression is defined;
+- [x] Loss retry is defined;
+- [x] Next Level is defined;
+- [x] Menu return is defined;
+- [x] final-level behavior is defined;
+- [x] no navigation starts from the outcome callback; outcome buttons wait for the busy gate;
+- [x] progression is one stored integer `0 .. levelCount`, saved on accepted `Won`;
+- [x] final completion shows `Play Again`, starts Level 1 and keeps the completion sentinel;
+- [x] active Board/session state is not persisted;
+- [x] fresh-install behavior works;
+- [x] invalid persisted progress is handled safely;
+- [x] `LockedAfterException` persistence review is recorded;
+- [x] `BoardBootstrap` is the only production writer of `inputController.enabled`; blocking UI gates board input and never re-enables a terminal session;
+- [x] one level cannot leak Board/View/progress/RNG/selection state into another;
+- [x] Restart confirmation is implemented or explicitly re-deferred with evidence;
+- [x] gameplay Menu opens a Leave Level confirmation when settled and is unavailable while resolving;
+- [x] Cancel preserves the active session, including logical selection and its re-derived cue;
+- [x] Confirm restarts exactly once; Leave returns to Main Menu; neither mode can run the other's action;
+- [x] final-level Win shows `All Levels Complete` with `Play Again` and `Menu`, and no `Next Level`;
+- [x] the flow gate stays separate from `IsInputLocked` and enables input only while `LevelProgress.Status == Playing`;
+- [x] Android Back behavior is defined for Main Menu;
+- [x] Android Back behavior is defined for settled gameplay;
+- [x] Back during resolution is safe;
+- [x] Back behavior is defined for confirmation;
+- [x] Back behavior is defined for Win/Loss;
+- [x] Back behavior is verified on the S23 for every state above;
+- [x] no navigation deactivates a running coroutine host mid-move;
+- [x] no generic pause/navigation/dialog framework was added without need;
+- [x] menu/gameplay/confirmation/outcome respect mobile safe areas;
+- [x] S23 game-flow smoke test completed;
+- [x] cold launch → Main Menu → Play / Continue → first real finger tap on the Board rechecked;
+- [x] full EditMode passes;
+- [x] full PlayMode passes;
+- [x] Console has no unexplained errors/warnings;
+- [x] docs/known issues reflect final behavior;
 - [ ] developer can explain gameplay-session vs game-flow ownership;
 - [ ] human reviewed the final diff.
 
 Do not start Phase 17 automatically.
+
+### Step 19 result — 2026-11-12
+
+Every technical and device item is met. Phase 16 closes when the three human items
+below are confirmed. Evidence for the ticked items:
+
+- **Product and data (menu, levels, catalog, Level 1, LevelDefinition):**
+  - Steps 6 and 9;
+  - `InitialLevelCatalog.asset` holds six levels, with Level 1 at seed 42, 20 moves, Red 25;
+  - `MainMenuView` has a single Play / Continue / Play Again button.
+- **One scene:** `SampleScene` is the only scene in the build. There is no `SceneManager` or `DontDestroyOnLoad` in production code.
+- **Ownership and gates:**
+  - `BoardBootstrap` is the only production writer of `inputController.enabled`;
+  - every `GameFlowController` command refuses while `IsBusy`;
+  - `HandleLevelEnded` never navigates;
+  - menus and prompts are overlays, and nothing deactivates the board (`KnownIssues/LockedAfterException.md`, Phase 16 review).
+- **Progression and persistence:** Step 7 and `ProgressionStoreTests` (fresh install, clamping, never-lower, final sentinel).
+- **Outcomes, confirmations and Back:** Steps 10–12, plus the S23 smoke test in Step 15.
+- **Session isolation and adversarial ordering:** Steps 13–14.
+- **Safe areas:** Step 15 S23 screenshots. The outcome dimmer's top strip is a known cosmetic issue: the card and buttons stay inside the safe area (`KnownIssues/OutcomeDimSafeArea.md`).
+- **Tests at `c95861c`**, which includes the Level 5–6 budgets and the `SafeAreaLayout` serialization cleanup:
+  - full EditMode 632 / 632;
+  - full PlayMode 344 passed, 0 failed, 3 skipped (the `[Explicit]` frame-rate tests);
+  - Console limited to the declared camera-fitting warning plus test-runner and tool housekeeping;
+  - SampleScene clean, Play Mode stopped.
+- **Documentation:** Step 17 and `Docs/Validation/PHASE16_VALIDATION_RECORD.md`.
+
+Open, for the developer to confirm:
+
+- normal human playthroughs of Levels 5–6 at their adjusted budgets (a phone result needs a rebuilt APK);
+- the developer can explain gameplay-session vs game-flow ownership (Step 18);
+- human review of the final Phase 16 diff.
 
 ---
 
