@@ -320,11 +320,35 @@ signed with the upload key (Step 3 session approach)
 - **App icon:** no final art pass. A temporary, truthful icon is acceptable if Play or the build requires one.
 
 **Build-side effects:**
-- Before building, snapshot the tracked files Unity builds are known to rewrite: `ProjectSettings.asset`, the URP assets and global settings, `DefaultVolumeProfile.asset`, and any tracked Build Profiles.
-- Afterwards:
-  - keep and review intentional release settings;
-  - inspect Unity build dirtiness file by file, including the Step 3 keystore fields;
-  - never commit it blindly.
+- Commit the reviewed Step 4 configuration **before any Android build**, including Step 5's clean-clone build. Record that settings commit as the baseline; never restore to the older identity/configuration by mistake.
+- The expected configuration diff is limited to `companyName`, `productName`, `bundleVersion`, `AndroidTargetSdkVersion: 36`, and the IL2CPP compiler configuration only if Release requires a change in `ProjectSettings/ProjectSettings.asset`; plus `m_EngineDiagnosticsEnabled: 0` in `ProjectSettings/UnityConnectSettings.asset`. The platform switch should produce no tracked changes. Investigate anything else before committing.
+- Before building, snapshot these known build-noise files from the reviewed baseline, outside Git:
+  - `ProjectSettings/ProjectSettings.asset` (`preloadedAssets` and Android batching);
+  - `Assets/Settings/UniversalRP.asset`;
+  - `Assets/Settings/UniversalRenderPipelineGlobalSettings.asset`;
+  - `Assets/Settings/DefaultVolumeProfile.asset`.
+- After every build, including failed or cancelled builds:
+  1. Restore the custom-keystore flag, path and alias through Unity as specified in Step 3. Do not save passwords or local signing paths in documentation or Git.
+  2. Inspect the full tracked diff, then each changed hunk against the settings commit. A familiar filename alone does not establish that a change is disposable build noise. Preserve unrelated edits and investigate unexpected changes.
+  3. Only when the remaining changes in the four files above are confirmed build noise, close Unity after confirming the scene has no unsaved work. Verify the Editor process has exited before using Git to restore those specific files from the recorded settings commit. Never use a blanket reset or restore files through Git while Unity is open.
+  4. Reopen Unity and verify the settings, scene, Console and exact Git diff. If changes recur on reopening, investigate rather than repeatedly restoring them. Keep the approved release configuration intact.
+- Read the Android Build Profile's Diagnostics override in the Editor, not merely the serialized integer: `2` means `ProjectSettings` (inherit the project default). Verify the disabled default and inheritance with Android active. A Windows-target readback is not Android evidence.
+- Until a reliable Diagnostics-off marker has been identified in the actual AAB, describe the result as **checked from settings only**. Do not infer the absence of uploads or the cause of `INTERNET`.
+- Step 6/12 artifact inspection must check embedded native symbols under `BUNDLE-METADATA/...debugsymbols/arm64-v8a/` and retain `bundletool dump manifest` evidence for the presence or absence of both `android.permission.INTERNET` and `android.permission.ACCESS_LOCAL_NETWORK`.
+
+## Step 4 implementation record — 2026-11-14
+
+- Applied through Unity 6000.5.10f1: `companyName: Atik Games`, `productName: Galaxplode`, `bundleVersion: 0.1.0`, Android target API 36, and project Diagnostics disabled. Package remains `com.tugaykapucu.match3`; minimum API remains 26; version code remains 1, with its availability still requiring human Console verification.
+- Switched the active Editor build target from `StandaloneWindows64` to `Android`. The switch produced no tracked settings or asset changes. Android remains active at the end of Step 4.
+- IL2CPP Release, ARM64, portrait, Minimal managed stripping, engine stripping, graphics APIs (Vulkan/OpenGLES3), quality, Internet Access Auto, Predictive Back opt-out and the 60 FPS policy were preserved. Release was already selected, so no IL2CPP compiler-configuration serialization was needed.
+- Saved only the existing, ignored Android platform profile under `Library/BuildProfiles`: AAB on; Export Project, Development Build and Script Debugging off; Public symbols (`SymbolTable` in the API), format `IncludeInBundle`. No tracked Build Profile was introduced.
+- With **Android active**, the project-default Diagnostics getter and effective getter both returned false. The live Android profile's Diagnostics override remained `ProjectSettings` (serialized value 2), inheriting the disabled default. This is **checked from settings only**: no AAB marker or absence of diagnostic uploads is claimed.
+- Validation with Android active: 11 settings/invariant checks passed; focused catalog/progression EditMode tests **29/29**; real-scene touch/flow PlayMode tests **16/16** at a 1080×1920 portrait Game view. No tests or production code were edited.
+- The first PlayMode attempt used the Android group's initial Free Aspect preview (1086×607 landscape): 11 passed and 5 failed (four exact confirmation-coordinate assertions and one menu-button/covered-tile overlap assertion). Selecting the existing portrait Game view preset resolved those failures without changing project settings, scene layout or tests. The local preview remains portrait.
+- Nine URP `TraceVirtualOffset` shader precision warnings appeared during the platform import. No rendering change was made. After the passing scene tests, the Console contained the declared no-room camera warning and test-framework result/cleanup messages, with no unexpected project errors.
+- The tracked configuration diff matches the declared baseline exactly: four PlayerSettings values and one UnityConnectSettings value. The only additional tracked change is this plan's cleanup procedure and implementation record. Assets, packages, quality, graphics, scene and prefab files are unchanged; SampleScene is clean and Play Mode is stopped.
+- Step 3 prerequisite, confirmed by the human: PKCS12 upload key (`upload`, RSA 4096, `CN=Atik Games`) and USB backup verified, with password stored separately. Public upload-certificate SHA-256: `50:85:36:9B:8C:ED:D8:6F:33:53:01:B6:2F:E5:28:E2:02:FD:C8:13:CD:C0:F9:C2:C3:F2:5E:E5:6A:8F:54:17`. The key was not accessed or configured in Step 4; custom-keystore flag remains off and path/alias remain empty.
+- No Android build, AAB creation, device installation/uninstallation, Play Console action or push occurred. Step 5 has not started. Account verification, version-code availability, app contact email and actual PC distribution state remain human Console checks. Full pre-build regression and artifact/permission checks remain required in their later steps.
 
 ---
 
