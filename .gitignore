@@ -64,6 +64,13 @@ sysinfo.txt
 *.unitypackage.meta
 *.app
 
+# Signing keys and exported signing material
+*.jks
+*.keystore
+*.p12
+*.pem
+*.pepk
+
 # Crashlytics generated file
 crashlytics-build.properties
 
