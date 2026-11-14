@@ -336,19 +336,7 @@ signed with the upload key (Step 3 session approach)
 - Until a reliable Diagnostics-off marker has been identified in the actual AAB, describe the result as **checked from settings only**. Do not infer the absence of uploads or the cause of `INTERNET`.
 - Step 6/12 artifact inspection must check embedded native symbols under `BUNDLE-METADATA/...debugsymbols/arm64-v8a/` and retain `bundletool dump manifest` evidence for the presence or absence of both `android.permission.INTERNET` and `android.permission.ACCESS_LOCAL_NETWORK`.
 
-## Step 4 implementation record — 2026-11-14
-
-- Applied through Unity 6000.5.10f1: `companyName: Atik Games`, `productName: Galaxplode`, `bundleVersion: 0.1.0`, Android target API 36, and project Diagnostics disabled. Package remains `com.tugaykapucu.match3`; minimum API remains 26; version code remains 1, with its availability still requiring human Console verification.
-- Switched the active Editor build target from `StandaloneWindows64` to `Android`. The switch produced no tracked settings or asset changes. Android remains active at the end of Step 4.
-- IL2CPP Release, ARM64, portrait, Minimal managed stripping, engine stripping, graphics APIs (Vulkan/OpenGLES3), quality, Internet Access Auto, Predictive Back opt-out and the 60 FPS policy were preserved. Release was already selected, so no IL2CPP compiler-configuration serialization was needed.
-- Saved only the existing, ignored Android platform profile under `Library/BuildProfiles`: AAB on; Export Project, Development Build and Script Debugging off; Public symbols (`SymbolTable` in the API), format `IncludeInBundle`. No tracked Build Profile was introduced.
-- With **Android active**, the project-default Diagnostics getter and effective getter both returned false. The live Android profile's Diagnostics override remained `ProjectSettings` (serialized value 2), inheriting the disabled default. This is **checked from settings only**: no AAB marker or absence of diagnostic uploads is claimed.
-- Validation with Android active: 11 settings/invariant checks passed; focused catalog/progression EditMode tests **29/29**; real-scene touch/flow PlayMode tests **16/16** at a 1080×1920 portrait Game view. No tests or production code were edited.
-- The first PlayMode attempt used the Android group's initial Free Aspect preview (1086×607 landscape): 11 passed and 5 failed (four exact confirmation-coordinate assertions and one menu-button/covered-tile overlap assertion). Selecting the existing portrait Game view preset resolved those failures without changing project settings, scene layout or tests. The local preview remains portrait.
-- Nine URP `TraceVirtualOffset` shader precision warnings appeared during the platform import. No rendering change was made. After the passing scene tests, the Console contained the declared no-room camera warning and test-framework result/cleanup messages, with no unexpected project errors.
-- The tracked configuration diff matches the declared baseline exactly: four PlayerSettings values and one UnityConnectSettings value. The only additional tracked change is this plan's cleanup procedure and implementation record. Assets, packages, quality, graphics, scene and prefab files are unchanged; SampleScene is clean and Play Mode is stopped.
-- Step 3 prerequisite, confirmed by the human: PKCS12 upload key (`upload`, RSA 4096, `CN=Atik Games`) and USB backup verified, with password stored separately. Public upload-certificate SHA-256: `50:85:36:9B:8C:ED:D8:6F:33:53:01:B6:2F:E5:28:E2:02:FD:C8:13:CD:C0:F9:C2:C3:F2:5E:E5:6A:8F:54:17`. The key was not accessed or configured in Step 4; custom-keystore flag remains off and path/alias remain empty.
-- No Android build, AAB creation, device installation/uninstallation, Play Console action or push occurred. Step 5 has not started. Account verification, version-code availability, app contact email and actual PC distribution state remain human Console checks. Full pre-build regression and artifact/permission checks remain required in their later steps.
+The approved Step 4 implementation record, validation evidence and public upload-certificate metadata now live in [the release ledger](../Release/RELEASE_LEDGER.md). Keep release evidence there rather than duplicating it in this plan.
 
 ---
 
@@ -364,6 +352,8 @@ signed with the upload key (Step 3 session approach)
 5. confirm compilation and the build succeed.
 
 The clone needs no committed keystore. Configure signing locally, or use debug signing with its purpose documented. The real release AAB still requires the upload key.
+
+Before real-scene PlayMode tests, set and verify the clean clone's Game view to **1080×1920 portrait**, even if Android Player Settings already says portrait. Record the actual dimensions and active target with the result. See [the local Game view dependency](../KnownIssues/SceneTestsGameViewDependency.md).
 
 **MCP comparison:** compare the workspace's embedded MCP package with the clone's resolved v10.0.0, checking:
 - the version;
@@ -383,7 +373,7 @@ No material difference → document and close. A material difference → determi
 **Goal:** the first real Play-uploadable artifact. It may precede privacy/app-content setup, since Internal can start early.
 
 **Pre-build:**
-- full EditMode and PlayMode runs;
+- **hard gate:** both complete EditMode and PlayMode suites pass before the first AAB. Record failures separately from the three approved `[Explicit]` hardware-timing skips; focused runs are insufficient;
 - Console review;
 - record the commit SHA.
 
@@ -495,6 +485,8 @@ The human approves the release.
 # Step 9 — Data-Surface / INTERNET Evidence Review
 
 **Goal:** evidence for the Data Safety answers, gathered after the real release AAB exists.
+
+Step 5's debug-signed APK retained `INTERNET` with Diagnostics configured off. No direct networking API uses were found in the project's C# scripts or MCP's eight Runtime C# files. Start the next investigation with engine modules and packages rather than treating Diagnostics as the lead. This narrows the investigation without proving that Diagnostics could never contribute; confirm the actual release AAB's permissions and data surface. `ACCESS_LOCAL_NETWORK` was absent from that APK, not yet verified for the release AAB.
 
 **Start here:** Player Settings → **Internet Access = Auto** (`ForceInternetPermission: 0`), plus the Step 4 Diagnostics decision as built. If the build still declares `android.permission.INTERNET`, find out why:
 
