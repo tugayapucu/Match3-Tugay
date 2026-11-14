@@ -6,7 +6,7 @@ Phase 17 is in progress. Step 5 established clean-clone reproducibility; Step 6 
 
 - Galaxplode / Atik Games; package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
-- Account verification, version-code availability, contact email and actual PC distribution state remain unverified in Console.
+- Outstanding Console checks: trader-status compliance, version-code acceptance, support email and actual PC distribution state; see Step 7 below.
 
 ## Upload certificate — human-verified Step 3
 
@@ -82,3 +82,20 @@ Commit: `df773ab9cd5e7b2c98cef4cf0b899ac1e00e192f` — Configure Galaxplode Andr
 - The matching `Galaxplode-InternalA-0.1.0-v1_BackUpThisFolder_ButDontShipItWithYourGame/` IL2CPP folder is retained beside this AAB under ignored `Builds/Android/Phase17Step6/` (523 files). It is associated with this build and excluded from source control and player distribution.
 - Human reports no previous Play upload for this package; code 1 is a candidate based on that history, **not Console-verified availability**. `INTERNET` investigation remains Step 9. App Bundle Explorer confirmation and Play acceptance are pending; **not runtime-tested on 16 KB**. No upload, Play app creation or S23 operation occurred.
 - Detailed reports, certificate-only output, per-library headers, symbol hashes, generated-APK inspection, signature checks, build-noise diff and final Editor readback are in ignored `Builds/Validation/Phase17Step6/`. Only this ledger changed in tracked files; no gameplay, scene, prefab, package or settings change remains. Step 6 implementation and local validation are complete and reviewed by Claude; the human's Step 7 Console-app creation has not started. Internal upload/rollout is the separate Step 8 gate.
+
+## Step 7 — completed and reviewed 2026-11-15
+
+| Check | Result |
+| --- | --- |
+| Evidence | Human readback from Console's Switch apps screen on November 15; no direct agent access |
+| Account | Personal; 12-testers/14-continuous-days Closed-test requirement applies before applying for production access |
+| App | **Galaxplode / `com.tugaykapucu.match3` / Draft**; last updated November 14, 2026; original package retained |
+| Creation approval / form | Explicit human approval preceded submission; **en-US / Game / Free** confirmed |
+| Declarations | Human personally accepted Developer Program Policies, Play App Signing terms and US export/encryption-compliance certification |
+| Dashboard | Internal available but not started; store setup incomplete; **0 opted-in testers**; production access unavailable; Closed clock not started |
+| Artifact acceptance | No AAB uploaded; code 1 acceptance and Play certificate provisioning remain unverified for Step 8 |
+| Missing controls | Support email and PC settings absent from creation form and not located afterward; actual settings unverified, no distribution change made |
+
+- **Trader status:** outstanding, due **February 1, 2027**. [Google's guidance](https://support.google.com/googleplay/android-developer/answer/17594752?hl=en-GB) lists paid apps, IAP and ads as profit signals. A hobby/non-commercial activity is "unlikely to be a trader"; no revenue alone does not settle the classification. A personal-account trader must provide a publicly displayed phone number and address (announced display from March 1, 2027). Adding ads later requires rechecking the declaration. The choice is the human's; no trader declaration submitted. Recheck any enforcement before publishing.
+- **Deferrals:** support email to **Step 13**, subject to any earlier Console requirement; PC distribution to **Step 8 before rollout approval**. Read-only route: select Galaxplode → **Test and release → Advanced settings → Form factors → Google Play Games on PC → Manage**, if present. [Console Help](https://support.google.com/googleplay/android-developer/answer/13295490) uses “Test and release”; [Google's PC guide](https://developer.android.com/games/playgames/development-submit) labels the parent “Release.” If absent, resolve the actual state before rollout; do not add/remove a form factor or save changes without human approval. The AAB is **ARM64-only, portrait/touch**; PC compatibility and opt-out are unverified.
+- **Step 14:** human approved adding a Turkish (`tr-TR`) store listing later, retaining en-US as the default; no translation implemented here.
