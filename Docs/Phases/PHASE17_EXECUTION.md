@@ -146,10 +146,11 @@ Prefer promoting the same tested AAB to Closed over an untested rebuild, unless 
 - **Every upload increases `versionCode`.** A code is never reused, even for a rejected upload.
 - `versionName` may stay `0.1.0` across testing uploads until the product meaningfully changes.
 
-Example sequence:
-- Internal A: `0.1.0 (1)`;
-- Internal B: `0.1.0 (2)`;
-- later test builds: `(3)` onwards;
+Current sequence (Step 8 compatibility finding):
+- original Internal A: `0.1.0 (1)`, uploaded as a draft, **never rolled out**; blocked by a PVRTC device filter;
+- replacement Internal A: planned `0.1.0 (2)`, subject to unused-code confirmation and separate rebuild/upload approvals;
+- Internal B: planned `0.1.0 (3)`, the in-place Play update from replacement A;
+- later test builds: `(4)` onwards, always recheck the next unused code;
 - Phase 20 production candidate: `1.0.0 (next unused code)`.
 
 Every upload is recorded in the Release Ledger (see Documentation).
@@ -374,6 +375,9 @@ No material difference → document and close. A material difference → determi
 
 **Pre-build:**
 - **hard gate:** both complete EditMode and PlayMode suites pass before the first AAB. Record failures separately from the three approved `[Explicit]` hardware-timing skips; focused runs are insufficient;
+- rerun both full suites after any `ProjectSettings/` change, including the pending texture-format/version correction; older tested-commit results cannot cover the changed settings. Set the recorded portrait Game view before real-scene tests;
+- verify and record **both** Android Player Settings texture formats and the effective Build Profile texture override. The pending correction is tracked **Texture Compression Formats = ETC2**, with the local profile set to **Use Player Settings** (`MobileTextureSubtarget.Generic`, 0). Inspect the resulting tracked `m_BuildTargetDefaultTextureCompressionFormat` diff;
+- **scripted-build safeguard:** do not use MCP's unprofiled `ManageBuild.HandleCommand` build path for Android. Its `ResolveSubtarget` supplies desktop `StandaloneBuildSubtarget.Player` (2), which Android interprets as PVRTC, even if the caller supplies an unrecognized texture name. Use an explicit Android `BuildPlayerOptions.subtarget = (int)MobileTextureSubtarget.Generic` with the tracked ETC2 setting, or a verified profile-aware Editor build. Record the actual build invocation and read back the subtarget afterward; changing the profile alone does not prevent this overwrite. No MCP package modification is required. Carry forward [the known issue](../KnownIssues/McpAndroidBuildSubtarget.md) every phase;
 - Console review;
 - record the commit SHA.
 
@@ -398,6 +402,8 @@ Inspect the **actual AAB**; never infer from older APK evidence. Use bundletool,
 | SDKs | min SDK; target SDK ≥ 36 |
 | Debuggability | `debuggable` false |
 | Native ABIs | arm64-v8a only, as configured |
+| Device filtering | Inspect every `supports-gl-texture`, `uses-feature` (including `glEsVersion`) and `supports-screens` declaration. Compare with the known-good Phase 16 Step 12 APK. No PVRTC filter; prefer no `supports-gl-texture`, otherwise establish that each declared format adds no restriction beyond GLES 3.0. Explain every filtering difference before upload. |
+| Play device compatibility (after approved upload, before rollout) | Inspect the replacement bundle's supported devices/version scope: a materially larger count than code 1's 3,151, **Galaxy S23 SM-S911B**, at least one Adreno and one Mali device supported. Record exact models/statuses. An inactive-track status with no version scope is insufficient evidence. |
 | **16 KB page size** | All four checks in the 16 KB section below. Don't assume Unity 6 guarantees any of them. |
 | **Predictive Back opt-out** | The **effective** value for the launcher activity is `false`: either the activity declares `android:enableOnBackInvokedCallback="false"`, or it declares nothing and `<application>` declares `false`. An activity-level `true` overrides an application-level `false` and **fails** the check. Read the built manifest, not PlayerSettings. This proves configuration only; the S23 Back checks (Steps 8, 17) prove behavior. |
 | Permissions | the full list, especially `INTERNET`; no unexpected entries |
@@ -446,28 +452,43 @@ The earlier Phase 13 APK passed checks 1–2. That is preliminary evidence only,
 
 **Goal:** prove Play accepts and distributes the bundle.
 
-**Testers:** the developer's own account or a very small internal-only list. The closed cohort is never used here.
+**Testers:** only the human developer's own Play account for Release A. The future closed cohort is never used here; an Internal tester must leave Internal before joining Closed. No tester email goes in Git or the ledger.
+
+**Before upload (separate human approval):**
+- confirm the correct Console package, current bundle/version-code history and exact Step 6 AAB hash; no rebuild without a concrete reason;
+- choose the default **Google-generated app signing key(s)**. Do not select a different/custom key, reuse another app's key or export a private key with PEPK for this release;
+- treat signing enrollment as a consequential human decision: Google's stored private signing key cannot be retrieved. Do not claim the key is unchangeable immediately after the first release: [current Play guidance](https://support.google.com/googleplay/android-developer/answer/9842756) permits limited pre-open/production changes and later upgrades. No key change is proposed here;
+- inspect the actual signing UI, including any Google-generated hybrid-key default. After processing, record public SHA-256 fingerprints for the upload certificate and Play app-signing certificate(s). The upload fingerprint must match Step 3's ledger value; identify which Play certificate applies to the S23's Android version;
+- upload approval authorizes neither rollout nor device uninstall. Stop for a new decision if the UI requests an unexpected signing action.
 
 **Before rollout:**
 - the artifact SHA matches the inspected AAB;
 - the version code is correct;
 - release notes are truthful;
 - the Console shows no blocking error;
+- Step 6's filtering comparison and version-specific Play device checks pass for the replacement bundle. Code 1 remains unrolled; only after separate upload approval does the human remove bundle 1 from the Internal draft and add the validated replacement bundle 2;
 - App Bundle Explorer shows no 16 KB or native-library warning.
+- the pending trader-status notice has been checked for enforcement, without an agent choosing a classification;
+- actual PC-distribution state has been checked using the documented route in the ledger. If enabled, recommend opting out until this ARM64-only, portrait/touch game is tested on PC; the human decides and approves any setting change.
 
 The human approves the release.
 
 **S23 pre-check (before installing A):** read, with the phone connected, whether `com.tugaykapucu.match3` is installed and with which signing certificate.
 - Every local APK so far is signed `CN=Android Debug`, but that is history, not a reading of the phone. **Don't decide on an uninstall until the installed certificate has been read.**
-- A locally built (debug or upload-key) install can't be updated by the Play-signed A.
-- If an uninstall is needed, the human explicitly approves it and acknowledges that the S23's saved progression is lost.
-- This is the only planned uninstall. A → B must stay an in-place update.
+- compare the installed certificate against the relevant Play app-signing certificate. A different, incompatible certificate prevents an in-place update.
+- inventory **every Android user/profile**, including **user 10**. Android shares the package installation across profiles while separating their data: a debug-signed copy left in user 10 can block a main-profile Play install with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+- ADB access to user 10 was previously denied. Identify the profile rather than guessing its type; if access is still denied, have the human use that profile's own app-management UI (for example, Secure Folder or Dual Messenger, if that is what it actually is). Do not bypass profile restrictions or delete a profile/container.
+- if removal is needed, first present the exact affected profiles and permanent progression-data loss for explicit human approval. After approved removal from **every profile that has the debug package**, confirm device-wide package absence using available package-manager evidence and any required human profile-UI readback. If absence cannot be established, stop before installing from Play.
+- optional, only if the human wants evidence: snapshot accessible debug-build save files with `run-as` to private ignored scratch storage before removal. This provides no supported restoration path into the Play build; treat progression loss as final. Do not bypass user 10's restrictions to collect files.
+- this is the planned debug-to-Play removal; A → B must stay an in-place update.
 
 **Play install:** install on the S23 **from Google Play**; no sideloading. Verify:
 - package, version and launcher label;
+- `installerPackageName=com.android.vending` and an installed signing certificate matching Console's **in-use** key or a key Console explicitly lists as applicable. No further quantum-ready beta-key investigation is needed unless this comparison fails;
 - launch, portrait and Main Menu;
 - first board tap, swipe and two-tap;
 - safe area;
+- sprite/highlight quality with the replacement ETC2 texture configuration;
 - Restart/Leave confirmations;
 - Win/Loss and specials;
 - **Android Back in every Phase 16 state** (the manifest opt-out proven on device);
@@ -480,6 +501,8 @@ The human approves the release.
 - the `AssetPackManager` exception (classify it per the carry-over table);
 - unexpected networking or service errors.
 
+**Available Play reports:** if a pre-launch report appears, record its build-specific crash/accessibility findings and triage any concrete blocker. Do not wait for the report to finish Step 8; a missing report remains pending for Step 18.
+
 ---
 
 # Step 9 — Data-Surface / INTERNET Evidence Review
@@ -487,6 +510,8 @@ The human approves the release.
 **Goal:** evidence for the Data Safety answers, gathered after the real release AAB exists.
 
 Step 5's debug-signed APK retained `INTERNET` with Diagnostics configured off. No direct networking API uses were found in the project's C# scripts or MCP's eight Runtime C# files. Start the next investigation with engine modules and packages rather than treating Diagnostics as the lead. This narrows the investigation without proving that Diagnostics could never contribute; confirm the actual release AAB's permissions and data surface. `ACCESS_LOCAL_NETWORK` was absent from that APK, not yet verified for the release AAB.
+
+Play's observed **Automatic protection / installer checks** adds code to generated APKs; the delivered code is not described completely by local AAB inspection. Keep the observed protection setting unchanged for the replacement, and use the actual **Play install** for device evidence. Include Play licensing/installer-check traffic as a candidate network source and the observed `CHECK_LICENSE` permission delta in this review; do not infer Data Safety answers solely from that permission. See [Google's Automatic protection documentation](https://support.google.com/googleplay/android-developer/answer/10183279).
 
 **Start here:** Player Settings → **Internet Access = Auto** (`ForceInternetPermission: 0`), plus the Step 4 Diagnostics decision as built. If the build still declares `android.permission.INTERNET`, find out why:
 
@@ -579,7 +604,7 @@ Verify:
 **Goal:** verify a real Google Play update.
 
 **Build:**
-- after the privacy link and any approved fixes, build Release B with a **higher `versionCode`**;
+- after the privacy link and any approved fixes, build Release B with a **higher `versionCode`**: planned **3** after replacement A **2**, subject to actual unused-code history;
 - inspect it again with the full Step 6 table, including the 16 KB and Back checks;
 - add it to the ledger.
 
@@ -828,6 +853,7 @@ Phase 17 is complete when every applicable item is true. Details live in the ref
   - runtime 16 KB testing is recorded as done or explicitly not done.
 - [ ] **Effective Predictive Back value is `false` for the launcher activity**: no activity-level `true` overrides the application value.
 - [ ] Permissions/components reviewed; `INTERNET` documented; SHA-256 recorded in the ledger.
+- [ ] Tracked ETC2 setting and profile inheritance verified; Android build call avoids the desktop-subtarget default; manifest filtering compared against the known-good Phase 16 APK. Replacement A passes version-specific Play checks for SM-S911B, Adreno and Mali before rollout; both full suites rerun after the settings change.
 
 **Internal and update path (Steps 7, 8, 12)**
 - [ ] App created; Release A accepted; the S23's installed certificate read from the phone, not inferred, with any uninstall approved by the human; S23 installed from Play; smoke passes, including Android Back.
