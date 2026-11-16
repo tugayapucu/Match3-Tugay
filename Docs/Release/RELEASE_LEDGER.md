@@ -1,12 +1,12 @@
 # Galaxplode release ledger
 
-Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Known startup exceptions remain open; Step 9 awaits the human's go-ahead.
+Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Step 9 evidence is reviewed; the telemetry readback and final Data Safety decision remain pending.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / Atik Games; package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
-- Step 8 reviewed; Step 9 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
+- Step 9 evidence reviewed; protection/telemetry readback pending; Step 10 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
 
@@ -175,4 +175,58 @@ Automated input was **screenshot-gated by the machine, not inspected by a person
 - Known startup exceptions remain unexplained, **not declared harmless**; no observed crash, frozen input or gameplay failure. AssetPackManager closure remains Phase 20; app-UID logs cannot exclude all system ANRs. Exit history records the intentional force-stop.
 - Pre-launch-report findings requested but not supplied: **pending Step 18**, without blocking Step 8. No full six-level run or 16 KB runtime test.
 - Raw screenshots, action journal, image comparisons, manifests and logs remain ignored under `Builds/Validation/Phase17Step8/`; incidental notification captures discarded.
-- Step 8 approved by Claude; no new suite run for this documentation-only update; validated production/settings unchanged. **Step 9 awaits the human's go-ahead.**
+- Step 8 approved by Claude; validated production/settings unchanged. Step 9's separately authorized evidence review follows below.
+
+## Step 9 - evidence gathered 2026-11-16; reviewed by Claude 2026-11-17
+
+Scope: unchanged release **0.1.0 (2)**, AAB SHA-256 **`41c68a46b59a8ca8eded9421e3144e6f79ba470ae1b4b69f0042398542477b66`**, and the retained, certificate-verified Play-installed base APK from Step 8. This step reuses Step 8's runtime observations; it does **not** add a packet capture or prove absence of traffic.
+
+### Why INTERNET is present
+
+Unity's actual **`IntermediateLibraryManifestDiag.txt`** attributes `INTERNET` to `UnityEngine.Networking` in **Unity.InputSystem** and **Unity.RenderPipelines.Core.Runtime**. Feature files and retained assembly references identify **PlayerConnection** tooling, rather than game HTTP calls. The installed Editor's manifest-builder IL confirms the Auto rule; Gradle's merger traces the permission to Unity's generated library manifest, before Play processing. This is stronger evidence than inferring the cause from package names or Diagnostics settings.
+
+The release's retained **InputSystem.InitializeInPlayer** has no remoting setup call, and **DebugUpdater.RuntimeInit** contains only `ret`; package source gates automatic remoting/debug initialization to development builds. These checks explain the permission without establishing that every engine/native path is incapable of networking. **Internet Access remains Auto; no setting was changed.**
+
+### Data surface and provisional dispositions
+
+| Surface | Permission | Module / SDK evidence | Configuration | Runtime evidence | Proposed answer / limit |
+| --- | --- | --- | --- | --- | --- |
+| Progression | No special permission | GameFlow + ProgressionStore; one integer `Match3.Progression.v1` in PlayerPrefs | Save on accepted win; no app sync/server code | Step 8 cold-relaunch Continue starts fresh Level 2 | No app-implemented upload identified; local-only processing is outside Play's collection definition, subject to the platform-backup caveat below |
+| Engine networking | `INTERNET` in AAB and delivered APK | PlayerConnection references trigger Unity's manifest rule | Auto, non-development; automatic remoting/debug startup absent in inspected IL | No new packet observation | Permission alone is not a collection declaration or proof of traffic |
+| Unity services | No service-specific permission distinguishes collection | Engine **UnityAnalyticsCommonModule** support types retained; UGS Analytics SDK not identified | Build input: Unity Connect, Analytics, Performance Reporting, Crash Reporting, Insights **all false**; project unlinked; Android Diagnostics disabled/inherited | No upload established by retained logs; logs are not exhaustive network evidence | No configured Unity collection identified; no blanket no-collection claim from settings alone |
+| MCP / Pipeline | No additional permission attributed to their runtime code | Names in registry, but **no retained MCPForUnity.Runtime or Unity.Pipeline.Attributes image**; runtime Pipeline server absent | No corresponding runtime initializer | No runtime collector identified in inspected artifacts | Registry names do not prove shipped executable SDK code |
+| Ads / IAP / auth / sensitive APIs | No AD_ID, location, camera, microphone, contacts or external-storage permission in inspected manifests | No matching game API calls, custom Android plugins, Firebase SDK or ads SDK definitions identified | Ads/Purchasing disabled; no authentication implementation | No permission dialog reported in Step 8 | No implemented feature basis for these collection categories; does not rule out normal-permission/native identifiers |
+| Play installer protection | Delivered APK adds `CHECK_LICENSE` | **38 additional DEX classes**, including `com.pairip.licensecheck` | Installer checks on; no change proposed | LicenseClient request observed; inspected report writes package name and a zero flag to a Binder parcel | Reviewed interpretation: package-only installer IPC and the Store's own processing are not app collection/sharing; Google does not explicitly confirm this classification |
+| Optional Play telemetry | Permission alone cannot establish it | Google describes anonymized environment/performance telemetry for anti-tamper protection | Default unstated; actual control/status readback pending | No telemetry payload captured | Recommend **off with human approval**, keeping protection on; final overall answer remains conditional |
+
+### Artifact checks and qualifications
+
+- **Registry versus compiled code:** `ScriptingAssemblies.json` lists **121 names**, while actual IL2CPP metadata has **68 images / 8,843 types** (67 stripped assemblies plus `__Generated`). Uploaded and delivered metadata are byte-identical, SHA-256 **`a32bcb5d3a3757b9c32006065cc6e7c4745307e66277aabef2920fab0b59cb3a`**. All 67 backup assemblies match current stripped output. No retained UnityWebRequest, UnityAnalytics service-module, MCP Runtime or Pipeline Attributes image; engine common analytics types remain. Earlier Steps 5/6 package-presence statements used the registry and must not be read as proof of retained executable code.
+- **Firebase helper is not Firebase SDK evidence:** Unity's Java compatibility helper reflectively looks for `com.google.firebase.analytics.FirebaseAnalytics`; no `com.google.firebase.*` class definition exists in either inspected DEX. No game identifier/analytics calls were found in the retained Match3 assemblies.
+- **Build flags versus labels:** `submitAnalytics: 1` remains serialized; do not treat it as proof of enabled runtime collection. The actual release build input records all five service switches above as false; `m_EngineDiagnosticsEnabled: 0`, unlinked Cloud settings and inherited Android override support the configuration finding. No reliable built Diagnostics marker was found.
+- **Play boundary:** local DEX **4,719 classes**, delivered **4,757**; added licensing code binds to `com.android.vending` services, consistent with Step 8 logs. No direct HTTP/socket invocation was found in those inspected added classes; this does not exclude Store-mediated network use or prove no collection/sharing. Do not substitute the separate Play Integrity API's data list for this installer-check implementation.
+- **Platform backup:** neither inspected manifest explicitly sets `allowBackup` or backup-exclusion rules. Android system backup/transfer may include preferences depending on OS/user settings; not tested here. Privacy wording can say the game stores progression in app preferences, not that data can never leave the phone. No backup operation or configuration change performed.
+
+### Policy basis and review gate
+
+Unity/Android sources checked **2026-11-16**; Google protection/Data Safety guidance rechecked **2026-11-17**:
+
+- [Unity Android Player settings](https://docs.unity.com/en-us/engine/6000.5/manual/platform-specific/android/getting-started/class-player-settings): Auto adds permission for detected networking APIs; the build diagnostic supplies this artifact's concrete reason.
+- [Unity Diagnostics settings](https://docs.unity.com/en-us/engine/6000.5/manual/unity-editor/editor-settings-reference/comp-manager-group/diagnostics-settings): collection can be disabled, profiles can override defaults, and unlinked projects have Diagnostics disabled.
+- [Google Automatic protection](https://support.google.com/googleplay/android-developer/answer/10183279?hl=en): Play injects code; installer checks can periodically require connectivity; optional anti-tamper telemetry controls require a separate status check.
+- [Google Data Safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en): permissions alone do not require declaring collection; local-only processing is excluded; third-party collection must be assessed, including on-device sharing. No automatic exemption inferred for Play-added code.
+- [Android application settings](https://developer.android.com/guide/topics/manifest/application-element) and [Auto Backup](https://developer.android.com/identity/data/autobackup): platform backup is distinct from app-implemented synchronization.
+
+### Reviewed Play boundary and outstanding human decision
+
+- **Installer check:** the inspected report passes the package name to the Play Store over on-device IPC. Codex and Claude assess that this installer check and the Store's own onward processing do not constitute collection/sharing by this app. This is a **reasoned interpretation, not an explicit Google exemption**, and is not extended to optional telemetry or arbitrary SDK transfers. Play developer support is optional for additional certainty.
+- **Telemetry control:** obtain the human's exact readback for Installer check, Anti-tamper protection and **Share app telemetry with Google**. An absent control is recorded as **not shown**, not assumed off. Recommend disabling only telemetry if available/enabled, **after separate human approval**, leaving installer protection on. No change has been made or approved yet.
+- **With telemetry verified off:** propose **No collection / No sharing** on the inspected evidence and installer/platform interpretation above, subject to human approval of the declaration. Neither silence in logs nor the permission alone supplies that conclusion.
+- **If telemetry stays on:** do not propose No collection. Conservative starting proposal: **App info and performance → Diagnostics**, purpose **Fraud prevention, security and compliance**, and **not shared** only if a relevant sharing exception is established. Confirm exact fields/purposes before submission; collection has no blanket anonymization exemption, while fully anonymized sharing has a separate exception in Google's guidance.
+- **Release B (planned code 3):** verify the telemetry setting again and inspect/test the delivered release before relying on the off configuration. Google's page does not state whether a toggle changes already-live **code 2**; no retrospective effect is claimed. Reconcile the declaration with applicable distributed versions; record any remaining code-2 uncertainty rather than silently carrying a code-3 result backward.
+
+### Step 10 privacy wording to carry forward
+
+Progress is stored on the device in app preferences and may be included in Android's own backup/transfer. Include a separate line that **Google Play performs licensing and installer checks under [Google's privacy policy](https://policies.google.com/privacy)**; do not claim Google itself collects nothing. If optional telemetry remains enabled, revise the policy to describe its assessed data/purposes instead of using blanket no-collection wording. These are handoff requirements, not a published privacy policy or a hosting decision.
+
+Raw build diagnostics, Cecil IL inspection, stripped-assembly inventory, DEX comparison and version-107 metadata inspection stay ignored under `Builds/Validation/Phase17Step9/`. This update changes only the ledger; no production, package, settings or Editor-state change, rebuild, install, Console change or push. Full suites were not repeated for this evidence/documentation step; no Data Safety form submitted or Step 10 implementation started.
