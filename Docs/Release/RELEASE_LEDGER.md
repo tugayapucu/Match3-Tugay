@@ -1,12 +1,12 @@
 # Galaxplode release ledger
 
-Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Step 9 evidence is reviewed; the telemetry readback and final Data Safety decision remain pending.
+Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Step 9 evidence is reviewed and Console shows installer checks only; the final Data Safety decision remains pending.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / Atik Games; package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
-- Step 9 evidence reviewed; protection/telemetry readback pending; Step 10 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
+- Step 9 evidence reviewed; human confirms installer checks on, anti-tamper/telemetry controls not shown; Step 10 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
 
@@ -197,7 +197,7 @@ The release's retained **InputSystem.InitializeInPlayer** has no remoting setup 
 | MCP / Pipeline | No additional permission attributed to their runtime code | Names in registry, but **no retained MCPForUnity.Runtime or Unity.Pipeline.Attributes image**; runtime Pipeline server absent | No corresponding runtime initializer | No runtime collector identified in inspected artifacts | Registry names do not prove shipped executable SDK code |
 | Ads / IAP / auth / sensitive APIs | No AD_ID, location, camera, microphone, contacts or external-storage permission in inspected manifests | No matching game API calls, custom Android plugins, Firebase SDK or ads SDK definitions identified | Ads/Purchasing disabled; no authentication implementation | No permission dialog reported in Step 8 | No implemented feature basis for these collection categories; does not rule out normal-permission/native identifiers |
 | Play installer protection | Delivered APK adds `CHECK_LICENSE` | **38 additional DEX classes**, including `com.pairip.licensecheck` | Installer checks on; no change proposed | LicenseClient request observed; inspected report writes package name and a zero flag to a Binder parcel | Reviewed interpretation: package-only installer IPC and the Store's own processing are not app collection/sharing; Google does not explicitly confirm this classification |
-| Optional Play telemetry | Permission alone cannot establish it | Google describes anonymized environment/performance telemetry for anti-tamper protection | Default unstated; actual control/status readback pending | No telemetry payload captured | Recommend **off with human approval**, keeping protection on; final overall answer remains conditional |
+| Optional Play telemetry | Permission alone cannot establish it | Google describes anonymized environment/performance telemetry for anti-tamper protection | Human readback **2026-11-17: control not shown**, anti-tamper also not shown; installer checks on | No telemetry payload captured | **Not shown is not verified off**; no toggle available in reported UI; recheck Release B |
 
 ### Artifact checks and qualifications
 
@@ -220,10 +220,10 @@ Unity/Android sources checked **2026-11-16**; Google protection/Data Safety guid
 ### Reviewed Play boundary and outstanding human decision
 
 - **Installer check:** the inspected report passes the package name to the Play Store over on-device IPC. Codex and Claude assess that this installer check and the Store's own onward processing do not constitute collection/sharing by this app. This is a **reasoned interpretation, not an explicit Google exemption**, and is not extended to optional telemetry or arbitrary SDK transfers. Play developer support is optional for additional certainty.
-- **Telemetry control:** obtain the human's exact readback for Installer check, Anti-tamper protection and **Share app telemetry with Google**. An absent control is recorded as **not shown**, not assumed off. Recommend disabling only telemetry if available/enabled, **after separate human approval**, leaving installer protection on. No change has been made or approved yet.
+- **Human readback, 2026-11-17:** **Prevent unauthorized access / Installer checks on** is the entire reported list; the human explicitly confirms **Anti-tamper protection** and **Share app telemetry with Google** are **not shown**. This completes the requested readback, not verification that telemetry is off. No setting changed; installer protection stays on. If the telemetry control becomes available/enabled later, recommend disabling only telemetry after separate human approval.
 - **With telemetry verified off:** propose **No collection / No sharing** on the inspected evidence and installer/platform interpretation above, subject to human approval of the declaration. Neither silence in logs nor the permission alone supplies that conclusion.
 - **If telemetry stays on:** do not propose No collection. Conservative starting proposal: **App info and performance → Diagnostics**, purpose **Fraud prevention, security and compliance**, and **not shared** only if a relevant sharing exception is established. Confirm exact fields/purposes before submission; collection has no blanket anonymization exemption, while fully anonymized sharing has a separate exception in Google's guidance.
-- **Release B (planned code 3):** verify the telemetry setting again and inspect/test the delivered release before relying on the off configuration. Google's page does not state whether a toggle changes already-live **code 2**; no retrospective effect is claimed. Reconcile the declaration with applicable distributed versions; record any remaining code-2 uncertainty rather than silently carrying a code-3 result backward.
+- **Release B (planned code 3):** recheck control availability and status, retaining **not shown** if still absent; inspect/test the delivered release before claiming a verified off configuration. Google's page does not state whether a toggle changes already-live **code 2**; no retrospective effect is claimed. Reconcile the declaration with applicable distributed versions; record any remaining code-2 uncertainty rather than silently carrying a code-3 result backward.
 
 ### Step 10 privacy wording to carry forward
 
