@@ -1,12 +1,12 @@
 # Galaxplode release ledger
 
-Phase 17 is in progress. Step 5 established clean-clone reproducibility; Step 6 produced the original upload-key-signed AAB. Code **1** remains an unrolled Internal draft. Step 8 found and corrected its PVRTC filtering defect: replacement **0.1.0 (2)** passed local validation and cleanup, but **has not been uploaded**; the track remains inactive.
+Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Known startup exceptions remain open; Step 9 awaits the human's go-ahead.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / Atik Games; package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
-- Outstanding Console checks: trader-status compliance, version-code acceptance, support email and actual PC distribution state; see Step 7 below.
+- Step 8 reviewed; Step 9 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
 
@@ -96,70 +96,83 @@ Commit: `df773ab9cd5e7b2c98cef4cf0b899ac1e00e192f` — Configure Galaxplode Andr
 | Artifact acceptance | At Step 7 closure, no AAB was uploaded; subsequent upload/processing evidence is in Step 8 |
 | Missing controls | Support email and PC settings absent from creation form and not located afterward; actual settings unverified, no distribution change made |
 
-- **Trader status:** outstanding, due **February 1, 2027**. [Google's guidance](https://support.google.com/googleplay/android-developer/answer/17594752?hl=en-GB) lists paid apps, IAP and ads as profit signals. A hobby/non-commercial activity is "unlikely to be a trader"; no revenue alone does not settle the classification. A personal-account trader must provide a publicly displayed phone number and address (announced display from March 1, 2027). Adding ads later requires rechecking the declaration. The choice is the human's; no trader declaration submitted. Recheck any enforcement before publishing.
+- **Trader status:** at Step 7, outstanding with a **February 1, 2027** deadline and no declaration reported. Step 8's current human readback shows **Non-trader**, superseding that pending-status label; submission timing and any remaining restriction message were not reported. [Google's guidance](https://support.google.com/googleplay/android-developer/answer/17594752?hl=en-GB) lists paid apps, IAP and ads as profit signals. A hobby/non-commercial activity is "unlikely to be a trader"; no revenue alone settles nothing. A personal-account trader's phone number and address are publicly displayed (announced from March 1, 2027). Adding ads later requires rechecking the declaration. Classification remains the human's; no agent selected or submitted it.
 - **Deferrals:** support email to **Step 13**, subject to any earlier Console requirement; PC distribution to **Step 8 before rollout approval**. Read-only route: select Galaxplode → **Test and release → Advanced settings → Form factors → Google Play Games on PC → Manage**, if present. [Console Help](https://support.google.com/googleplay/android-developer/answer/13295490) uses “Test and release”; [Google's PC guide](https://developer.android.com/games/playgames/development-submit) labels the parent “Release.” If absent, resolve the actual state before rollout; do not add/remove a form factor or save changes without human approval. The AAB is **ARM64-only, portrait/touch**; PC compatibility and opt-out are unverified.
 - **Step 14:** human approved adding a Turkish (`tr-TR`) store listing later, retaining en-US as the default; no translation implemented here.
 
-## Step 8 — uploaded Internal draft 2026-11-15; post-upload verification pending
+## Step 8 - complete and reviewed 2026-11-16
+
+Console evidence is human-reported; artifact, device and log checks were performed locally. Detailed chronology and raw evidence remain ignored under `Builds/Validation/Phase17Step8/`, including the pre-condensation ledger snapshot.
+
+### Original upload and compatibility correction
 
 | Check | Result |
 | --- | --- |
-| Release A | Exact Step 6 file/hash rechecked and unchanged; no tracked production-source/settings drift since `a569a9e`; original draft uploaded without a rebuild. The subsequently identified local texture-subtarget defect requires a separately approved replacement |
-| Console version history | Empty history confirmed by the human before upload; afterward, code **1** processed and appeared as **0.1.0 (1)** |
-| Release / track | Human confirms **Internal A - 0.1.0 (1)** / **Draft** / Internal **Inactive**; no publication or rollout |
-| Reported upload certificate | Human-reported SHA-256 `50:85:36:9B:8C:ED:D8:6F:33:53:01:B6:2F:E5:28:E2:02:FD:C8:13:CD:C0:F9:C2:C3:F2:5E:E5:6A:8F:54:17` matches the Step 3/Step 6 upload certificate |
-| Active Play app-signing certificate | Human copied SHA-256 from the **App signing key — In use** panel: `66:25:7F:76:FA:79:1B:62:6D:B6:B7:D2:B5:77:82:C0:DC:DF:C4:F2:17:C1:A2:F3:B7:0D:9B:B9:96:26:DC:B0`; matches Console's Digital Asset Links snippet and differs from the upload certificate |
-| Other signing keys | Screenshot also shows a Previous app signing keys row marked Quantum-ready (beta). No further beta-key investigation required: accept an installed certificate matching Console's **in-use** key or one explicitly listed as applicable, together with installer `com.android.vending` |
-| Play 16 KB / native details | For **0.1.0 (1)**, human reports **Memory page size: Supports 16 KB**, ARM64-v8a, API 26+, target 36, GLES 3.0+. Play's generic caveat about undetected libraries/page-size assumptions is retained; independent static confirmation obtained, **16 KB runtime remains untested** |
-| Other Play details | 3,151 supported devices; `GL_IMG_texture_compression_pvrtc` (also present in local AAB). Human supplied a device-catalog CSV after personally accepting its terms; agent made no Console change |
-| S23 compatibility concern | CSV has **3,151 rows**, matching the reported supported total; no Galaxy S23/SM-S911/dm1q match, no Qualcomm/Adreno GPU entries, and 2,990 PowerVR entries. It contains no targeting-status column and the export's tab/filter is unconfirmed. This is consistent with PVRTC filtering but does not establish the exact S23 exclusion reason. Resolve the Console's S23 targeting status before rollout; no rebuild or exclusion change authorized from this inference |
-| S23 model readback | The Console row **SC-51D / Android 16 / Adreno 740 / Unsupported** is a different S23 variant. Claude's read-only ADB check on **2026-11-13** confirmed the physical phone as **SM-S911B / Android 17 / 4,096-byte pages**, with a debug certificate reported in abbreviated form as `c968…3dd1`. Check **SM-S911B for code 2** specifically; re-read the current full installed certificate before any separately approved uninstall |
-| Effective texture-setting defect | Read-only Unity inspection found **Android build-profile subtarget PVRTC (2)**, player texture-format list `ETC`, import-compression override `NoOverride`. The built AAB and Play metadata advertise only PVRTC. This confirms a local build-profile override missed in release preflight; [Unity documents the per-build texture selection](https://docs.unity.com/en-us/engine/6000.5/manual/platform-specific/android/building-and-delivering/build-settings). It strongly explains the PowerVR-heavy targeting/unsupported Adreno model, while the exact Console exclusion reason remains unavailable |
-| Root cause, traced 2026-11-16 | The Step 5 build call (2026-11-13 22:45:44 UTC) and Step 6 call (2026-11-14 15:13:47 UTC) both invoked MCP `ManageBuild.HandleCommand` for Android without a texture subtarget. `ManageBuild` → `BuildTargetMapping.ResolveSubtarget` defaults to **desktop Player (2)** → `BuildRunner.CreateBuildOptions` passes that value to `BuildPlayerOptions.subtarget`. Android interprets **2 as PVRTC**. Unity persists this build option into Editor-local settings. No Step 4 texture-setting assignment was found; the two build calls account for both workspaces. This is the same trap already documented in Phase 12 Step 9 and Phase 13's execution plan, missed again in Phase 17 |
-| Manifest comparison | Re-inspected the known-good Phase 16 Step 12 APK: **no `supports-gl-texture`**. Step 5's APK adds **PVRTC**, while the remaining screen/feature/GLES filtering declarations match. Fresh extraction from the unchanged Step 6 AAB confirms PVRTC too. Independently checked all ten available final Phase 12–16 APKs: none has PVRTC, confirming Claude's comparison. Phase 17's build calls introduced the regression; the older S23 smoke evidence is not invalidated |
-| Approved correction, applied 2026-11-16 | **Tracked Android Player Settings Texture Compression Formats = ETC2**, local Build Profile **Use Player Settings (Generic, 0)**. The texture-only diff was inspected before changing version code **1 → 2**; these are the only two tracked settings changes. The build invocation must explicitly preserve inheritance, bypassing MCP's desktop-default resolver. Human supplied approval of the fix, full tests, commit and replacement rebuild; no replacement upload or rollout authorized |
-| Replacement/version plan | Code **1** was uploaded, **never rolled out**, and is blocked from rollout by PVRTC. Replacement A **0.1.0 (2)** built and passed local checks; **not uploaded**. Later update B remains planned as **0.1.0 (3)**, rechecking availability before upload. Code 1's AAB and IL2CPP backup preserved. Draft bundle removal/addition requires separate human upload approval |
-| Required replacement evidence | **Both full suites** after the tracked settings change; repeat signature, manifest, symbols and static 16 KB checks. Compare manifest filtering with the Phase 16 APK; no PVRTC restriction. After approved upload/before rollout, verify materially broader support plus **SM-S911B, an Adreno and a Mali device** in the replacement bundle's device view. Check sprite/highlight quality on the phone after a separately approved Play installation. These checks are now explicit in Step 6 |
-| DEX metric | Human reports Low, 6.44 MB uncompressed, 8% obfuscation, no R8 metadata. Below Google's published 50 MB game DEX alert threshold; no R8/build change proposed solely for this metric ([guidance](https://developer.android.com/google/play/vitals/code-optimization)) |
-| Play permission list | Human expanded Details: `android.permission.INTERNET`, `com.android.vending.CHECK_LICENSE`, `com.tugaykapucu.match3.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`; no `ACCESS_LOCAL_NETWORK` in the list |
-| Automatic protection | Human reports **1 of 1 service active → Prevent unauthorized access → Installer checks on**. Keep this observed setting unchanged for replacement A. [Google documents runtime installer-check code added to Play-generated APKs](https://support.google.com/googleplay/android-developer/answer/10183279): delivered code differs from the uploaded AAB's code. Device evidence must come from a **Play install**, and Step 9 includes licensing/installer traffic as a candidate network source |
-| Permission delta | `CHECK_LICENSE` is absent from the local uploaded-AAB manifest. [Google documents it for Play license checks](https://developer.android.com/google/play/licensing/client-side-verification); active installer protection is consistent with a Play-processing explanation, but the exact injection path/runtime behavior is not independently verified. Step 9 must include Play-added protection in the distributed-build evidence; no collection/non-collection conclusion from this permission or setting alone |
-| Remaining post-upload checks | Replacement local validation is recorded below. Separate upload/rollout approvals, code-2 Play device/symbol checks, installed signing-certificate comparison and phone sprite quality remain pending. User-provided CSV/screenshot moved intact to ignored `Builds/Validation/Phase17Step8/`; neither belongs in a commit |
-| Investigation housekeeping | During the read-only investigation, human closed Unity; process exit confirmed before restoring only MCP-generated `.mcp.json`. No production changes were made in that investigation. The subsequently approved correction and validation are recorded below |
-| Reviewer additions | All-profile removal/verification, own-account-only Internal testing, Google-generated signing, Play-installer/certificate checks and available-report triage incorporated into execution-plan Step 8 |
-| Gates | Human explicitly approved creating the Internal draft and uploading the unchanged Step 6 AAB with Google-generated signing defaults. Rollout, S23 uninstall/install, PC changes, private-key export and push remain unauthorized |
+| Code 1 | Step 6 AAB accepted as draft; **never rolled out**, replaced by code 2; original AAB/IL2CPP backup retained |
+| Play signing | Upload certificate matches Step 3; Google-managed in-use SHA-256 **`66:25:7F:76:FA:79:1B:62:6D:B6:B7:D2:B5:77:82:C0:DC:DF:C4:F2:17:C1:A2:F3:B7:0D:9B:B9:96:26:DC:B0`** |
+| Defect / cause | **PVRTC**, only **3,151 supported devices**; MCP `ResolveSubtarget` supplied desktop **Player (2)** to Android, where **2 = PVRTC**, in Step 5/6 builds |
+| Safeguard | Tracked Android **ETC2**, profile **Generic (0)**, explicit Android subtarget; MCP unchanged; [known issue](../KnownIssues/McpAndroidBuildSubtarget.md) |
+| Warning correction | Step 5's **1,108 PVRTC warnings were a defect signal**, not acceptable noise; same trap appeared in Phase 12 |
+| Version plan | Replacement A **0.1.0 (2)**; update B planned **0.1.0 (3)**, subject to unused-code confirmation |
 
-Signing clarification: the Google-held private key is not retrievable, but [Play supports limited key changes/upgrades](https://support.google.com/googleplay/android-developer/answer/9842756); it is not accurate to call the key fixed forever after the first release. Upload and processing are human-reported evidence, not direct agent access to Console. No key export/change, S23 uninstall/install or rollout has been reported.
-
-Texture-inspection evidence is in ignored `Builds/Validation/Phase17Step8/ReadOnlyTextureInspection.json`. The corrected read-only probe returned an idle Editor, clean SampleScene and zero native Console errors/warnings; no project source/settings change occurred. One tool-only probe first referenced an obsolete enum and failed in-memory compilation, then was corrected using reflected metadata. Release A's compatibility/configuration issue must be reviewed before proceeding to rollout; the previous no-rebuild recommendation is superseded by this concrete finding.
-
-Root-cause evidence and normalized manifest-filter comparison are retained beside it as `TextureBuildCallEvidence.json` and `ManifestFilterComparison.json`. The Step 5/6 warning classifications above are historical: **the 1,108 PVRTC notices indicated a build-configuration defect, not acceptable release noise**. Their absence on a warm import did not clear that defect. [Unity documents subtarget persistence](https://docs.unity.com/en-us/engine/6000.5/script-reference/unityeditor/buildplayeroptions/subtarget), and [Android documents Play's texture-format filtering](https://developer.android.com/guide/topics/manifest/supports-gl-texture-element).
-
-### Replacement A — code 2 pre-build validation, 2026-11-16
+### Replacement A - local validation
 
 | Check | Result |
 | --- | --- |
-| Settings | Android ETC2 serialized under `m_BuildTargetDefaultTextureCompressionFormat`; code **2**, name **0.1.0**. Profile **Generic (0)**. Package, SDK 26/36, IL2CPP Release, ARM64, graphics and frame-rate policy unchanged |
-| Test environment | Android target; existing Game view preset 5 read back as **1080×1920** before tests and confirmed afterward. SampleScene active and clean; `runInBackground=false` |
-| Full EditMode | **632 passed, 0 failed, 0 skipped**; 7.30 s |
-| Full PlayMode | **344 passed, 0 failed, 3 `Skipped:Explicit`** (30/60/120 FPS hardware-timing tests); 102.98 s |
-| Console | No project errors or unexpected warnings. Expected no-room camera negative-test warning plus test-runner/tooling messages; MCP again labels the normal results-saving line as Exception while native error count is zero |
-| Release configuration | Non-development AAB, script debugging off; Public/SymbolTable symbols included in bundle. Diagnostics project default false, Android profile state 2 (inherit). Before human signing setup: custom keystore false, path and alias empty |
-| Evidence / gate | Raw test results and inspection helpers in ignored `Builds/Validation/Phase17Step8/ReplacementV2/`. Validated changes committed before the build; human entered signing passwords locally. Replacement upload, rollout and device uninstall remain separate gates |
+| Source / settings | **`90f35ad4e5313384e931368cecb93634e9efe928`**; tracked settings changed only Android ETC2 and code **1 to 2** |
+| Test environment | Unity **6000.5.10f1**, Android, **1080x1920 portrait**; SampleScene clean; `runInBackground=false` |
+| Full suites | **632 EditMode passed; 344 PlayMode passed, 0 failed, 3 approved explicit hardware-timing skips** |
+| Test Console | Expected camera negative-test warning and runner/tooling messages; no project errors or unexpected warnings |
+| AAB | `Builds/Android/Phase17Step8/Galaxplode-InternalA-0.1.0-v2.aab`; **60,939,391 bytes** |
+| SHA-256 | **`41c68a46b59a8ca8eded9421e3144e6f79ba470ae1b4b69f0042398542477b66`** |
+| Build | Explicit Generic subtarget bypassed resolver; **59.79 s, 0 errors, 1 known Pipeline warning**; subtarget read back **0** |
+| Manifest | **No `supports-gl-texture`**; screen/feature/GLES filters match Phase 16; SDK **26/36**, ARM64, portrait, non-debuggable, Back callback **false** |
+| Permissions / Diagnostics | `INTERNET` and app dynamic-receiver permission; **no `ACCESS_LOCAL_NETWORK`**; Diagnostics off/inherited, settings-only evidence |
+| Signature | `jarsigner` passed; **449 payload entries** verified against upload certificate; no duplicate entries; Play accepted without re-signing |
+| Static 16 KB | **7 libraries** pass LOAD/RELRO; **PAGE_ALIGNMENT_16K**; 2 generated APKs pass `zipalign`; compressed libraries, `extractNativeLibs=true` |
+| Symbols / tools | **7 Public symbol files**, no full DWARF; producer bundletool **1.18.3**, local validator/APK generator **1.17.2** |
+| Artifacts / cleanup | IL2CPP backup **522 files**; signing cleared, four noise files restored with Unity closed; reopened settings/scene clean, **0 Console errors/warnings** |
 
-### Replacement A — code 2 local artifact validation, 2026-11-16
+### Replacement A - Play acceptance and installation
 
 | Check | Result |
 | --- | --- |
-| Build source | **`90f35ad4e5313384e931368cecb93634e9efe928`**; settings commit `f9801b2`, guardrails `85067f4`, pre-build evidence `90f35ad`. Both full suites above passed before these commits/build; no production change between tests and build |
-| AAB | `Builds/Android/Phase17Step8/Galaxplode-InternalA-0.1.0-v2.aab`; **60,939,391 bytes**; SHA-256 **`41c68a46b59a8ca8eded9421e3144e6f79ba470ae1b4b69f0042398542477b66`** |
-| Build invocation / result | Explicit `BuildPlayerOptions.subtarget = MobileTextureSubtarget.Generic` through `BuildRunner.ScheduleBuild`; bypassed `ManageBuild`'s resolver. **Succeeded**, 59.79 s, 0 errors, **1 warning** (known disabled Unity Pipeline runtime). Post-build readback: **Generic (0)**, tracked **ETC2** |
-| Filtering / metadata | **No `supports-gl-texture`**. Screen, feature and GLES declarations match the Phase 16 Step 12 APK. Package `com.tugaykapucu.match3`, **0.1.0 (2)**, SDK **26/36**, non-debuggable, portrait, effective Predictive Back callback **false**. Components, permissions, package assemblies and startup hooks match code 1; no unexpected component or package startup hook |
-| Permissions / Diagnostics | Local AAB requests only `INTERNET` and the package's dynamic-receiver permission; **no `ACCESS_LOCAL_NETWORK`**. Diagnostics remains supported by settings/inheritance evidence only; no artifact marker or no-networking claim. Play-added installer checks/licensing remain part of Step 9's delivered-build review |
-| Signature | `jarsigner` verified; all **449 payload entries** independently digest/signature-verified against the approved upload certificate **`50:85…54:17`**, no duplicate entries. Same signed-entry ordering/self-signed certificate caveats as code 1 retained; no re-signing needed locally. Existing human-password `jarsigner` fallback applies only if Play rejects signature layout |
-| Static 16 KB / APK packaging | **All 7 ARM64 libraries** pass LOAD alignment and RELRO. Config **`PAGE_ALIGNMENT_16K`**; two local arm64/API36 APKs generated, both `zipalign -c -P 16 -v 4` checks pass. Native libraries are **compressed**, `extractNativeLibs=true`, so ELF/extraction checks carry native compatibility. **Not runtime-tested on 16 KB** |
-| Symbols / tool versions | **7 Public/SymbolTable files** in `BUNDLE-METADATA/...debugsymbols/arm64-v8a/`, symbol tables present, no full DWARF debug info. Producer bundletool **1.18.3**, local APK generator/validator **1.17.2**: Play-generated APKs still need independent Console/device checks |
-| Retained artifacts | Code 1 unchanged; code 2's adjacent **`BackUpThisFolder_ButDontShipItWithYourGame`** retained (**522 files**). Raw inspections, symbol hashes, manifest comparison and invocation in ignored `Builds/Validation/Phase17Step8/ReplacementV2/`; nothing installed |
-| Build hygiene / final gate | Signing flag, path, alias and password fields cleared through Editor APIs after the build. Temporary Resources files self-cleaned. Human closed Unity; process exit confirmed before restoring **only the four reviewed build-noise files**. Restored settings hash equals the tested baseline; no tracked production/settings diff remains. Reopened Editor confirms ETC2, Generic (0), code 2, Diagnostics disabled/inherited, signing off/path and alias empty, zero preloaded assets, clean SampleScene, stopped Play Mode, 1080×1920, `runInBackground=false`, **zero Console errors/warnings**. No replacement upload, rollout, uninstall or push |
+| Release / cohort | **Internal A - 0.1.0 (2)**, Available to internal testers, **Not reviewed**, owner-only; **Nov 16, 9:48 PM**, timezone unspecified; Closed clock not started |
+| Preview | Only code **2**; **0 errors**, only Java mapping warning; R8 minification off, native symbols recognized (**21.2 MB**) |
+| Notes, en-US | "Initial internal test build of Galaxplode with touch gameplay, menus and saved level progression." |
+| Device coverage | Draft **13,323**, published **13,286**; 37-model decrease unexplained; Supported export **3,080 Adreno / 6,809 Mali** |
+| Representative devices | Supported export: **dm1q / S23 / Adreno 740**, **a34x / A34 / Mali G68**; code-2 Downloads lists **dm1q / Android 17 / 38.7 MB** |
+| Catalog discrepancy | Unscoped SM-S911B detail said Unsupported; cause unproven, but actual Play installation succeeded |
+| Play 16 KB | Code 2 **Supports 16 KB**, with standard caveat; **not runtime-tested on 16 KB** |
+| PC / trader | PC **not listed** on Form factors; account **Non-trader**; no PC-compatibility claim or agent classification |
+| Debug removal | Approved human uninstall erased normal-profile progression; package absence verified; managed profile 10 had no copy and was unchanged |
+| Device | **SM-S911B / dm1q / Android 17 (SDK 37) / 4,096-byte pages**, normal user 0 |
+| Verified Play install | **Galaxplode / com.tugaykapucu.match3 / 0.1.0 (2)**, non-debuggable, 2 APKs; installer/initiator **`com.android.vending`**, signer matches full in-use certificate above |
+| Delivered SDK | S23 base min **32**, target **36**; AAB min **26**; consistent with SDK-specific generation, not global API-32-only support |
+| Protection / network lead | Installer checks **on**, Play adds code; delivered `CHECK_LICENSE` and LicenseClient service request observed; not packet/data-field evidence; carry to Step 9 |
 
-The incremental build reported fewer warnings than code 1's 418; the earlier import/compiler messages did not recur. The count alone is not compatibility evidence: no warning was suppressed, and the effective subtarget plus **actual manifest comparison** prove the PVRTC correction. Console also showed the known URP volume/runtime-list preprocessing messages; native Console error count was zero. Device-catalog acceptance for **code 2 / SM-S911B, Adreno and Mali**, protection/Play delivery, sprite quality and publication remain unverified until the separately approved Play actions.
+SDK-specific generation is a qualified inference from [bundletool 1.18.3](https://github.com/google/bundletool/releases/tag/1.18.3) and its [variant configuration](https://github.com/google/bundletool/blob/1.18.3/src/main/proto/config.proto). [Automatic protection](https://support.google.com/googleplay/android-developer/answer/10183279) changes delivered code; the exact permission-injection path is not independently proven.
+
+### Play-installed S23 smoke
+
+Automated input was **screenshot-gated by the machine, not inspected by a person**; agent visual review and machine reference comparisons supplied result evidence.
+
+| Check | Result |
+| --- | --- |
+| Launch / permissions | Human opened from Play; portrait **MATCH 3 / Play** visible; human confirmed **no permission prompt** |
+| First tap / selection | First injected tap showed cue; same-tile tap cancelled; **20 / Red 0/25 / 0**, exact starting image restored |
+| Two-tap / swipe / Loss | **20** settled board/HUD images match Phase 16 references (**1,021,200 pixels each**); loss **0 moves / Red 23/25 / 9,400 points** |
+| Restart / Retry | Restart Confirm and Loss Retry each restored exact fresh Level 1, without stale cue/outcome |
+| Win / specials | Four-move win **16 moves / Red 25/25 / 8,400 points**; settled states match references; flying Wisp captured; Next displayed, not pressed |
+| Back: Playing / Confirmation | Playing opens Leave; Back cancels and restores selection exactly; Cancel button preserves settled state |
+| Back: busy | Resolving-board/disabled-button witness before Back; finishes **19 / 9/25 / 3,500**, no prompt; fresh settled Back opens Leave |
+| Back: Outcome / Menu | Won Back returns to Continue without exiting; Main Menu Back leaves game; reopening retains Continue |
+| Persistence / Leave | Force-stop/relaunch retains Continue; fresh Level 2 **22 / Green 0/22 / 0**, first injected tap works; Menu Leave returns to Continue |
+| Visuals | ETC2 gems/specials/cue and controls clear in captures; known outcome-dimmer strips remain; no smoothness/all-tile/all-device claim |
+| Human real-finger check | **One-minute gameplay check on the Play build not done**; human opened the app, board smoke used ADB injection |
+| Log triage | 990 app-UID lines: **2 AssetPackManager exceptions, 2 dex-finalizer assertions; 0 fatal-exception/fatal-signal/ANR-text matches**; game alive |
+
+- Known startup exceptions remain unexplained, **not declared harmless**; no observed crash, frozen input or gameplay failure. AssetPackManager closure remains Phase 20; app-UID logs cannot exclude all system ANRs. Exit history records the intentional force-stop.
+- Pre-launch-report findings requested but not supplied: **pending Step 18**, without blocking Step 8. No full six-level run or 16 KB runtime test.
+- Raw screenshots, action journal, image comparisons, manifests and logs remain ignored under `Builds/Validation/Phase17Step8/`; incidental notification captures discarded.
+- Step 8 approved by Claude; no new suite run for this documentation-only update; validated production/settings unchanged. **Step 9 awaits the human's go-ahead.**
