@@ -1,12 +1,12 @@
 # Galaxplode release ledger
 
-Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Step 9 evidence is reviewed and Console shows installer checks only; the final Data Safety decision remains pending.
+Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. Step 10 draft content is approved; developer-name confirmation, publication and live verification remain pending.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / Atik Games; package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
-- Step 9 evidence reviewed; human confirms installer checks on, anti-tamper/telemetry controls not shown; Step 10 not started. Support email remains Step 13; PC absent from Form factors; trader readback **Non-trader**.
+- Step 9 evidence reviewed; installer checks on, anti-tamper/telemetry controls not shown. Step 10 contact approved; see live policy (publication pending); human chose **tugaykapucu.com** hosting. PC absent from Form factors; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
 
@@ -230,3 +230,29 @@ Unity/Android sources checked **2026-11-16**; Google protection/Data Safety guid
 Progress is stored on the device in app preferences and may be included in Android's own backup/transfer. Include a separate line that **Google Play performs licensing and installer checks under [Google's privacy policy](https://policies.google.com/privacy)**; do not claim Google itself collects nothing. If optional telemetry remains enabled, revise the policy to describe its assessed data/purposes instead of using blanket no-collection wording. These are handoff requirements, not a published privacy policy or a hosting decision.
 
 Raw build diagnostics, Cecil IL inspection, stripped-assembly inventory, DEX comparison and version-107 metadata inspection stay ignored under `Builds/Validation/Phase17Step9/`. This update changes only the ledger; no production, package, settings or Editor-state change, rebuild, install, Console change or push. Full suites were not repeated for this evidence/documentation step; no Data Safety form submitted or Step 10 implementation started.
+
+## Step 10 - draft content approved 2026-11-17; not published
+
+| Check | Result |
+| --- | --- |
+| Source | `Docs/Release/PrivacyPolicy/index.html`; HTML/CSS template with **PUBLIC_CONTACT_EMAIL** placeholder; actual public-contact copy belongs in the website repository |
+| Draft content | Galaxplode / Atik Games / package; device progression, Android backup/transfer, Google Play checks, deletion, proposed support-correspondence retention and contact sections |
+| Public contact | Contact approved; see live policy (publication pending); personal address excluded from game Git files; dedicated support address/alias offered; no test email sent |
+| Proposed audience | **13–15, 16–17, 18+ targeted; 5 and under, 6–8, 9–12 not targeted**; human's final clarification supersedes the earlier under-13 answer |
+| Policy status | Draft content approved; banner/`noindex` and placeholder retained; developer-name match, effective date and publication approval pending; no blanket no-collection claim |
+| Local validation | Structure/content checks passed; isolated-browser previews at **320, 390 and 1080 px**, no horizontal overflow; reviewed mobile and full desktop captures |
+| Live verification | **Not performed for the policy**: preferred domain reachable over HTTPS, but policy route not deployed; logged-out policy/mobile/contact checks remain open |
+
+**Human hosting decision, 2026-11-17:** switch from the proposed separate GitHub Pages site to the human's existing **tugaykapucu.com** site on **Vercel**. Public headers and Next.js assets support the host identification; the linked public repository **`tugayapucu/tugaykapucu.com`** uses **Next.js 16.2.2**. Read-only source inspection found no middleware/proxy or routing rewrite. Proposed single addition **`public/galaxplode/privacy.html`** would serve **`https://tugaykapucu.com/galaxplode/privacy.html`**, per [Next.js static-file documentation](https://nextjs.org/docs/app/api-reference/file-conventions/public-folder). No website file, DNS, deployment setting or repository visibility changed; production deployment linkage remains to confirm before publishing.
+
+The standalone source avoids the portfolio's scripts/forms/layout. It discloses potential Vercel technical-request processing separately from game storage; [Vercel's Privacy Notice](https://vercel.com/legal/privacy-notice) distinguishes its own processing from processing for customers. Live response/body must still be checked after an approved deployment; no claim that all hosting telemetry is disabled.
+
+**Audience review, 2026-11-17:** the initial under-13 answer triggered the plan's read-only [Families review](https://support.google.com/googleplay/android-developer/answer/9893335?hl=en). The human then clarified the actual design/marketing intent: teenagers and adults **13+**, not young children; colorful space art is for casual players. Record this as **proposed**, not submitted, and reassess if design, marketing or monetization changes. [Google's audience guidance](https://support.google.com/googleplay/android-developer/answer/9867159?hl=en) requires selections to reflect intended design and notes that local definitions of children vary. No blanket legal/Families-compliance claim or new age/consent framework was introduced. Existing Step 9 data/SDK limits remain; disabled Diagnostics is supported by [Unity's privacy documentation](https://docs.unity.com/en-us/cloud/developer-data/privacy-overview), not a universal privacy exemption.
+
+**Unintended appeal to children:** Google may judge the actual listing/design as child-directed despite a proposed 13+ declaration. Mitigate in Step 14 with truthful teen/adult casual-puzzle copy and representative screenshots, avoiding contradictory child-directed claims; reassess the audience if design/marketing actually changes, rather than relying on age selections alone.
+
+**Before publication approval:** confirm **Atik Games** matches the public Play developer name on the account and Galaxplode listing; Unity's company name is not that verification. The profile readback omitted the developer-name field, and the human reports only the app title on the S23 Play listing, with **no developer name shown**. The match remains **unverified**; no private account details are retained here. Confirm deployment linkage, prepare the website-only contact substitution, remove the draft banner and set the effective date to the actual publication date in the concrete publication copy. Obtain explicit approval before writing/deploying to the website repository.
+
+**After approved deployment:** verify the exact policy URL returns **HTTP 200 over valid HTTPS** in a fresh logged-out mobile browser; compare the response to the approved publication content and check for **no injected scripts**, login requirement or unexpected resources. Verify the displayed app/package/entity, date and contact. Record results and URL here; Step 10 stays open until live checks pass.
+
+No target-audience Console declaration, Step 11 UI change, Unity operation or new build. Raw checks/screenshots and public-site inspection remain ignored under `Builds/Validation/Phase17Step10/`. Game-repo changes are the placeholder policy template and this ledger; no personal contact address or deployed policy copy is included. The preceding Step 9 readback was committed as **`ea80e3c`** and pushed with the six earlier reviewed commits; no Step 10 push authorized.
