@@ -222,6 +222,7 @@ STOP if Phase 16 is not actually closed.
 | Decision | Proposal / constraint |
 | --- | --- |
 | Package | `com.tugaykapucu.match3` |
+| Public Play developer identity | **Atik Gameworks**, changed and confirmed by the human on **2026-11-17** because Atik Games was unavailable. Keep Unity `companyName: Atik Games` and the existing package unchanged; this public-name update requires no rebuild. |
 | Working Play app name | Shown to testers. The current in-game title is `MATCH 3`. Testers must not see a technical placeholder. |
 | Android launcher/display name | Unity `productName`, currently `agentic-match3-unity`; see the Step 4 rename note |
 | `companyName` | Currently `DefaultCompany`. Decide whether it is acceptable for the first Play test or should change before release identity is committed. It also affects Editor paths (Step 4). |
@@ -561,6 +562,8 @@ If the evidence supports "no user data collected or shared by the app", say exac
 
 Record the URL in the ledger.
 
+**Approved result, 2026-11-17:** [the policy is published](https://tugaykapucu.com/galaxplode/privacy.html). The exact served-file SHA-256, website commit and live/human phone checks are recorded in [the release ledger](../Release/RELEASE_LEDGER.md). The Console privacy-URL save awaits human confirmation; the listing developer-name display check belongs to Step 14.
+
 ---
 
 # Step 11 — In-App Privacy Policy Access
@@ -656,6 +659,7 @@ Verify:
 - a short and a full description;
 - a temporary compliant icon and feature graphic, if required;
 - the minimum screenshots.
+- recheck that the public listing displays **Atik Gameworks** as the developer. The human confirmed the account rename, but the listing still showed no developer name on **2026-11-17**; its cause is unverified.
 
 **Truthfulness:**
 - describe only features that exist;
