@@ -41,9 +41,9 @@ namespace Match3.Presentation.Tests
             typeof(GameFlowController).GetField("confirmation", Fields).SetValue(flow, prompt.View);
         }
 
-        private void InitializeFlow()
+        private void InitializeFlow(Action<string> openUrl = null)
         {
-            flow.Initialize(new ProgressionStore(flowCatalog.Count, flowKey));
+            flow.Initialize(new ProgressionStore(flowCatalog.Count, flowKey), openUrl);
             bootstrapObject.SetActive(true);
         }
 
@@ -90,6 +90,47 @@ namespace Match3.Presentation.Tests
             Assert.That(bootstrap.LevelProgress, Is.Null);
             Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Uninitialized));
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator GameFlow_PrivacyPolicy_OpensApprovedHttpsUrl_WithoutStartingOrChangingSession(
+            [ValueSource(nameof(StoredFlowProgress))] int saved)
+        {
+            PrepareFlow(saved);
+            int opened = 0;
+            string requested = null;
+            Assert.That(flow.OpenPrivacyPolicy(), Is.False, "Uninitialized flow cannot open a URL.");
+            InitializeFlow(url => { opened++; requested = url; });
+            yield return null;
+            int progression = flow.Progression;
+            int stored = PlayerPrefs.GetInt(flowKey);
+            string label = menu.Label.text;
+
+            menu.Privacy.onClick.Invoke();
+
+            Assert.That(opened, Is.EqualTo(1));
+            Assert.That(requested, Is.EqualTo("https://tugaykapucu.com/galaxplode/privacy.html"));
+            Assert.That(Uri.TryCreate(requested, UriKind.Absolute, out var uri), Is.True);
+            Assert.That(uri.Scheme, Is.EqualTo(Uri.UriSchemeHttps));
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            Assert.That(flow.CurrentLevelIndex, Is.EqualTo(-1));
+            Assert.That(flow.Progression, Is.EqualTo(progression));
+            Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(stored));
+            Assert.That(bootstrap.LevelProgress, Is.Null);
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(menu.Label.text, Is.EqualTo(label));
+            Assert.That(menu.Background.activeInHierarchy && menu.Controls.activeInHierarchy, Is.True);
+
+            menu.Play.onClick.Invoke();
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Playing));
+            Assert.That(flow.CurrentLevelIndex, Is.EqualTo(progression == flowCatalog.Count ? 0 : progression));
+            Assert.That(controller.enabled, Is.True);
+            menu.Privacy.onClick.Invoke(); // Bypass the hidden UI to check the command's own guard.
+            Assert.That(opened, Is.EqualTo(1));
+            Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.OpenPrivacyPolicy(), Is.False, "A confirmation cannot open the browser.");
+            Assert.That(flow.CancelConfirmation(), Is.True);
+            Assert.That(opened, Is.EqualTo(1));
         }
 
         [UnityTest]

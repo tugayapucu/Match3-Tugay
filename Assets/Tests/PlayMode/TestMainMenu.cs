@@ -11,6 +11,7 @@ namespace Match3.Presentation.Tests
         public GameObject Controls;
         public MainMenuView View;
         public Button Play;
+        public Button Privacy;
         public TMP_Text Label;
 
         public static TestMainMenu Create(Transform owner)
@@ -27,11 +28,15 @@ namespace Match3.Presentation.Tests
             var text = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             text.transform.SetParent(button.transform, false);
             menu.Label = text.GetComponent<TextMeshProUGUI>();
+            var privacy = new GameObject("PrivacyPolicy", typeof(RectTransform), typeof(Image), typeof(Button));
+            privacy.transform.SetParent(menu.Controls.transform, false);
+            menu.Privacy = privacy.GetComponent<Button>();
             menu.View = menu.Background.AddComponent<MainMenuView>();
             var flags = BindingFlags.Instance | BindingFlags.NonPublic;
             typeof(MainMenuView).GetField("controls", flags).SetValue(menu.View, menu.Controls);
             typeof(MainMenuView).GetField("playButton", flags).SetValue(menu.View, menu.Play);
             typeof(MainMenuView).GetField("playLabel", flags).SetValue(menu.View, menu.Label);
+            typeof(MainMenuView).GetField("privacyButton", flags).SetValue(menu.View, menu.Privacy);
             menu.Background.SetActive(true);
             return menu;
         }

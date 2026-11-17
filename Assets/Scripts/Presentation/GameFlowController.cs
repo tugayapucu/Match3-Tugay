@@ -10,6 +10,8 @@ namespace Match3.Presentation
     // Chooses sessions and navigation; Bootstrap and Core retain all in-level gameplay responsibilities.
     public sealed class GameFlowController : MonoBehaviour
     {
+        public const string PrivacyPolicyUrl = "https://tugaykapucu.com/galaxplode/privacy.html";
+
         [SerializeField] private LevelCatalog catalog;
         [SerializeField] private BoardBootstrap bootstrap;
         [SerializeField] private LevelHudView hud;
@@ -19,6 +21,7 @@ namespace Match3.Presentation
         private ProgressionStore store;
         private LevelStatus outcome;
         private InputAction backAction;
+        private Action<string> openUrl;
 
         public GameFlowMode Mode { get; private set; }
         public int CurrentLevelIndex { get; private set; } = -1;
@@ -64,8 +67,8 @@ namespace Match3.Presentation
             if (Mode == GameFlowMode.Uninitialized) Initialize();
         }
 
-        // Tests supply a store with an isolated key before Start; production uses the versioned default.
-        public void Initialize(ProgressionStore progressionStore = null)
+        // Tests isolate saves and record URL requests; production uses PlayerPrefs and the system browser.
+        public void Initialize(ProgressionStore progressionStore = null, Action<string> openUrl = null)
         {
             if (Mode != GameFlowMode.Uninitialized)
                 throw new InvalidOperationException("Game flow is already initialized.");
@@ -74,8 +77,9 @@ namespace Match3.Presentation
             catalog.Validate();
             store = progressionStore ?? new ProgressionStore(catalog.Count);
             int loaded = store.Load();
+            this.openUrl = openUrl ?? Application.OpenURL;
             hud.Initialize(() => Restart(), HandleOutcomeAction, () => ReturnToMenu());
-            mainMenu.Initialize(() => Play());
+            mainMenu.Initialize(() => Play(), () => OpenPrivacyPolicy());
             confirmation.Initialize(() => Confirm(), () => CancelConfirmation());
             confirmation.Hide();
             bootstrap.SetInputAvailable(false);
@@ -83,6 +87,13 @@ namespace Match3.Presentation
             Mode = GameFlowMode.MainMenu;
             hud.SetVisible(false);
             mainMenu.Show(MainMenuActionLabel);
+        }
+
+        public bool OpenPrivacyPolicy()
+        {
+            if (Mode != GameFlowMode.MainMenu || bootstrap.IsBusy) return false;
+            openUrl(PrivacyPolicyUrl);
+            return true;
         }
 
         public bool Play()

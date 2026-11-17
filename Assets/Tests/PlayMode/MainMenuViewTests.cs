@@ -15,7 +15,7 @@ namespace Match3.Presentation.Tests
         {
             owner = new GameObject("MenuTestOwner");
             menu = TestMainMenu.Create(owner.transform);
-            menu.View.Initialize(() => { });
+            menu.View.Initialize(() => { }, () => { });
         }
 
         [TearDown]
@@ -38,27 +38,34 @@ namespace Match3.Presentation.Tests
         [Test]
         public void Reinitialize_ReplacesCallback_WithoutAddingAnotherButtonListener()
         {
-            int oldCalls = 0, newCalls = 0;
-            menu.View.Initialize(() => oldCalls++);
-            menu.View.Initialize(() => newCalls++);
+            int oldCalls = 0, newCalls = 0, oldPrivacyCalls = 0, newPrivacyCalls = 0;
+            menu.View.Initialize(() => oldCalls++, () => oldPrivacyCalls++);
+            menu.View.Initialize(() => newCalls++, () => newPrivacyCalls++);
+            menu.Privacy.onClick.Invoke();
+            Assert.That(newCalls, Is.Zero, "Privacy must not also invoke Play.");
             menu.Play.onClick.Invoke();
             Assert.That(oldCalls, Is.Zero);
             Assert.That(newCalls, Is.EqualTo(1));
+            Assert.That(oldPrivacyCalls, Is.Zero);
+            Assert.That(newPrivacyCalls, Is.EqualTo(1));
         }
 
-        [Test]
-        public void Initialize_NullCallback_IsRejected()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Initialize_NullCallback_IsRejected(bool privacy)
         {
-            Assert.Throws<ArgumentNullException>(() => menu.View.Initialize(null));
+            Assert.Throws<ArgumentNullException>(() => menu.View.Initialize(
+                privacy ? (Action)(() => { }) : null, privacy ? null : (Action)(() => { })));
         }
 
         [TestCase("controls")]
         [TestCase("playButton")]
         [TestCase("playLabel")]
+        [TestCase("privacyButton")]
         public void Initialize_MissingWiring_IsRejected(string field)
         {
             typeof(MainMenuView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu.View, null);
-            Assert.Throws<InvalidOperationException>(() => menu.View.Initialize(() => { }));
+            Assert.Throws<InvalidOperationException>(() => menu.View.Initialize(() => { }, () => { }));
         }
     }
 }

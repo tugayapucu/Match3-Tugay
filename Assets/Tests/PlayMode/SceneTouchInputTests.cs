@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Match3.Core;
@@ -27,6 +28,7 @@ namespace Match3.Presentation.Tests
         private Camera inputCamera;
         private GameFlowController flow;
         private string progressKey;
+        private List<string> openedUrls;
         private UnityEngine.Events.UnityAction<Scene, LoadSceneMode> sceneLoaded;
 
         [UnitySetUp]
@@ -36,13 +38,15 @@ namespace Match3.Presentation.Tests
             input.Setup();
             touchscreen = InputSystem.AddDevice<Touchscreen>();
             progressKey = "Match3.Tests.SceneFlow." + Guid.NewGuid().ToString("N");
+            openedUrls = new List<string>();
             // sceneLoaded runs before Start: inject an isolated store before production startup can save.
             sceneLoaded = (loaded, mode) =>
             {
                 if (loaded.name != "SampleScene") return;
                 flow = loaded.GetRootGameObjects()
                     .SelectMany(root => root.GetComponentsInChildren<GameFlowController>(true)).Single();
-                flow.Initialize(new ProgressionStore(Read<LevelCatalog>(flow, "catalog").Count, progressKey));
+                flow.Initialize(new ProgressionStore(Read<LevelCatalog>(flow, "catalog").Count, progressKey),
+                    url => openedUrls.Add(url));
             };
             SceneManager.sceneLoaded += sceneLoaded;
             yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Additive);
@@ -119,6 +123,66 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.SelectedPosition, Is.Null, "The menu release must not select the board behind it.");
             Assert.That(controller.IsInputLocked, Is.False);
             Assert.That(menu.gameObject.activeSelf || controls.activeSelf, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator MainMenu_PrivacyTouch_OpensOnceOnRelease_KeepsBoardGated_AndPlayStillWorks(
+            [Values(false, true)] bool asymmetricSafeArea)
+        {
+            Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
+            var menu = Read<MainMenuView>(flow, "mainMenu");
+            var privacy = Read<Button>(menu, "privacyButton");
+            var play = Read<Button>(menu, "playButton");
+            var safe = hud.GetComponentInParent<SafeAreaLayout>();
+            if (asymmetricSafeArea)
+            {
+                safe.enabled = false;
+                safe.ApplyLayout(new Rect(120f, 90f, Screen.width - 200f, Screen.height - 190f),
+                    new Vector2Int(Screen.width, Screen.height), safe.GetComponentInParent<Canvas>().scaleFactor);
+            }
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            Rect safeRect = ScreenRect(safe.SafeAreaRoot);
+            Rect privacyRect = ScreenRect((RectTransform)privacy.transform);
+            Rect playRect = ScreenRect((RectTransform)play.transform);
+            Assert.That(safeRect.Contains(privacyRect.min) && safeRect.Contains(privacyRect.max), Is.True);
+            Assert.That(safeRect.Contains(playRect.min) && safeRect.Contains(playRect.max), Is.True);
+            Assert.That(privacyRect.Overlaps(playRect), Is.False);
+            Assert.That(privacyRect.yMax, Is.LessThan(playRect.yMin), "Privacy is secondary, below Play.");
+            float scale = safe.GetComponentInParent<Canvas>().scaleFactor;
+            Assert.That(privacyRect.height / scale, Is.GreaterThanOrEqualTo(128f - 0.1f));
+            Assert.That(privacy.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("Privacy Policy"));
+            Assert.That(privacy.gameObject.activeInHierarchy && privacy.interactable, Is.True);
+            var progress = bootstrap.LevelProgress;
+            var types = boardView.GetComponentsInChildren<TileView>().Select(tile => tile.Type).ToArray();
+            string label = Read<TMPro.TMP_Text>(menu, "playLabel").text;
+            bool hadSave = PlayerPrefs.HasKey(progressKey);
+
+            Vector2 point = ButtonPoint(privacy);
+            QueuePress(20, point); yield return null; yield return null;
+            Assert.That(openedUrls, Is.Empty, "The URL opens on release, not press.");
+            QueueRelease(20, point); yield return null; yield return null;
+
+            Assert.That(openedUrls, Is.EqualTo(new[] { GameFlowController.PrivacyPolicyUrl }));
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(progress));
+            Assert.That(boardView.GetComponentsInChildren<TileView>().Select(tile => tile.Type), Is.EqualTo(types));
+            Assert.That(progress.MovesRemaining, Is.EqualTo(20));
+            Assert.That(progress.Score, Is.Zero);
+            Assert.That(PlayerPrefs.HasKey(progressKey), Is.EqualTo(hadSave));
+            Assert.That(controller.enabled, Is.False);
+            Assert.That(controller.SelectedPosition, Is.Null);
+            Assert.That(controller.IsInputLocked, Is.False);
+            Assert.That(Read<TMPro.TMP_Text>(menu, "playLabel").text, Is.EqualTo(label));
+            Assert.That(menu.gameObject.activeInHierarchy, Is.True);
+
+            // A fresh press after the browser request follows the unchanged primary-action path.
+            point = ButtonPoint(play);
+            QueuePress(21, point); yield return null; yield return null;
+            QueueRelease(21, point); yield return null; yield return null;
+            AssertFreshLevel(progress);
+            Assert.That(openedUrls.Count, Is.EqualTo(1));
         }
 
         [UnityTest]

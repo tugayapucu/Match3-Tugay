@@ -11,24 +11,30 @@ namespace Match3.Presentation
         [SerializeField] private GameObject controls;
         [SerializeField] private Button playButton;
         [SerializeField] private TMP_Text playLabel;
+        [SerializeField] private Button privacyButton;
         private Action onPlayRequested;
+        private Action onPrivacyRequested;
 
-        public void Initialize(Action onPlayRequested)
+        public void Initialize(Action onPlayRequested, Action onPrivacyRequested)
         {
             if (onPlayRequested == null) throw new ArgumentNullException(nameof(onPlayRequested));
-            if (controls == null || playButton == null || playLabel == null)
-                throw new InvalidOperationException("Assign Main Menu controls, button and label before initializing.");
+            if (onPrivacyRequested == null) throw new ArgumentNullException(nameof(onPrivacyRequested));
+            if (controls == null || playButton == null || playLabel == null || privacyButton == null)
+                throw new InvalidOperationException("Assign Main Menu controls, Play button and label, and Privacy Policy button before initializing.");
             this.onPlayRequested = onPlayRequested;
+            this.onPrivacyRequested = onPrivacyRequested;
         }
 
         private void Awake()
         {
             if (playButton != null) playButton.onClick.AddListener(HandlePlayClicked);
+            if (privacyButton != null) privacyButton.onClick.AddListener(HandlePrivacyClicked);
         }
 
         private void OnDestroy()
         {
             if (playButton != null) playButton.onClick.RemoveListener(HandlePlayClicked);
+            if (privacyButton != null) privacyButton.onClick.RemoveListener(HandlePrivacyClicked);
         }
 
         public void Show(string actionLabel)
@@ -45,5 +51,6 @@ namespace Match3.Presentation
         }
 
         private void HandlePlayClicked() => onPlayRequested?.Invoke();
+        private void HandlePrivacyClicked() => onPrivacyRequested?.Invoke();
     }
 }
