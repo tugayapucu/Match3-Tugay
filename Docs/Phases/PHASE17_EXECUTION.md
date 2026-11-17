@@ -562,7 +562,7 @@ If the evidence supports "no user data collected or shared by the app", say exac
 
 Record the URL in the ledger.
 
-**Approved result, 2026-11-17:** [the policy is published](https://tugaykapucu.com/galaxplode/privacy.html). The exact served-file SHA-256, website commit and live/human phone checks are recorded in [the release ledger](../Release/RELEASE_LEDGER.md). The Console privacy-URL save awaits human confirmation; the listing developer-name display check belongs to Step 14.
+**Approved result, 2026-11-17:** [the policy is published](https://tugaykapucu.com/galaxplode/privacy.html). The exact served-file SHA-256, website commit and live/human phone checks are recorded in [the release ledger](../Release/RELEASE_LEDGER.md). The human confirmed the Console privacy-URL save on **2026-11-17**; the listing developer-name display check belongs to Step 14.
 
 ---
 
@@ -600,6 +600,8 @@ Verify:
 
 **Phase 16 evolution:** "Main Menu has exactly one real button" was true for Phase 16. Phase 17 deliberately adds a second real action. Document it as an evolution, not a regression.
 
+**Approved implementation record, 2026-11-18:** the Editor implementation and automated regression results are in [the release ledger](../Release/RELEASE_LEDGER.md). The S23 browser/Back round trip remains pending for the Play-installed Release B in Step 12; the existing code-2 install is preserved. Step 11 is not fully device-validated yet.
+
 ---
 
 # Step 12 — Internal Release B / Play Update Path
@@ -619,6 +621,8 @@ Verify:
 **Verify:**
 - progression survives as intended;
 - the Privacy action appears;
+- tap Privacy, verify the approved page opens in the browser, then Android Back returns to the same Main Menu/label with saved progression unchanged, board input gated and no unexpected session or stale gesture;
+- make one Privacy tap while offline: any browser network error must leave the game unaffected; Android Back must return to the same menu with the save unchanged. Record if the browser instead serves a cached page, and restore connectivity afterward;
 - launch and gameplay work;
 - the version changed;
 - no signature mismatch;

@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Phase 17 Step 8 is complete and reviewed: Play code **2** is available to owner-only Internal testers, with installation and smoke checks verified. The Step 10 policy is published under **Atik Gameworks** and passed automated live checks plus human phone/contact verification; the listing-name display check is deferred to Step 14.
+Play code **2** remains available to owner-only Internal testers, with installation and smoke checks verified. The Step 10 policy is approved and published; Step 11 is approved and Editor-validated, with the Release B device round-trip and offline checks still pending.
 
 ## Approved identity and open Console checks
 
@@ -248,7 +248,7 @@ Raw build diagnostics, Cecil IL inspection, stripped-assembly inventory, DEX com
 | Live browser | Fresh isolated logged-out Chrome; **320/390/1080 px** fit; zero scripts/forms/iframes; mobile capture inspected; no injected content |
 | Contact check | Automated target/click checks passed; human confirmed **page and email link work on the phone** on **2026-11-17**; no test email sent |
 | Step 14 follow-up | Human rechecked on **2026-11-17**: developer name **still absent** from the listing; account rename human-confirmed, display unverified; recheck during Step 14 |
-| Console privacy URL | **Awaiting human confirmation that it is saved** in App content > Privacy policy; agent made no Console change |
+| Console privacy URL | **Human confirmed saved on 2026-11-17** in App content > Privacy policy: `https://tugaykapucu.com/galaxplode/privacy.html`; confirmation is human-reported, not independently inspected by the agent |
 
 **Human hosting decision, 2026-11-17:** the human chose the existing **tugaykapucu.com** site on **Vercel**, replacing the proposed separate GitHub Pages site, and confirmed connected repository **`tugayapucu/tugaykapucu.com`** with Production branch **`main`**. The Next.js repository serves the single added public HTML file at the URL above; portfolio code, dependencies, DNS and deployment configuration were unchanged.
 
@@ -262,6 +262,35 @@ The standalone source avoids the portfolio's scripts/forms/layout. It discloses 
 
 **Publication approval and execution, 2026-11-17:** Claude approved the exact template-to-website differences: draft removal, effective date, hosted wording and approved contact. The human then explicitly authorized one website commit and push to `main`, triggering Vercel production publication. No game-repository commit/push, Play Console action or Step 11 implementation was included.
 
-**Live-check limits and human readback:** automated checks used a new isolated browser profile without login, cookies or authorization and emulated mobile viewports. The only extra request was the browser's same-origin `/favicon.ico`; no scripts, remote assets or injected resources appeared. The automated mailto click was intercepted; separately, the human confirmed the page and email link work on the phone. Email delivery was not tested. The human also confirmed that the Play listing still has **no developer name displayed**; the cause is unverified, and listing-name display is deferred to **Step 14**, rather than remaining a Step 10 gate. Saving the verified URL in **App content > Privacy policy** remains a human Console action; no saved-status confirmation has been received, and the agent has not performed it.
+**Live-check limits and human readback:** automated checks used a new isolated browser profile without login, cookies or authorization and emulated mobile viewports. The only extra request was the browser's same-origin `/favicon.ico`; no scripts, remote assets or injected resources appeared. The automated mailto click was intercepted; separately, the human confirmed the page and email link work on the phone. Email delivery was not tested. The human also confirmed that the Play listing still has **no developer name displayed**; the cause is unverified, and listing-name display is deferred to **Step 14**, rather than remaining a Step 10 gate. The human confirmed on **2026-11-17** that the verified URL was saved in **App content > Privacy policy**. The agent recorded that confirmation without operating the Console.
 
-No target-audience Console declaration, Step 11 UI change, Unity operation or new build. Raw local/live response evidence, hashes and screenshots remain ignored under `Builds/Validation/Phase17Step10/`. Game-repo changes are the placeholder policy template, the execution-plan identity note and this ledger; no personal contact address or deployed policy copy is included. The preceding Step 9 readback was committed as **`ea80e3c`** and pushed with the six earlier reviewed commits; Step 10 documentation approved for two scoped commits; no game-repository push or Step 11 implementation authorized.
+No target-audience Console declaration, Step 11 UI change, Unity operation or new build. Raw local/live response evidence, hashes and screenshots remain ignored under `Builds/Validation/Phase17Step10/`. Game-repo changes are the placeholder policy template, the execution-plan identity note and this ledger; no personal contact address or deployed policy copy is included. The preceding Step 9 readback was committed as **`ea80e3c`** and pushed with the six earlier reviewed commits; Step 10 documentation was approved for two scoped commits; its authorization did not include a game-repository push or Step 11 implementation. The human subsequently authorized Step 11 below.
+
+
+## Step 11 - implementation and Editor validation, 2026-11-18
+
+Status: approved by Claude on **2026-11-18**. The physical S23 browser/Back round trip and one offline Privacy tap remain pending for Release B in Step 12, preserving the installed Play update path. Step 12 awaits the human's go-ahead.
+
+| Check | Result |
+| --- | --- |
+| UI | `Canvas/SafeArea/MenuControls/PrivacyPolicyButton`, below the existing primary action; **480 x 128** Canvas units, **40** font size, subdued blue; existing layout group and safe area reused |
+| View | `MainMenuView.Initialize(Action, Action)` accepts Play and Privacy callbacks; Awake/OnDestroy add/remove each listener once; initialization validates the required button |
+| Flow | `OpenPrivacyPolicy()` accepts only idle Main Menu requests; opens fixed `PrivacyPolicyUrl` via `Application.OpenURL`; does not change mode, selection, session, progression or input availability |
+| Approved URL | `https://tugaykapucu.com/galaxplode/privacy.html` |
+| Test seam | Optional `Action<string>` in `GameFlowController.Initialize` records URL requests; production defaults to the OS browser; automated tests never launch a real browser |
+| Focused PlayMode | **15 passed, 0 failed**: view wiring/reinitialization, five stored-progression cases and native touchscreen clicks with ordinary/asymmetric safe areas |
+| Full EditMode | **632 passed, 0 failed** |
+| Full PlayMode | **353 passed, 0 failed, 3 skipped** out of 356; skips are the existing explicit real 30/60/120 FPS hardware tests |
+| Final scene regression | **18/18 SceneTouchInputTests passed** after restoring unrelated cached GoalIcon/GoalText layout values; subsequent whitespace-only normalization preserved scene semantics |
+| Preview | Android Game view fixed and verified at **1080 x 1920** before tests; menu screenshot inspected, board input disabled and no session created at launch |
+| Console | Full PlayMode: runner housekeeping and the deliberately expected no-room camera warning; no unexpected project errors. Final stopped-Editor preview check: **0 entries** |
+| Editor / settings | Unity **6000.5.10f1**, Android target; SampleScene active, clean, Play Mode stopped; no ProjectSettings, package, Core, prefab or build changes |
+| Git | Implementation committed as **`236c892`**; this approved plan/ledger record is committed separately; no push. Existing human-confirmed Console URL save is preserved in the Step 10 record |
+
+Changed files: `Assets/Scripts/Presentation/MainMenuView.cs`, `Assets/Scripts/Presentation/GameFlowController.cs`, `Assets/Scenes/SampleScene.unity`; tests `MainMenuViewTests.cs`, `GameFlowControllerTests.cs`, `SceneTouchInputTests.cs`, `TestMainMenu.cs`; this ledger and `Docs/Phases/PHASE17_EXECUTION.md`.
+
+The scene's semantic diff contains only the new button/label plus the MenuControls child and MainMenuView reference. Unity-generated HUD layout-cache and whitespace noise were removed through an Editor API save/reload and whitespace-only normalization; no Git restore/reset was used. The Phase 16 single-action menu intentionally becomes a two-action menu in Phase 17; Play/Continue/Play Again labels and behavior remain covered.
+
+`OpenPrivacyPolicy` returning true means the URL request was dispatched, not that a browser successfully opened. Release B's S23 smoke must still prove **menu -> correct HTTPS page -> Android Back -> same menu/label**, with the save unchanged, input gated, no stale gesture and no unexpected session. Also tap Privacy once while offline: a browser network error must leave the game unaffected, and Back must restore the same menu/save. Record a cached page honestly if the browser serves one, and restore connectivity afterward. Do these checks on the Play-installed Release B in Step 12; no APK/AAB, sideload, device uninstall or Play Console action was performed here. Step 12 has not started.
+
+Raw test summaries/XML, the scene structural check, final Editor state and screenshot stay ignored under `Builds/Validation/Phase17Step11/`. No contact email or signing material was added to the game repository.
