@@ -1,11 +1,11 @@
 # Galaxplode release ledger
 
-Play code **2** remains available to owner-only Internal testers, with installation and smoke checks verified. The Step 10 policy is approved and published; Step 11 is approved and Editor-validated, with the Release B device round-trip and offline checks still pending.
+Play code **2** remains available to owner-only Internal testers, with installation and smoke checks verified. Release B **0.1.0 (3)** is built and locally validated (Step 12); upload, rollout and the S23 update remain pending human approvals.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / **Atik Gameworks** (public Play developer identity); package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
-- Codex implements; Claude independently reviews; ChatGPT advises; the human owns secrets, irreversible operations and Play Console decisions.
+- From Step 12: Claude implements; ChatGPT reviews and advises; Codex is an optional reviewer for critical issues; the human owns secrets, irreversible operations and Play Console decisions. (Steps 3-11: Codex implemented, Claude reviewed.)
 - Step 9 evidence reviewed; installer checks on, anti-tamper/telemetry controls not shown. Step 10 contact approved; see live policy; human chose **tugaykapucu.com** hosting. PC absent from Form factors; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
@@ -294,3 +294,26 @@ The scene's semantic diff contains only the new button/label plus the MenuContro
 `OpenPrivacyPolicy` returning true means the URL request was dispatched, not that a browser successfully opened. Release B's S23 smoke must still prove **menu -> correct HTTPS page -> Android Back -> same menu/label**, with the save unchanged, input gated, no stale gesture and no unexpected session. Also tap Privacy once while offline: a browser network error must leave the game unaffected, and Back must restore the same menu/save. Record a cached page honestly if the browser serves one, and restore connectivity afterward. Do these checks on the Play-installed Release B in Step 12; no APK/AAB, sideload, device uninstall or Play Console action was performed here. Step 12 has not started.
 
 Raw test summaries/XML, the scene structural check, final Editor state and screenshot stay ignored under `Builds/Validation/Phase17Step11/`. No contact email or signing material was added to the game repository.
+
+## Step 12 - Release B local build and validation, 2026-11-18
+
+Status: local build and checks complete; **awaiting review and the human's upload approval**. No upload, rollout or device action yet.
+
+| Check | Result |
+| --- | --- |
+| Settings commit | **`60dc806`**: `AndroidBundleVersionCode` 2 -> **3**, the only tracked change; `versionName` stays `0.1.0`. Codes 1 and 2 are consumed |
+| Tests (before commit) | Android active, Game view 1080 x 1920: EditMode **632 passed**; PlayMode **353 passed, 3 explicit timing skips, 0 failed** |
+| Signing session | Human loaded the upload keystore in Publishing Settings; no password, keystore path or key material passed to the agent |
+| Build | Guarded invocation with explicit `subtarget = Generic` (bypasses the MCP PVRTC default, see `Docs/KnownIssues/McpAndroidBuildSubtarget.md`); preflight asserted Android release AAB, ETC2/Generic, code 3, IL2CPP Release/ARM64, alias `upload`, Public symbols in bundle, Diagnostics off. **Succeeded, 0 errors, 4 warnings** (disabled runtime Pipeline notice, 3 TextMeshPro large-method notices; no PVRTC), 64 s |
+| AAB | `Builds/Android/Phase17Step12/Galaxplode-InternalB-0.1.0-v3.aab`, **60,942,929 bytes**, SHA-256 **`a4f276a53d92761414919dac07e616a54fe470f36513983f113a1066222bc849`**; IL2CPP backup folder kept beside it |
+| Bundle | `bundletool validate` passed; built by bundletool 1.18.3; config `PAGE_ALIGNMENT_16K` |
+| Signature | `jarsigner -verify`: jar verified; signer `CN=Atik Games`, SHA-256 `50:85...54:17` (upload certificate). Same JarInputStream ordering warning as codes 1/2, which Play accepted |
+| Manifest | **Identical to code 2 except `versionCode="3"`**: no `supports-gl-texture`; same permissions (`INTERNET`, dynamic-receiver), features, components; application `enableOnBackInvokedCallback="false"`, no activity override; `extractNativeLibs="true"` |
+| Native / symbols | 7 arm64-v8a libraries; 7 `.so.sym` public symbol files under `BUNDLE-METADATA/.../debugsymbols/arm64-v8a/` |
+| 16 KB static | All 7 libraries: every `LOAD` align >= `0x4000`; RELRO ends on a 16 KB boundary or at its `LOAD` end. Generated arm64/API-36 APKs pass `zipalign -c -P 16 -v 4`; native libraries compressed, so ZIP alignment is not applicable. Runtime 16 KB untested |
+| Cleanup | Signing flag/path/alias and both in-memory passwords cleared through the Editor API (placeholder `'{inproject}: '` left by Unity). Human closed Unity; Editor exit confirmed; only the four known build-noise files restored from `60dc806`; human reopened. Readback: code 3, ETC2/Generic, AAB release, Public symbols, Diagnostics off, signing off/empty, no preloaded assets, SampleScene clean, Game view 1080 x 1920, **0 Console errors/warnings**, git clean |
+| A -> B Data Safety delta | Runtime source diff `90f35ad`..`60dc806`: Step 11 only (`GameFlowController`, `MainMenuView`, SampleScene) plus the version code. **No package or lockfile change.** Manifest unchanged apart from the version code. New behavior: `Application.OpenURL` opens the fixed published policy URL in the browser; no game data is passed. **Step 9's conclusion still holds** for B |
+
+**Next gates (human):** upload approval (Internal, code 3 only, release notes "Adds a Privacy Policy link to the main menu."); code-3 device catalog (SM-S911B supported, count similar to code 2) and a recheck of the Automatic protection telemetry control; separate rollout approval (owner-only Internal); then the S23 Play update without uninstalling, the Privacy browser/Back and offline checks, and the update smoke.
+
+Raw evidence (build invocation and summary, redacted build-noise patch, manifest, config, signature output, generated APKs) is ignored under `Builds/Validation/Phase17Step12/`. The redacted patch replaces the local keystore path with a placeholder.
