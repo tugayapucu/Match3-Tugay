@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Open: Automatic protection detail-page telemetry readback.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19).
 
 ## Approved identity and open Console checks
 
@@ -320,7 +320,7 @@ Raw evidence (build invocation and summary, redacted build-noise patch, manifest
 
 ## Step 12 - Play upload, rollout and S23 update, 2026-11-19
 
-Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**; open item: Automatic protection detail-page telemetry readback. The human performed all Console actions; the agent did read-only device checks and screenshot-gated ADB input.
+Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**; Automatic protection detail-page telemetry readback completed the same day. The human performed all Console actions; the agent did read-only device checks and screenshot-gated ADB input.
 
 ### Play Console (human, readback)
 
@@ -331,7 +331,7 @@ Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**;
 | Devices | Phone 8,426 / Tablet 4,797 / Car 10 / Chromebook 50 / XR 2 = **13,285**; **0 removed, 0 added** vs code 2. Release page later showed 13,286 (catalog drift) |
 | Delivery size | 38.7 MB new install (-8.97 KB vs code 2); 18.7 MB update |
 | App bundle explorer | Code 3: API 26+, target 36, arm64-v8a; **Supports 16 KB** |
-| Protection overview | Installer checks **on**; Play Integrity API 0/7 and Billing protection 0/4 off; releases signed by Play. No telemetry-sharing control on the overview. **Release B telemetry readback incomplete:** the Automatic protection detail page (where Google places the control) must be rechecked before final Data Safety answers; if absent, record "not shown" without inferring disabled |
+| Protection overview | Installer checks **on**; Play Integrity API 0/7 and Billing protection 0/4 off; releases signed by Play. No telemetry-sharing control on the overview. **Detail page rechecked 2026-11-19** (App integrity now redirects to Protected with Play -> Automatic protection settings): lists only **Installer check** and **Manage store listing**; telemetry-sharing control **not shown** (not inferred disabled) |
 
 ### S23 update path (SM-S911B, Android 17 / API 37)
 
