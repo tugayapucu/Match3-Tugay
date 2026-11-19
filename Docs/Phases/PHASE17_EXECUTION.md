@@ -138,6 +138,15 @@ Closed test          → promote/reuse the verified Release B; start the 12 × 1
 
 Prefer promoting the same tested AAB to Closed over an untested rebuild, unless Play Console requires otherwise.
 
+**Approved exception, 2026-11-20 — Internal Release C before Closed.** Code 3 has empty Android icon assignments, so Unity shipped its default branding (96×96 legacy icon and 108×108 adaptive layers), and the Main Menu title reads `MATCH 3`. The human approved a minimal **Internal Release C `0.1.0 (4)`** (next unused code, confirmed in Console before upload):
+
+- scope: Galaxplode launcher icon (adaptive foreground/background, round and legacy exports), Main Menu title `GALAXPLODE`, version code; nothing else;
+- the Play Store icon (512×512) and feature graphic (1024×500) are separate exports of the same artwork, prepared for Step 14; Google distinguishes the listing icon from the launcher icon;
+- C goes through the full Release B path: regression tests, artifact validation, separate upload / rollout / S23-update approvals, Play-installed S23 checks (icon, title, Privacy navigation, progression);
+- Closed then promotes the **verified C**; Release B stays preserved as the previous verified release.
+
+Reason: tester first impression and listing/screenshot consistency. B would **not** be frozen for 14 days: Closed accepts updates during testing, because the requirement concerns testers staying opted in, not one unchanged build. Each Closed update still needs Google review and the Internal → S23 → Closed path.
+
 ---
 
 # Versioning Convention
@@ -150,7 +159,8 @@ Current sequence (Step 8 compatibility finding):
 - original Internal A: `0.1.0 (1)`, uploaded as a draft, **never rolled out**; blocked by a PVRTC device filter;
 - replacement Internal A: planned `0.1.0 (2)`, subject to unused-code confirmation and separate rebuild/upload approvals;
 - Internal B: planned `0.1.0 (3)`, the in-place Play update from replacement A;
-- later test builds: `(4)` onwards, always recheck the next unused code;
+- Internal C: planned `0.1.0 (4)`, icon + title only (approved exception above);
+- later test builds: `(5)` onwards, always recheck the next unused code;
 - Phase 20 production candidate: `1.0.0 (next unused code)`.
 
 Every upload is recorded in the Release Ledger (see Documentation).
