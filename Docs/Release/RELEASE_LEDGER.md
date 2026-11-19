@@ -364,7 +364,7 @@ Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**;
 
 ## Step 13 - Play Console app setup for Closed testing, 2026-11-19/20
 
-Status: **complete; awaiting review.** The human entered and saved every answer in the Console; the agent proposed answers from recorded evidence and did not operate the Console. **Nothing was sent for review**; the saved changes wait in Publishing overview.
+Status: **complete; approved by review 2026-11-20** (ledger-only, no blocking issue). The human entered and saved every answer in the Console; the agent proposed answers from recorded evidence and did not operate the Console. **Nothing was sent for review**; the saved changes wait in Publishing overview. Saved does not mean reviewed or published. The all-country setting does not activate Closed testing or start its clock.
 
 | Item | Saved answer | Basis |
 | --- | --- | --- |
@@ -372,7 +372,7 @@ Status: **complete; awaiting review.** The human entered and saved every answer 
 | Sign in details (App access) | **No part of the app is restricted** | No accounts, payments, codes or other-device actions |
 | Ads | **No ads** | No ads SDK; Ads/Purchasing disabled (Step 9) |
 | Content rating | IARC questionnaire, category **Game**; every answer **No** (violence, fear, sexuality, gambling, language, substances, crude humor, digital purchases, user interaction, location sharing, miscellaneous). Result: ESRB Everyone, PEGI 3, USK All ages, IARC Generic 3+, no content descriptors | Abstract gem clearing; no characters, chat, purchases or location |
-| Target audience | **13-15, 16-17, 18 and over**; no under-13 group, so the Families follow-up pages did not appear | Step 10 human audience decision |
+| Target audience | **13-15, 16-17, 18 and over**; no under-13 group, so the Families follow-up pages did not appear. This is **not a worldwide Families-policy exemption**: teenage groups may include children under local laws; the audience/listing review continues in Step 14 | Step 10 human audience decision |
 | Government apps / Financial features / Health | **No / none / none** ("Rewards, points" and "Stress management, relaxation" deliberately not selected) | Not applicable to the game |
 | Category and contact | **Game / Puzzle**; no tags; approved public contact email; no phone or website; external-marketing default unchanged | Plan: setup minimum; optimization is Phase 21 |
 | Data safety | **No data collected; no data shared**; privacy URL as above; no badges | See assessment below |
@@ -391,6 +391,6 @@ ChatGPT reviewed the proposal on 2026-11-19 and accepted **No collection / No sh
 
 ### Observations
 
-- The Closed testing page states that testers see the temporary name **`com.tugaykapucu.match3 (unreviewed)`** until app setup is complete and reviewed. This is a Play placeholder, not the build's `productName`; recheck in Steps 14 and 16 because the plan requires that testers not see a technical placeholder.
+- The Closed testing page states that testers see the temporary name **`com.tugaykapucu.match3 (unreviewed)`** until app setup is complete and reviewed. This is a Play placeholder, not the build's `productName`; recheck its replacement after review (no particular date assumed) in Steps 14 and 16, because the plan requires that testers not see a technical placeholder.
 - In-game title **MATCH 3** stays with Step 14.
 - No repository code, settings, build or device change in this step.
