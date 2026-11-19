@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated through Play without reinstalling; save, Privacy link, offline behavior and gameplay verified (Step 12).
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Open: Automatic protection detail-page telemetry readback.
 
 ## Approved identity and open Console checks
 
@@ -320,7 +320,7 @@ Raw evidence (build invocation and summary, redacted build-noise patch, manifest
 
 ## Step 12 - Play upload, rollout and S23 update, 2026-11-19
 
-Status: **complete; awaiting review.** The human performed all Console actions; the agent did read-only device checks and screenshot-gated ADB input.
+Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**; open item: Automatic protection detail-page telemetry readback. The human performed all Console actions; the agent did read-only device checks and screenshot-gated ADB input.
 
 ### Play Console (human, readback)
 
@@ -331,7 +331,7 @@ Status: **complete; awaiting review.** The human performed all Console actions; 
 | Devices | Phone 8,426 / Tablet 4,797 / Car 10 / Chromebook 50 / XR 2 = **13,285**; **0 removed, 0 added** vs code 2. Release page later showed 13,286 (catalog drift) |
 | Delivery size | 38.7 MB new install (-8.97 KB vs code 2); 18.7 MB update |
 | App bundle explorer | Code 3: API 26+, target 36, arm64-v8a; **Supports 16 KB** |
-| Protection overview | Installer checks **on**; Play Integrity API 0/7 and Billing protection 0/4 off; releases signed by Play. **No telemetry-sharing control shown on the overview**; the Automatic protection detail page was not re-read this time (11-17 readback: not shown) |
+| Protection overview | Installer checks **on**; Play Integrity API 0/7 and Billing protection 0/4 off; releases signed by Play. No telemetry-sharing control on the overview. **Release B telemetry readback incomplete:** the Automatic protection detail page (where Google places the control) must be rechecked before final Data Safety answers; if absent, record "not shown" without inferring disabled |
 
 ### S23 update path (SM-S911B, Android 17 / API 37)
 
@@ -345,18 +345,18 @@ Status: **complete; awaiting review.** The human performed all Console actions; 
 | Declared permissions (`aapt2`) | `INTERNET`, `CHECK_LICENSE`, dynamic receiver | **identical** |
 | User 10 (Work profile) | not installed | not installed |
 
-`ACCESS_LOCAL_NETWORK` appears as granted in `dumpsys` but is **not declared** in either APK; Android 17 grants it to older-target apps that hold `INTERNET` (split-permission flags). Relevant only when targeting API 37.
+`ACCESS_LOCAL_NETWORK` appears as granted in `dumpsys` but is **not declared** in either APK. On Android 17, apps targeting below API 37 receive implicit local-network access through `INTERNET` (split-permission flags); runtime enforcement changes at target 37. The grant does not establish actual LAN use.
 
 ### Update smoke (ADB input, screenshot-gated)
 
 | Check | Result |
 | --- | --- |
 | Launch | Cold start, **no permission prompt**; Main Menu **MATCH 3 / Continue / Privacy Policy** |
-| Save survived | Human saw Continue -> Level 5 around the update (version at that moment uncertain). Agent run on code 3: Continue -> **Level 5, 24 / Purple 0/28 / 0** |
+| App data / save | Evidence supports an **in-place update with retained app data** (unchanged install time and data inodes) and **Level 5 available afterward**: Continue -> **Level 5, 24 / Purple 0/28 / 0** on code 3. The exact code-2 saved-level baseline is **unconfirmed** (the human's Level 5 sighting may have been after the auto-update); no repeat update required |
 | Gameplay | One swipe -> **23 / Purple 3/28 / 300**; Menu -> Leave dialog -> Leave -> Continue still shown |
 | Privacy online | Chrome opens `https://tugaykapucu.com/...` (logcat intent), live policy (Atik Gameworks, effective 2026-11-17); Android Back -> **same Main Menu with Continue** |
 | Privacy offline | Airplane mode on (verified no network); tap -> Chrome `ERR_INTERNET_DISCONNECTED`; Back -> Main Menu; Continue -> fresh Level 5, swipe -> 23 / 3/28 / 300; Leave works. Airplane mode then **turned off and network confirmed** |
-| Log triage | 632 app-PID lines: **1 AssetPackManager exception, 1 dex-finalizer assertion**, `libpenguin.so`, Swappy `libgame.so` lookup, 8 gralloc format `0x3b` probes (all previously recorded noise); **0 fatal-exception/fatal-signal/ANR matches**; app alive |
+| Log triage | 632 app-PID lines: **1 AssetPackManager exception, 1 dex-finalizer assertion**, `libpenguin.so`, Swappy `libgame.so` lookup, 8 gralloc format `0x3b` probes: previously observed, **unexplained, with no functional impact observed during this smoke**. **No fatal-exception/fatal-signal/ANR matches in the captured logs**; app alive. AssetPackManager investigation stays open (Phase 20) |
 
 - Chrome queued the offline page for "Load page later" (Chrome feature, not the game).
 - Release B carry-overs met: Privacy -> browser -> Back -> Main Menu with save unchanged; offline Privacy tap does not affect the game; codes 1-3 consumed.
