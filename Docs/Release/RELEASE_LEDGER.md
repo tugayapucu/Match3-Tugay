@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Play code **2** remains available to owner-only Internal testers, with installation and smoke checks verified. Release B **0.1.0 (3)** is built and locally validated (Step 12); upload, rollout and the S23 update remain pending human approvals.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated through Play without reinstalling; save, Privacy link, offline behavior and gameplay verified (Step 12).
 
 ## Approved identity and open Console checks
 
@@ -297,7 +297,7 @@ Raw test summaries/XML, the scene structural check, final Editor state and scree
 
 ## Step 12 - Release B local build and validation, 2026-11-18
 
-Status: local build and checks complete; **awaiting review and the human's upload approval**. No upload, rollout or device action yet.
+Status: local build and checks complete; upload, rollout and S23 update follow in the next section.
 
 | Check | Result |
 | --- | --- |
@@ -317,3 +317,47 @@ Status: local build and checks complete; **awaiting review and the human's uploa
 **Next gates (human):** upload approval (Internal, code 3 only, release notes "Adds a Privacy Policy link to the main menu."); code-3 device catalog (SM-S911B supported, count similar to code 2) and a recheck of the Automatic protection telemetry control; separate rollout approval (owner-only Internal); then the S23 Play update without uninstalling, the Privacy browser/Back and offline checks, and the update smoke.
 
 Raw evidence (build invocation and summary, redacted build-noise patch, manifest, config, signature output, generated APKs) is ignored under `Builds/Validation/Phase17Step12/`. The redacted patch replaces the local keystore path with a placeholder.
+
+## Step 12 - Play upload, rollout and S23 update, 2026-11-19
+
+Status: **complete; awaiting review.** The human performed all Console actions; the agent did read-only device checks and screenshot-gated ADB input.
+
+### Play Console (human, readback)
+
+| Check | Result |
+| --- | --- |
+| Release | New Internal release **`Internal B - 0.1.0 (3)`**, code **3 only**; code 2 shown **Not included**. Rolled out by the human: **Available to internal testers**, released 2026-11-19 15:43, "Not reviewed" (normal for Internal) |
+| Preview | **0 errors, 1 warning**: no deobfuscation file (no R8/ProGuard; IL2CPP symbols are in the bundle) |
+| Devices | Phone 8,426 / Tablet 4,797 / Car 10 / Chromebook 50 / XR 2 = **13,285**; **0 removed, 0 added** vs code 2. Release page later showed 13,286 (catalog drift) |
+| Delivery size | 38.7 MB new install (-8.97 KB vs code 2); 18.7 MB update |
+| App bundle explorer | Code 3: API 26+, target 36, arm64-v8a; **Supports 16 KB** |
+| Protection overview | Installer checks **on**; Play Integrity API 0/7 and Billing protection 0/4 off; releases signed by Play. **No telemetry-sharing control shown on the overview**; the Automatic protection detail page was not re-read this time (11-17 readback: not shown) |
+
+### S23 update path (SM-S911B, Android 17 / API 37)
+
+| Check | Before (code 2) | After (code 3) |
+| --- | --- | --- |
+| Version | 2 / 0.1.0 | **3 / 0.1.0**, updated 17:12:28 by **Play auto-update** (auto-update had not been disabled) |
+| Installer / initiator | `com.android.vending` | **`com.android.vending`** |
+| Signer | `66:25...DC:B0` + Play source stamp | **same Play app-signing certificate** + source stamp |
+| First install time | 2026-11-16 22:22:21 | **unchanged** (update, not reinstall) |
+| User 0 data inodes | CE 2185179 / DE 3086509 | **unchanged** (app data kept) |
+| Declared permissions (`aapt2`) | `INTERNET`, `CHECK_LICENSE`, dynamic receiver | **identical** |
+| User 10 (Work profile) | not installed | not installed |
+
+`ACCESS_LOCAL_NETWORK` appears as granted in `dumpsys` but is **not declared** in either APK; Android 17 grants it to older-target apps that hold `INTERNET` (split-permission flags). Relevant only when targeting API 37.
+
+### Update smoke (ADB input, screenshot-gated)
+
+| Check | Result |
+| --- | --- |
+| Launch | Cold start, **no permission prompt**; Main Menu **MATCH 3 / Continue / Privacy Policy** |
+| Save survived | Human saw Continue -> Level 5 around the update (version at that moment uncertain). Agent run on code 3: Continue -> **Level 5, 24 / Purple 0/28 / 0** |
+| Gameplay | One swipe -> **23 / Purple 3/28 / 300**; Menu -> Leave dialog -> Leave -> Continue still shown |
+| Privacy online | Chrome opens `https://tugaykapucu.com/...` (logcat intent), live policy (Atik Gameworks, effective 2026-11-17); Android Back -> **same Main Menu with Continue** |
+| Privacy offline | Airplane mode on (verified no network); tap -> Chrome `ERR_INTERNET_DISCONNECTED`; Back -> Main Menu; Continue -> fresh Level 5, swipe -> 23 / 3/28 / 300; Leave works. Airplane mode then **turned off and network confirmed** |
+| Log triage | 632 app-PID lines: **1 AssetPackManager exception, 1 dex-finalizer assertion**, `libpenguin.so`, Swappy `libgame.so` lookup, 8 gralloc format `0x3b` probes (all previously recorded noise); **0 fatal-exception/fatal-signal/ANR matches**; app alive |
+
+- Chrome queued the offline page for "Load page later" (Chrome feature, not the game).
+- Release B carry-overs met: Privacy -> browser -> Back -> Main Menu with save unchanged; offline Privacy tap does not affect the game; codes 1-3 consumed.
+- Raw screenshots, logcat and both pulled base APKs are ignored under `Builds/Validation/Phase17Step12/s23-update/`.
