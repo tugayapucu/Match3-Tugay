@@ -1,5 +1,25 @@
 # Art Provenance
 
+## Phase 17 — Galaxplode app icon and store graphics
+
+Design **A**, chosen by the human on 2026-11-20 from three rendered candidates: the **Spectrum Core** special gem with a soft warm glow on a navy space background. It is composed only from project-owned inputs:
+
+- `Assets/Art/Tiles/PrismaticEnergy/Specials/SpectrumCore.png` (Phase 11 Prismatic Energy art, provenance below), resized only;
+- the background colours sampled from the game itself: Main Menu navy RGB (22, 34, 61) and gameplay blue RGB (49, 76, 120);
+- a procedural star field with fixed seeds;
+- the title text in `Assets/TextMesh Pro/Fonts/LiberationSans.ttf` (SIL Open Font License; licence file beside the font).
+
+No image-generation service, stock asset or other game's listing was used. Source of truth: [GenerateAppIcon.py](GenerateAppIcon.py), run from the repository root with **Pillow 11.3.0** installed outside the repository; running it twice gives byte-identical files.
+
+| Output | Spec | Where |
+| --- | --- | --- |
+| Play Store icon | 512 × 512, fully opaque 32-bit PNG, full square (Google applies the mask) | `Docs/Art/Store/PlayStoreIcon-512.png` |
+| Feature graphic | 1024 × 500, 24-bit PNG without alpha | `Docs/Art/Store/FeatureGraphic-1024x500.png` |
+| Android adaptive background / foreground | 432 × 432 (108 dp at xxxhdpi); artwork inside the 66 dp (264 px) safe zone | generated into `Assets/Art/AppIcon/` in Release C step C3 |
+| Android legacy / round icons | 192 × 192 square, and the same circle-cropped | generated into `Assets/Art/AppIcon/` in step C3 |
+
+The store graphics live outside `Assets/` so Unity does not import them. The listing icon and the launcher icon are separate exports of the same design, as Google treats them as separate assets.
+
 ## Phase 15 — Selection highlight
 
 `Assets/Art/Tiles/PrismaticEnergy/SelectionHighlight.png` is original geometric artwork made for this project. It uses no reference images, external artwork or third-party assets. Its reproducible source is [GenerateSelectionHighlight.py](GenerateSelectionHighlight.py), using only Python's standard library; run `python Docs/Art/GenerateSelectionHighlight.py` from the repository root.
