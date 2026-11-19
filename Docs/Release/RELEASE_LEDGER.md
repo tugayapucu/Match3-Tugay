@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19).
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review.
 
 ## Approved identity and open Console checks
 
@@ -361,3 +361,36 @@ Status: **functional result approved by ChatGPT review 2026-11-19, no rebuild**;
 - Chrome queued the offline page for "Load page later" (Chrome feature, not the game).
 - Release B carry-overs met: Privacy -> browser -> Back -> Main Menu with save unchanged; offline Privacy tap does not affect the game; codes 1-3 consumed.
 - Raw screenshots, logcat and both pulled base APKs are ignored under `Builds/Validation/Phase17Step12/s23-update/`.
+
+## Step 13 - Play Console app setup for Closed testing, 2026-11-19/20
+
+Status: **complete; awaiting review.** The human entered and saved every answer in the Console; the agent proposed answers from recorded evidence and did not operate the Console. **Nothing was sent for review**; the saved changes wait in Publishing overview.
+
+| Item | Saved answer | Basis |
+| --- | --- | --- |
+| Privacy policy | Already set (Step 10), `https://tugaykapucu.com/galaxplode/privacy.html` | Step 10 |
+| Sign in details (App access) | **No part of the app is restricted** | No accounts, payments, codes or other-device actions |
+| Ads | **No ads** | No ads SDK; Ads/Purchasing disabled (Step 9) |
+| Content rating | IARC questionnaire, category **Game**; every answer **No** (violence, fear, sexuality, gambling, language, substances, crude humor, digital purchases, user interaction, location sharing, miscellaneous). Result: ESRB Everyone, PEGI 3, USK All ages, IARC Generic 3+, no content descriptors | Abstract gem clearing; no characters, chat, purchases or location |
+| Target audience | **13-15, 16-17, 18 and over**; no under-13 group, so the Families follow-up pages did not appear | Step 10 human audience decision |
+| Government apps / Financial features / Health | **No / none / none** ("Rewards, points" and "Stress management, relaxation" deliberately not selected) | Not applicable to the game |
+| Category and contact | **Game / Puzzle**; no tags; approved public contact email; no phone or website; external-marketing default unchanged | Plan: setup minimum; optimization is Phase 21 |
+| Data safety | **No data collected; no data shared**; privacy URL as above; no badges | See assessment below |
+| Closed countries | **All countries/regions** on track **Closed testing - Alpha** (track still inactive; no testers, release or review) | Human choice; only invited, opted-in testers can see a closed test |
+
+### Data safety assessment
+
+ChatGPT reviewed the proposal on 2026-11-19 and accepted **No collection / No sharing** as a **reasoned, evidence-based assessment of the inspected Release B**, with no code change or rebuild. The human then saved the form. Qualifications kept:
+
+- **Installer check:** the inspected transfer of a constant package name to the Play Store over on-device IPC is assessed as not app collection/sharing. This is an **interpretation, not a Google exemption**; on-device transfers of user data to another app can count as sharing.
+- **Telemetry:** **not shown; not verified disabled** (readbacks 2026-11-17 for A and 2026-11-19 for B, including the settings page). Its absence is not proof that telemetry is off.
+- **Privacy button:** a fixed public URL with no player identifiers or game data, opened in the external browser (no WebView), is treated as browser navigation. This is not a general exemption for external-browser integrations; Vercel's website processing stays disclosed in the policy.
+- **Android backup:** system-managed backup may include shared preferences; this is platform behavior, not app-implemented collection or synchronization. The policy's backup disclosure stays.
+- **Version scope:** code 1 never rolled out; code 2 was the Step 9 artifact with the same practices; code 3 is the only version on Internal.
+- **Reassess** if protection features, SDKs, browser parameters, hosting integration or synchronization change. Play developer support remains optional for the Play-protection interpretation.
+
+### Observations
+
+- The Closed testing page states that testers see the temporary name **`com.tugaykapucu.match3 (unreviewed)`** until app setup is complete and reviewed. This is a Play placeholder, not the build's `productName`; recheck in Steps 14 and 16 because the plan requires that testers not see a technical placeholder.
+- In-game title **MATCH 3** stays with Step 14.
+- No repository code, settings, build or device change in this step.
