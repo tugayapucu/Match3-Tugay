@@ -1,4 +1,8 @@
-"""Generate Galaxplode's launcher icon layers, Play Store icon and feature graphic.
+"""Generate Galaxplode's adaptive launcher icon layers, Play Store icon and feature graphic.
+
+Only adaptive layers are exported for the launcher: the minimum Android version
+is 8.0 (API 26), where every launcher uses the adaptive icon, and Unity 6 marks
+the Legacy and Round Android icon kinds obsolete.
 
 Design "A": the Spectrum Core special gem with a soft glow on a navy space
 background (chosen by the human on 2026-11-20).
@@ -19,7 +23,7 @@ import math
 import os
 import random
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 GEM = "Assets/Art/Tiles/PrismaticEnergy/Specials/SpectrumCore.png"
 FONT = "Assets/TextMesh Pro/Fonts/LiberationSans.ttf"
@@ -84,17 +88,6 @@ def composite(size, body_ratio):
     return img
 
 
-def circle(img):
-    """Anti-aliased circular crop (supersampled mask)."""
-    s = img.width
-    m = Image.new("L", (s * 4, s * 4), 0)
-    ImageDraw.Draw(m).ellipse((0, 0, s * 4 - 1, s * 4 - 1), fill=255)
-    m = m.resize((s, s), Image.LANCZOS)
-    out = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    out.paste(img, (0, 0), ImageChops.multiply(m, img.getchannel("A")))
-    return out
-
-
 def feature_graphic():
     w, h = 1024, 500
     img = background(w, h, seed=11)
@@ -125,10 +118,6 @@ def main():
         # Adaptive layers: 432 px = 108 dp at xxxhdpi; artwork inside the 66 dp safe zone.
         background(ADAPTIVE, ADAPTIVE).convert("RGB").save(os.path.join(out, "AdaptiveBackground.png"))
         foreground(ADAPTIVE, SAFE_DIAMETER).save(os.path.join(out, "AdaptiveForeground.png"))
-        # Legacy (full square) and round icons, 192 px source.
-        legacy = composite(192, 0.80)
-        legacy.convert("RGB").save(os.path.join(out, "LegacyIcon.png"))
-        circle(legacy).save(os.path.join(out, "RoundIcon.png"))
 
     if args.store_out:
         out = args.store_out

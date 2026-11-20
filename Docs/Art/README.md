@@ -16,9 +16,8 @@ No image-generation service, stock asset or other game's listing was used. Sourc
 | Play Store icon | 512 × 512, fully opaque 32-bit PNG, full square (Google applies the mask) | `Docs/Art/Store/PlayStoreIcon-512.png` |
 | Feature graphic | 1024 × 500, 24-bit PNG without alpha | `Docs/Art/Store/FeatureGraphic-1024x500.png` |
 | Android adaptive background / foreground | 432 × 432 (108 dp at xxxhdpi); artwork inside the 66 dp (264 px) safe zone | generated into `Assets/Art/AppIcon/` in Release C step C3 |
-| Android legacy / round icons | 192 × 192 square, and the same circle-cropped | generated into `Assets/Art/AppIcon/` in step C3 |
 
-The store graphics live outside `Assets/` so Unity does not import them. The listing icon and the launcher icon are separate exports of the same design, as Google treats them as separate assets.
+The store graphics live outside `Assets/` so Unity does not import them. The listing icon and the launcher icon are separate exports of the same design, as Google treats them as separate assets. No legacy or round launcher PNGs are exported: the minimum Android version is 8.0 (API 26), where launchers use the adaptive icon, and Unity 6 marks the Legacy and Round Android icon kinds obsolete.
 
 ## Phase 15 — Selection highlight
 
