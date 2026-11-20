@@ -126,6 +126,34 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator MainMenu_Title_ReadsGalaxplode_OnOneLine_WithoutOverflow()
+        {
+            Assert.That(flow.ReturnToMenu(), Is.True);
+            Assert.That(flow.Confirm(), Is.True);
+            var menu = Read<MainMenuView>(flow, "mainMenu");
+            var controls = Read<GameObject>(menu, "controls");
+            yield return null;
+            Assert.That(controls.activeInHierarchy, Is.True);
+            Transform titleTransform = controls.transform.Find("Title");
+            Assert.That(titleTransform, Is.Not.Null);
+            var title = titleTransform.GetComponent<TMPro.TMP_Text>();
+
+            // Measure the laid-out result, not a stale mesh from before the menu was shown.
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)controls.transform);
+            title.ForceMeshUpdate();
+
+            Assert.That(title.text, Is.EqualTo("GALAXPLODE"));
+            Assert.That(title.isTextOverflowing, Is.False);
+            Assert.That(title.textInfo.lineCount, Is.EqualTo(1), "The longer title must not wrap.");
+            Assert.That(title.textInfo.characterCount, Is.EqualTo("GALAXPLODE".Length));
+            Assert.That(title.textBounds.size.x, Is.LessThanOrEqualTo(title.rectTransform.rect.width + 0.5f));
+            Rect safeRect = ScreenRect(hud.GetComponentInParent<SafeAreaLayout>().SafeAreaRoot);
+            Rect titleRect = ScreenRect(title.rectTransform);
+            Assert.That(safeRect.Contains(titleRect.min) && safeRect.Contains(titleRect.max), Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator MainMenu_PrivacyTouch_OpensOnceOnRelease_KeepsBoardGated_AndPlayStillWorks(
             [Values(false, true)] bool asymmetricSafeArea)
         {
