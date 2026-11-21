@@ -133,7 +133,8 @@ Internal Release A   → prove signing / package / AAB / Play delivery quickly
                        (internal can start before full app setup)
 privacy page + in-app link + app-content setup
 Internal Release B   → higher versionCode, installed as a real Play update
-Closed test          → promote/reuse the verified Release B; start the 12 × 14-day clock
+Closed test          → promote/reuse the verified Internal release (Release C since the
+                       2026-11-20 exception below); start the 12 × 14-day clock
 ```
 
 Prefer promoting the same tested AAB to Closed over an untested rebuild, unless Play Console requires otherwise.
@@ -709,7 +710,7 @@ Verify:
 
 # Step 16 — Closed Release Launch
 
-**Goal:** start the clock as soon as the verified build and app setup are ready. Promote/reuse Release B where Play supports it; never ship an untested rebuild just to change track.
+**Goal:** start the clock as soon as the verified build and app setup are ready. Promote/reuse the verified Release C (code 4; approved 2026-11-20 exception) where Play supports it; never ship an untested rebuild just to change track.
 
 **Pre-launch gate:**
 - app setup is complete: privacy page live, in-app link present, Data Safety, content rating, target audience, ads and app-access declarations, and the listing accepted;
@@ -880,7 +881,7 @@ Phase 17 is complete when every applicable item is true. Details live in the ref
 
 **Data and privacy (Steps 9–11)**
 - [ ] `INTERNET` cause explained from the Internet Access = Auto starting point; no answer based on assumption alone.
-- [ ] Data Safety evidence reconciled against Release B (A → B delta) before submission.
+- [ ] Data Safety evidence reconciled against the promoted release (A → B → C deltas) before submission.
 - [ ] Privacy page live, public, app-specific.
 - [ ] In-app Privacy action implemented and tested; S23 browser → Back → Main Menu check passes.
 
