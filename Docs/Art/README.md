@@ -34,6 +34,8 @@ Four real captures of Release C `0.1.0 (4)`, installed from Play on the owner's 
 
 Raw captures stay ignored under `Builds/Validation/Phase17ReleaseC/`.
 
+Play AI asset declaration (human, 2026-11-21): the Play icon, the feature graphic and all four screenshots are labelled AI-generated in the listing, because they show or are built from the AI-assisted Phase 11 tile art. The composition and captures themselves involve no image generation.
+
 ## Phase 15 — Selection highlight
 
 `Assets/Art/Tiles/PrismaticEnergy/SelectionHighlight.png` is original geometric artwork made for this project. It uses no reference images, external artwork or third-party assets. Its reproducible source is [GenerateSelectionHighlight.py](GenerateSelectionHighlight.py), using only Python's standard library; run `python Docs/Art/GenerateSelectionHighlight.py` from the repository root.

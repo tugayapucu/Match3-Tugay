@@ -1,12 +1,12 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) was delivered by Play to the owner's S23 on 2026-11-21 as an in-place update and passed the icon, title, progression, swap and Privacy checks (S23 result approved in review); Console shows `4 (0.1.0)` **Available to internal testers** (last updated Nov 21 5:27 PM, not reviewed, 13,293 devices). The code-4 16 KB and Automatic protection readbacks are pending before Step 16. Closed testing not started.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) was delivered by Play to the owner's S23 on 2026-11-21 as an in-place update and passed the icon, title, progression, swap and Privacy checks (S23 result approved in review); Console shows `4 (0.1.0)` **Available to internal testers** (last updated Nov 21 5:27 PM, not reviewed, 13,293 devices). Code-4 readbacks complete (Supports 16 KB; Automatic protection unchanged, telemetry control not shown). Step 14 en-US listing and graphics saved (AI label declared); Google Play Games on PC opted out (2026-11-21); nothing sent for review. Closed testing not started.
 
 ## Approved identity and open Console checks
 
 - Galaxplode / **Atik Gameworks** (public Play developer identity); package `com.tugaykapucu.match3`; English (United States); free, no ads initially.
 - From Step 12: Claude implements; ChatGPT reviews and advises; Codex is an optional reviewer for critical issues; the human owns secrets, irreversible operations and Play Console decisions. (Steps 3-11: Codex implemented, Claude reviewed.)
-- Step 9 evidence reviewed; installer checks on, anti-tamper/telemetry controls not shown. Step 10 contact approved; see live policy; human chose **tugaykapucu.com** hosting. PC absent from Form factors; trader readback **Non-trader**.
+- Step 9 evidence reviewed; installer checks on, anti-tamper/telemetry controls not shown. Step 10 contact approved; see live policy; human chose **tugaykapucu.com** hosting. PC absent from Form factors at Step 8; found opted-in and opted out in Step 14; trader readback **Non-trader**.
 
 ## Upload certificate — human-verified Step 3
 
@@ -443,9 +443,27 @@ Status: **Internal validation complete; awaiting review and the human's decision
 
 Raw evidence (8 screenshots, full and app logcat, pulled `base.apk`) is ignored under `Builds/Validation/Phase17ReleaseC/s23-update/`.
 
-**Pending code-4 Console readbacks (human), required before Step 16 (the Data safety assessment is carried into Closed only after them):**
+**Code-4 Console readbacks (human), 2026-11-21, required before Step 16:**
 
-- App bundle explorer, code 4: the **Supports 16 KB** result;
-- Protected with Play / Automatic protection **detail page** status for code 4 (telemetry control shown or not shown).
+- App bundle explorer, code 4, Memory page size: **"Supports 16 KB"** (with Google's standard caveat about undetected libraries or code assuming a page size). Runtime 16 KB remains untested on a 16 KB device.
+- Protected with Play overview: Automatic protection **1 of 1, Installer checks on**; Play Integrity API 0 of 7 ("not integrated"); Play Billing protection 0 of 4; releases signed by Play. **Automatic protection settings detail page** lists only **Installer check** and **Manage store listing**; anti-tamper and the telemetry-sharing control are **not shown** (same as code 3; not shown is not verified off). No setting changed. The Step 13 Data safety assessment therefore carries to code 4 for Closed.
 
 **Next gates (human), in plan order:** Step 14 minimum truthful store listing (screenshots from C, Play icon, feature graphic); Step 15 Closed-test cohort preparation; Step 16 Closed launch, promoting the **verified code 4** (separate approval, Google review). Release B stays recorded as verified.
+
+## Step 14 - minimum truthful store listing, 2026-11-21
+
+Status: **listing saved by the human; nothing sent for review.** The agent prepared the text and graphics in the repository and the human entered and saved them in the Console. Saved is not reviewed or published.
+
+| Item | Result |
+| --- | --- |
+| Listing text | en-US default listing saved from `Docs/Release/StoreListing-en-US.md` (`baa5f52`, approved in review): name **Galaxplode**, 78-character short description, 785-character full description. Every claim is mapped to Release C evidence in that file |
+| Graphics | Play icon 512 x 512, feature graphic 1024 x 500, four 1350 x 2400 phone screenshots of Release C on the S23 in the approved order (gameplay first, Main Menu last); provenance in `Docs/Art/README.md` |
+| AI asset declaration | Human ticked Play's AI-generated label for the icon, the feature graphic and all four screenshots, because they show or are built from the AI-assisted Phase 11 tile art. Self-declaration; can be changed later |
+| PC form factor | Publishing overview listed the draft change "Form factor Google Play Games on PC set to opted-in" (Step 8 had recorded PC absent from Form factors; when the opt-in happened is unknown). Form factors showed it **Active**, with "Opt-in" and "Release ... to a testing track" ticked (code 4 counted). PC is out of scope for Phase 17 (plan: opt out where Play allows), so the human **opted out** on 2026-11-21. The dialog said the change is published immediately and only affects Google Play Games on PC. Readback: PC no longer Active, "Opt-in" unticked, 1 of 4 complete; **Remove** not clicked (opting back in stays possible) |
+| Android XR | Form factors shows **Active**. It was not in the draft change list, so it is treated as Play's default for phone apps. **Untested on XR**; left unchanged |
+| Publishing overview | Before the opt-out the full page read "Changes not yet submitted for review. To send changes for review, complete the required steps in the app dashboard", listing the Closed countries, the en-US listing, Step 13 App content, the PC opt-in and the Puzzle category. The Test and release summary briefly showed "You have no unpublished changes"; this contradicted the full page and is unexplained. The human does not remember any submit action, and the full page is taken as authoritative. After the opt-out the Publishing overview was **not read back**; the Form factors readback is the evidence for the opt-out. The "Phones, Tablets, Desktop (Googlebo..." selector on Test and release is a device-type view filter, not the PC opt-in |
+| Dashboard | **Draft app**; testers still see the temporary name **`com.tugaykapucu.match3 (unreviewed)`**; Production inactive. Remaining tasks are Closed-test tasks: countries, testers, create and preview the release, **send it to Google for review**. Production access needs a Closed test with **at least 12 opted-in testers for at least 14 days** (0 opted in now) |
+
+The pending listing and App content changes are expected to go to Google together with the Closed release in Step 16; the temporary name should be replaced only after that review.
+
+**Next gates (human):** Step 15 Closed-test cohort preparation (15-20 testers, above the 12 minimum); Step 16 Closed launch of the verified code 4 (separate approval, Google review).
