@@ -17,15 +17,15 @@ Match colorful gems, unleash cosmic powers and complete six fun puzzle levels!
 ## Full description (4000 max)
 
 ```text
-Galaxplode is a casual match-3 puzzle game. Swap neighbouring gems to line up three or more of the same colour, and collect the gems each level asks for before you run out of moves.
+Galaxplode is a casual match-3 puzzle game. Swap neighboring gems to line up three or more of the same color, and collect the gems each level asks for before you run out of moves.
 
 What's in the game
 • Six levels, each with its own gem goal and move limit
 • Four special gems made from bigger matches:
   – Beam Crystal (four in a line) clears a full row or column
-  – Wisp (a 2×2 square) clears the gems around it, then flies to another part of the board
+  – Wisp (a 2×2 square) clears a cross around itself, then flies to another target
   – Nova Gem (an L or T shape) clears a 5×5 area
-  – Spectrum Core (five in a line) clears every gem of one colour
+  – Spectrum Core (five in a line) clears every gem of one color
 • Your level progression is saved on your device, so you can continue from your next unlocked level.
 • Offline gameplay: no account, no ads and no in-app purchases
 
@@ -46,8 +46,8 @@ Galaxplode is an early version and is still in development.
 | --- | --- |
 | Six levels, each with a gem goal and move limit | `Assets/Levels/InitialLevelCatalog.asset`: six entries, each with `goalTileType`, `goalTarget`, `startingMoveCount` |
 | Special gems and their shapes | `SpecialCreationRules`: 2×2 square → Propeller (Wisp); run of 5+ → LightBall (Spectrum Core); run of 4 → Rocket (Beam Crystal); crossing runs → TNT (Nova Gem) |
-| Special gem effects | `SpecialEffects.GetFootprint`: Rocket full row/column; TNT 5×5; Propeller 3×3 plus a remote target; LightBall every gem of one colour |
+| Special gem effects | `SpecialEffects.GetFootprint`: Rocket full row/column; TNT 5×5; Propeller cross-shaped footprint plus a remote target; LightBall every gem of one color |
 | Level progression saved on the device | `ProgressionStore`: saves only the next unlocked level (or "all complete") in `PlayerPrefs` after an accepted win; no in-level session is saved. After all six levels the menu offers "Play Again" |
-| Offline gameplay; no account, ads or purchases | Step 9 / Step 13 records: no account, no ads SDK, Ads/Purchasing disabled. Play needs no network (Step 12 offline check on Release B; no runtime code change in C); the Privacy Policy link opens in the browser and needs a connection |
+| Offline gameplay; no account, ads or purchases | Step 9 / Step 13 records: no account, no ads SDK, Ads/Purchasing disabled. Offline gameplay was verified on Release B; Release C has no runtime code changes. The Privacy link and Google Play checks can use the network. |
 
 Deliberately absent: rankings, awards, multiplayer, leaderboards, daily content, larger level counts, device-support claims, future-content promises and child-directed wording (the declared audience is 13+).

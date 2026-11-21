@@ -23,7 +23,7 @@ The store graphics live outside `Assets/` so Unity does not import them. The lis
 
 Four real captures of Release C `0.1.0 (4)`, installed from Play on the owner's Samsung Galaxy S23 (1080 × 2340) on 2026-11-21, taken with `adb exec-out screencap`. Gameplay was played on the device (guarded one-move-at-a-time input; every special gem shown was created by real matches). Nothing was drawn, composited or retouched.
 
-[PadStoreScreenshot.py](PadStoreScreenshot.py) turns each capture into **1350 × 2400 (exactly 9:16)**: the capture is pasted unchanged at (135, 30) and only a border is added by extending its own edge pixels; it refuses an image if any UI touches an edge. No scaling or cropping, so every game pixel is identical to the capture (verified for all four).
+[PadStoreScreenshot.py](PadStoreScreenshot.py) turns each capture into **1350 × 2400 (exactly 9:16)**: the capture is pasted unchanged at (135, 30) and only a border is added by extending its own edge pixels. As a heuristic it refuses an image whose edges contain short colour runs; this cannot guarantee that no UI touches an edge, so each output was also inspected visually. No scaling or cropping, so every game pixel is identical to the capture (verified for all four).
 
 | Order | File | Shows | Raw capture SHA-256 (prefix) |
 | --- | --- | --- | --- |

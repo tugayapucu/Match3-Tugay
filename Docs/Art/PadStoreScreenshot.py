@@ -3,10 +3,11 @@
 The capture is pasted unchanged (no scaling, cropping or retouching) at offset
 (135, 30); only the surrounding border is added. The border extends the
 capture's own edge pixels outward (each row's edge colour to the sides, then
-the top and bottom rows up and down). The script refuses an image unless every
-edge consists of long flat colour runs, so no UI touches an edge and the
-padding cannot hide, cut or invent anything. For a screen with one flat
-background this is the same as filling with that colour.
+the top and bottom rows up and down). As a heuristic, the script refuses an
+image whose edge pixels contain short colour runs, which usually means UI
+touches an edge. It cannot guarantee that no UI touches an edge, so inspect
+every output visually as well. For a screen with one flat background this is
+the same as filling with that colour.
 
 Run from the repository root with Pillow 11.3.0 installed outside the repository:
 
@@ -22,7 +23,7 @@ from PIL import Image
 SOURCE = (1080, 2340)
 TARGET = (1350, 2400)
 TOLERANCE = 2  # per-channel difference still treated as the same flat colour
-MIN_RUN = 40  # shortest flat edge run accepted; anything shorter suggests UI at the edge
+MIN_RUN = 40  # shortest flat edge run accepted; shorter runs suggest (not prove) UI at the edge
 
 
 def check_edge(name, pixels):
