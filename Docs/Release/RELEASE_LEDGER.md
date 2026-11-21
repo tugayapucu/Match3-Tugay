@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) is built and locally validated; upload, rollout and the S23 update remain pending human approvals.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) is uploaded and rolled out to owner-only Internal testers (2026-11-21), replacing code 3; the S23 updated in place through Play and passed the icon, title, progression, swap and Privacy checks. Closed testing not started.
 
 ## Approved identity and open Console checks
 
@@ -422,3 +422,25 @@ The Step 13 observation "in-game title MATCH 3 stays with Step 14" is superseded
 **Next gates (human):** confirm code 4 is not listed in Play Console; upload approval (new Internal release, code 4 only); separate rollout approval; then the S23 Play update without uninstalling, with icon, title, Privacy and progression checks. Closed testing starts only after Release C passes Internal validation and is approved.
 
 Raw evidence (build invocation and summary, redacted build-noise patch, manifest, config, signature output, generated APKs, `aapt2` badging and icon XML, extracted icon PNGs and contact sheet) is ignored under `Builds/Validation/Phase17ReleaseC/`.
+
+## Release C - Play upload, rollout and S23 update, 2026-11-21
+
+Status: **Internal validation complete; awaiting review and the human's decision on Closed testing.** Closed testing has not been started.
+
+| Check | Result |
+| --- | --- |
+| Code 4 unused | Human confirmed in Play Console before upload. Uploading consumed code 4; any further build is code 5 or higher |
+| Upload (human) | New Internal release with `Galaxplode-InternalC-0.1.0-v4.aab` only; notes "New Galaxplode app icon and main menu title." Preview: **1 warning**, no deobfuscation file (same as A/B; IL2CPP, no R8). Bundle row identical to B (Enhanced, 26+, target 36, arm64-v8a). Device changes **0 added / 0 removed** in every form factor (catalog total 13,292 vs 13,285 at B's preview: catalog drift). Size for new installs 39.2 MB (**+484 KB**, matching the added icon densities); **size for updates 993 KB**. Code 3 not carried into the release |
+| Rollout (human) | Rolled out to owner-only Internal testers; the S23 received it from Play the same day |
+| S23 install | `versionCode=4`, `versionName=0.1.0`, installer and initiator `com.android.vending`, `lastUpdateTime` 2026-11-21 17:32 (device time, UTC+3); **`firstInstallTime` unchanged (2026-11-16)**: in-place update, not reinstalled |
+| Installed APK | Pulled `base.apk`: Play app-signing certificate SHA-256 `66257f76...26dcb0`, **same as code 3**; label Galaxplode; icon `mipmap-anydpi-v26/app_icon.xml`; permissions identical to code 3 (`INTERNET`, dynamic receiver, Play-added `CHECK_LICENSE`; Android 17 implicit `ACCESS_LOCAL_NETWORK`, shown by Settings as "Nearby devices") |
+| Icon | Settings App info shows the **Spectrum Core gem on navy** in Samsung's mask, not the Unity logo. Samsung placed the launcher shortcut in Gaming Hub (Samsung behavior for apps listed as games) |
+| Title | Main Menu shows **GALAXPLODE** on one line, unclipped, at launch and after leaving a level |
+| Progression | Continue opened **Level 6** (orange 0/30, 26 moves, seed 314): the unlock persisted through the update. The exact pre-update state was not captured, so this shows retained data, not a specific baseline |
+| Gameplay | One orange swap: moves 26 -> 25, goal 3/30, score 900. Menu -> "Leave level?" -> Leave returned to the menu |
+| Privacy | Privacy Policy opened the published policy in Chrome (Atik Gameworks, effective 2026-11-17); Back returned to the game menu. Offline Privacy not repeated: no code change since B |
+| Logs | Cold launch 322 ms. No crash, ANR or fatal signal for the app. Every app warning/error signature (gralloc format 59, Swappy `libgame.so` lookup, AssetPackManager class lookup, dex finalizer, back-callback notice) was **previously observed in Step 12**; unexplained, with no functional impact observed during this smoke |
+
+Raw evidence (8 screenshots, full and app logcat, pulled `base.apk`) is ignored under `Builds/Validation/Phase17ReleaseC/s23-update/`.
+
+**Next gates (human):** review of Release C; then approval to promote the verified code 4 to Closed testing (Step 15 path), with the Step 14 store listing (screenshots from C, Play icon and feature graphic) first. Release B stays recorded as verified.
