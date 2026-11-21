@@ -19,6 +19,21 @@ No image-generation service, stock asset or other game's listing was used. Sourc
 
 The store graphics live outside `Assets/` so Unity does not import them. The listing icon and the launcher icon are separate exports of the same design, as Google treats them as separate assets. No legacy or round launcher PNGs are exported: the minimum Android version is 8.0 (API 26), where launchers use the adaptive icon, and Unity 6 marks the Legacy and Round Android icon kinds obsolete.
 
+### Play Store screenshots (Phase 17 Step 14)
+
+Four real captures of Release C `0.1.0 (4)`, installed from Play on the owner's Samsung Galaxy S23 (1080 × 2340) on 2026-11-21, taken with `adb exec-out screencap`. Gameplay was played on the device (guarded one-move-at-a-time input; every special gem shown was created by real matches). Nothing was drawn, composited or retouched.
+
+[PadStoreScreenshot.py](PadStoreScreenshot.py) turns each capture into **1350 × 2400 (exactly 9:16)**: the capture is pasted unchanged at (135, 30) and only a border is added by extending its own edge pixels; it refuses an image if any UI touches an edge. No scaling or cropping, so every game pixel is identical to the capture (verified for all four).
+
+| Order | File | Shows | Raw capture SHA-256 (prefix) |
+| --- | --- | --- | --- |
+| 1 | `Store/Screenshots/01-SpecialGems.png` | Level 6 mid-play, 29/30: Beam Crystals and Wisps on the board | `44e5a281ad2d1750` |
+| 2 | `Store/Screenshots/02-LevelStart.png` | Level 6 at the start, 0/30 | `00b054d5ab3b642f` |
+| 3 | `Store/Screenshots/03-AllLevelsComplete.png` | Final result card after Level 6 (known undimmed top strip, `Docs/KnownIssues/OutcomeDimSafeArea.md`) | `5a0e20fa726597c7` |
+| 4 | `Store/Screenshots/04-MainMenu.png` | Main Menu with the GALAXPLODE title | `91fd2a85ca1d7ddd` |
+
+Raw captures stay ignored under `Builds/Validation/Phase17ReleaseC/`.
+
 ## Phase 15 — Selection highlight
 
 `Assets/Art/Tiles/PrismaticEnergy/SelectionHighlight.png` is original geometric artwork made for this project. It uses no reference images, external artwork or third-party assets. Its reproducible source is [GenerateSelectionHighlight.py](GenerateSelectionHighlight.py), using only Python's standard library; run `python Docs/Art/GenerateSelectionHighlight.py` from the repository root.
