@@ -720,6 +720,8 @@ Verify:
 
 The human approves the start.
 
+**Exception approved 2026-11-22 (human; ChatGPT and Codex reviews):** Step 16 may be prepared and submitted while recruiting continues, reusing the verified code 4 (no rebuild). Before the final submit, re-read the full Publishing overview and confirm every pending change (Closed release, countries, listing, App content, PC still opted out). Record "submitted while recruiting" only after submission; the clock rule below is unchanged.
+
 **Record in the ledger:**
 - version name and code;
 - SHA-256 and commit;
@@ -752,6 +754,8 @@ Fourteen qualifying days only **allow** the production-access application (Phase
 - the S23's active Play account has left Internal;
 - that account is opted into Closed;
 - Play shows the app as available on the Closed track for that account.
+
+**Approved alternative (2026-11-22):** the S23 stays on Internal. The first Closed-delivery check uses the owner's second phone with a separate Google account that has never joined Internal: verify device compatibility, Closed enrollment and Play showing the app on the Closed track, then install. Installer and certificate checks alone do not identify the track. That account is not counted toward the 12 (project rule, `Docs/Release/ClosedTestCohort.md`).
 
 A fresh install from Closed would need an uninstall. That only happens with explicit human approval and the progression loss acknowledged; otherwise record "Closed delivery verified by account and enrollment, not by reinstall".
 
