@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) was delivered by Play to the owner's S23 on 2026-11-21 as an in-place update and passed the icon, title, progression, swap and Privacy checks (S23 result approved in review); the exact Internal release status and the code-4 Console readbacks are still to be recorded. Closed testing not started.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) was delivered by Play to the owner's S23 on 2026-11-21 as an in-place update and passed the icon, title, progression, swap and Privacy checks (S23 result approved in review); Console shows `4 (0.1.0)` **Available to internal testers** (last updated Nov 21 5:27 PM, not reviewed, 13,293 devices). The code-4 16 KB and Automatic protection readbacks are pending before Step 16. Closed testing not started.
 
 ## Approved identity and open Console checks
 
@@ -431,7 +431,7 @@ Status: **Internal validation complete; awaiting review and the human's decision
 | --- | --- |
 | Code 4 unused | Human confirmed in Play Console before upload. Uploading consumed code 4; any further build is code 5 or higher |
 | Upload (human) | New Internal release with `Galaxplode-InternalC-0.1.0-v4.aab` only; notes "New Galaxplode app icon and main menu title." Preview: **1 warning**, no deobfuscation file (same as A/B; IL2CPP, no R8). Bundle row identical to B (Enhanced, 26+, target 36, arm64-v8a). Device changes **0 added / 0 removed** in every form factor (catalog total 13,292 vs 13,285 at B's preview: catalog drift). Size for new installs 39.2 MB (**+484 KB**, matching the added icon densities); **size for updates 993 KB**. Code 3 not carried into the release |
-| Rollout (human) | Performed by the human. **Directly observed only on the device:** Play delivered code 4 to the S23 on 2026-11-21. The Console's Internal release status (name, "Available to internal testers", release time, device count) was not read back yet; recorded separately below when the human provides it |
+| Rollout (human) | Performed by the human. **Directly observed only on the device:** Play delivered code 4 to the S23 on 2026-11-21. Console readback by the human, 2026-11-21: Internal release **`4 (0.1.0)`, Available to internal testers**, 1 version code (4), last updated **Nov 21 5:27 PM** (Console display time), **Not reviewed** (Internal), **13,293** supported devices. Consistent with the device's `lastUpdateTime` 17:32 |
 | S23 install | `versionCode=4`, `versionName=0.1.0`, installer and initiator `com.android.vending`, `lastUpdateTime` 2026-11-21 17:32 (device time, UTC+3); **`firstInstallTime` unchanged (2026-11-16)**: in-place update, not reinstalled |
 | Installed APK | Pulled `base.apk`: Play app-signing certificate SHA-256 `66257f76...26dcb0`, **same as code 3**; label Galaxplode; icon `mipmap-anydpi-v26/app_icon.xml`; permissions identical to code 3 (`INTERNET`, dynamic receiver, Play-added `CHECK_LICENSE`; Android 17 implicit `ACCESS_LOCAL_NETWORK`, shown by Settings as "Nearby devices") |
 | Icon | Settings App info shows the **Spectrum Core gem on navy** in Samsung's mask, not the Unity logo. Samsung placed the launcher shortcut in Gaming Hub (Samsung behavior for apps listed as games) |
@@ -443,9 +443,8 @@ Status: **Internal validation complete; awaiting review and the human's decision
 
 Raw evidence (8 screenshots, full and app logcat, pulled `base.apk`) is ignored under `Builds/Validation/Phase17ReleaseC/s23-update/`.
 
-**Pending code-4 Console readbacks (human), before the record closes and before the Data safety assessment is carried into Closed:**
+**Pending code-4 Console readbacks (human), required before Step 16 (the Data safety assessment is carried into Closed only after them):**
 
-- Internal testing: exact release status line for `0.1.0 (4)` (status, release time, device count);
 - App bundle explorer, code 4: the **Supports 16 KB** result;
 - Protected with Play / Automatic protection **detail page** status for code 4 (telemetry control shown or not shown).
 
