@@ -1,6 +1,6 @@
 # Galaxplode release ledger
 
-Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review.
+Release B **0.1.0 (3)** is available to owner-only Internal testers (rolled out 2026-11-19), replacing code 2. The S23 updated in place through Play with app data retained; Privacy link, offline behavior and gameplay verified (Step 12). Automatic protection detail page: telemetry control not shown (2026-11-19). Step 13 App content saved (10 of 11 setup tasks; store listing is Step 14) and Closed countries set; nothing sent for review. Release C **0.1.0 (4)** (Galaxplode icon and menu title) is built and locally validated; upload, rollout and the S23 update remain pending human approvals.
 
 ## Approved identity and open Console checks
 
@@ -394,3 +394,31 @@ ChatGPT reviewed the proposal on 2026-11-19 and accepted **No collection / No sh
 - The Closed testing page states that testers see the temporary name **`com.tugaykapucu.match3 (unreviewed)`** until app setup is complete and reviewed. This is a Play placeholder, not the build's `productName`; recheck its replacement after review (no particular date assumed) in Steps 14 and 16, because the plan requires that testers not see a technical placeholder.
 - In-game title **MATCH 3** stays with Step 14.
 - No repository code, settings, build or device change in this step.
+
+## Release C - local build and validation, 2026-11-21
+
+Scope approved by the human on 2026-11-20 (plan exception in `Docs/Phases/PHASE17_EXECUTION.md`): Galaxplode launcher icon, Main Menu title **GALAXPLODE**, next version code. Status: local build and checks complete; **awaiting review, the code-4-unused confirmation and the human's upload approval**. No upload, rollout or device action yet.
+
+| Check | Result |
+| --- | --- |
+| Source commits | `038b862` plan exception; `1a6ae19` icon generator and Play Store graphics; `1265e8b` adaptive icon layers assigned; `2042c01` Unity's settled icon serialization; `07a379f` title **MATCH 3 -> GALAXPLODE** plus one-line/no-overflow test; **`ac41aee`** `AndroidBundleVersionCode` 3 -> **4**, the only change in that commit. `versionName` stays `0.1.0`; codes 1-3 are consumed |
+| Human checks | Icon preview in Player Settings looked right; title checked in Play mode ("looks good") |
+| Tests (after the title change) | Android active, Game view 1080 x 1920: EditMode **632 passed**; PlayMode **354 passed, 3 explicit timing skips, 0 failed**. The code-4 commit changes only the version code |
+| Signing session | Human loaded the upload keystore in Publishing Settings; no password, keystore path or key material passed to the agent |
+| Build | Step 12 guarded invocation with code 4 and **one added preflight: all 6 adaptive icon sizes use `Assets/Art/AppIcon` background and foreground**; explicit `subtarget = Generic`. **Succeeded, 0 errors, 1 warning** (disabled runtime Pipeline notice, as in B; B's 3 TextMeshPro notices did not recur; no PVRTC), 44 s |
+| AAB | `Builds/Android/Phase17ReleaseC/Galaxplode-InternalC-0.1.0-v4.aab`, **61,428,529 bytes**, SHA-256 **`6d8708e5d23aea367d1e4193c9f95972c77b9aefdbb9c7249d3a8839ce553a7a`**; IL2CPP backup folder kept beside it |
+| Bundle | `bundletool validate` passed; built by bundletool 1.18.3; config `PAGE_ALIGNMENT_16K` |
+| Signature | `jarsigner -verify`: jar verified; signer `CN=Atik Games`, SHA-256 `50:85...54:17` (upload certificate). Same warning categories as B; the extra JarInputStream lines are the new icon density files |
+| Manifest | **Identical to code 3 except `versionCode="4"`** |
+| Icon resources | `aapt2`: application icon `mipmap-anydpi-v26/app_icon.xml` (and `app_icon_round.xml`) = adaptive icon with `ic_launcher_background` / `ic_launcher_foreground`, each in 6 densities (81-432 px; code 3 had only 108 px). xxxhdpi layers are **pixel-identical** to the source PNGs; rendered contact sheet shows the Spectrum Core gem on navy at every density |
+| Legacy fallback | `mipmap-mdpi-v4/app_icon.png` (96 x 96, Unity logo) is **byte-identical to code 3's**. Android 8+ resolves the `anydpi-v26` adaptive icon first and minSdk is 26, so it is not expected to display; S23 check after the Play update confirms what users see |
+| Native / symbols | 7 arm64-v8a libraries; 7 `.so.sym` public symbol files in the bundle |
+| 16 KB static | All 7 libraries pass the LOAD-alignment and RELRO checks; generated arm64/API-36 APKs pass `zipalign -c -P 16 -v 4`. Runtime 16 KB untested |
+| Cleanup | Signing flag/path/alias and both passwords cleared through the Editor API (placeholder `'{inproject}: '`, exact match with B). Build-noise diff has the same changed lines as B. Human closed Unity; Editor exit confirmed; only the four known build-noise files restored from `ac41aee`; human reopened. Readback: code 4, ETC2/Generic, AAB release, Public symbols, Diagnostics off, signing off/empty, no preloaded assets, 6/6 adaptive icons, SampleScene clean, **0 Console errors/warnings**, git clean |
+| B -> C Data Safety delta | Runtime diff `60dc806`..`ac41aee`: icon textures, SampleScene title text, ProjectSettings (icons, version code), one PlayMode test. **No production script, package or lockfile change**; manifest unchanged apart from the version code. **Step 9 / Step 13 conclusions still hold** for C |
+
+The Step 13 observation "in-game title MATCH 3 stays with Step 14" is superseded by this release.
+
+**Next gates (human):** confirm code 4 is not listed in Play Console; upload approval (new Internal release, code 4 only); separate rollout approval; then the S23 Play update without uninstalling, with icon, title, Privacy and progression checks. Closed testing starts only after Release C passes Internal validation and is approved.
+
+Raw evidence (build invocation and summary, redacted build-noise patch, manifest, config, signature output, generated APKs, `aapt2` badging and icon XML, extracted icon PNGs and contact sheet) is ignored under `Builds/Validation/Phase17ReleaseC/`.
