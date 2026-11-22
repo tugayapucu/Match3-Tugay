@@ -217,6 +217,45 @@ Avoid confusion with the existing selection brackets and **Nova Gem corner brack
 
 **Stop:** Human approval before build, Internal update, Closed update and each push. A code-complete phase is not automatically deployed.
 
+## 18.0 result — audit and baseline (2026-11-22)
+
+No code, scene, asset or setting changes. Evidence (screenshots and JSON layout records) is ignored local evidence under `Builds/Validation/Phase18Step0/`.
+
+**Baseline:** Android active, Game view 1080×1920, `SampleScene` clean, `0.1.0 (4)`, Generic subtarget. EditMode **632 passed**; PlayMode **354 passed, 3 explicit timing skips, 0 failed** (matches the expected baseline). Console 0 errors/warnings afterwards.
+
+**Capture method (repeatable):** temporary fixed Game view presets for 1080×2340, 1080×2400 and 1080×1200 (720×1280 and 1080×1920 are built-in); Play Mode paused and advanced with `EditorApplication.Step()`, because Play Mode frames do not run while the Editor is unfocused (an early unstepped reading was stale and discarded). Asymmetric insets as in the tests: `SafeAreaLayout` disabled, then `ApplyLayout(60, 70, 940×2170)` at 1080×2340. Afterwards presets removed, 1080×1920 reselected, Play Mode stopped, scene clean, Run In Background unchanged (off).
+
+**Measured layout (Level 1, actual rendered pixels):**
+
+| Screen | Canvas scale | Cell | Board | HUD bar | Gap HUD→board / board→buttons | Goal icon | Clipped text / off-screen controls |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1080×1920 | 1.00 | 120 px | 960 px | 96 px | 332 / 332 | 44 px | none |
+| 1080×2340 (S23) | 1.00 | 120 px | 960 px | 96 px | **542 / 542** | 44 px | none |
+| 1080×2400 (20:9) | 1.00 | 120 px | 960 px | 96 px | **572 / 572** | 44 px | none |
+| 720×1280 | 0.67 | 80 px | 640 px | 64 px | 221 / 221 | **29 px** | none |
+| 1080×1200 (short) | 1.00 | 102 px | 820 px | 96 px | **42 / 42** (height-limited) | 44 px | none |
+| 1080×2340 asymmetric | 1.00 | 103 px | 823 px | 96 px | 525 / 525; HUD, buttons and board inside SafeArea | 44 px | none |
+
+The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipped text at all five sizes.
+
+**Classification:**
+
+| Item | Class | Evidence and consequence |
+| --- | --- | --- |
+| Outcome dimmer strip (`OutcomeDimSafeArea.md`) | **MUST** | Reproduced on the S23 (Phase 12/16 captures, store screenshot 03); cause unchanged in the scene. Editor "before" captures of Won/Lost/All Levels Complete are taken in 18.1 |
+| Level indicator | **SHOULD (recommended)** | No screen shows the level number (HUD: Moves, Goal, Score; menu: Play/Continue/Play Again) |
+| Tall-screen composition (`TallScreenComposition.md`) | **SHOULD** | 542 px (S23) and 572 px (20:9) empty bands above and below the board; the HUD is a 96 px strip. Constraint for 18.2: the short screen is already height-limited (42 px gaps, 102 px cells), so a taller HUD shrinks the board there unless the design accounts for it |
+| Normal-gem colour reliance (`ColourOnlyGems.md`) | **MUST evaluate** | Simulation of the S23 board: under protan/deutan, red, green, orange and yellow collapse into olive/yellow tones and blue/purple into blue; in grayscale only yellow and orange stand out. Cue sizes to design for: **80–120 px cells** and a **29–44 px goal icon** |
+| Picking / touch comfort (`MobileLayoutAndPicking.md`) | **NOT REPRODUCED / DEFER** | Full-cell colliders and touch tests pass; S23 finger review approved in Phase 15; profiling is Phase 19 |
+| README (`MissingReadme.md`) | **DEFER to Phase 23** | `PLAN.md` §29 |
+| Audio | **DECIDE in 18.4** | Audio enabled, one AudioListener, no clips, AudioSources or vibration calls |
+| `SceneTestsGameViewDependency.md` | Unchanged | Baseline run with the required Game view; no action |
+| `FrameRatePolicy.md`, `LockedAfterException.md` | Phase 19 | Not Phase 18 work |
+| `RefillSeedReuse.md`, `WatchList.md` | Unchanged | Low priority / monitor only |
+| `McpAndroidBuildSubtarget.md` | Release gate | Covered by the 18.5 build procedure |
+
+**Product decisions** remain as recorded in section 3 (level indicator, overlay cues first, audio only with mute, haptics deferred). **Open fact:** the LG G7's Android version and display mode are not yet known; they are needed only for Phase 17 Step 17 and 18.5, not for 18.1.
+
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
 - Recruit **12 or more** independent eligible testers each continuously opted in for **14 days** before production-access application; prefer 15–20 for buffer and real feedback. Current checkpoint from the handoff: **1 non-owner opt-in**. Count is a time-sensitive operational fact and must be rechecked, not assumed unchanged.
