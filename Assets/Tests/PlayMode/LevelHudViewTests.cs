@@ -226,6 +226,54 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.PlayAgain.interactable && hud.OutcomeMenu.interactable, Is.True);
         }
 
+        // The full-screen dimmer sits outside the HUD's CanvasGroup, so the view applies
+        // "level over AND HUD visible" itself, whichever of Show and SetVisible comes last.
+        [Test]
+        public void OutcomeDimmer_ShowThenHide_FollowsTheOutcomeAndTheHudVisibility()
+        {
+            hud.View.Show(new LevelProgress(20, TileType.Red, 25, 100));
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.False, "Off while playing.");
+
+            hud.View.Show(Won());
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.True, "On with the Won outcome.");
+
+            hud.View.SetVisible(false);
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.False, "Off when the HUD is hidden for the menu.");
+            Assert.That(hud.OutcomePanel.activeSelf, Is.False, "The card is deactivated so it cannot take menu touches.");
+
+            hud.View.Show(new LevelProgress(20, TileType.Red, 25, 100));
+            hud.View.SetVisible(true);
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.False, "A new level starts without the dimmer.");
+            Assert.That(hud.OutcomePanel.activeSelf, Is.False);
+        }
+
+        [Test]
+        public void OutcomeDimmer_HiddenThenShown_AppearsOnlyWhenTheHudBecomesVisible()
+        {
+            hud.View.SetVisible(false);
+            hud.View.Show(Lost());
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.False, "A terminal Show while hidden leaves the dimmer off.");
+            Assert.That(hud.OutcomePanel.activeSelf, Is.False);
+
+            hud.View.SetVisible(true);
+            Assert.That(hud.OutcomeDimmer.activeSelf, Is.True, "Showing the HUD with the outcome up turns it on.");
+            Assert.That(hud.OutcomePanel.activeSelf, Is.True);
+        }
+
+        private static LevelProgress Won()
+        {
+            var progress = new LevelProgress(5, TileType.Red, 3, 100);
+            progress.ApplyValidMove(new ResolutionResult(new[] { TileType.Red, TileType.Red, TileType.Red }));
+            return progress;
+        }
+
+        private static LevelProgress Lost()
+        {
+            var progress = new LevelProgress(1, TileType.Red, 3, 100);
+            progress.ApplyValidMove(new ResolutionResult(new[] { TileType.Green, TileType.Green, TileType.Green }));
+            return progress;
+        }
+
         [Test]
         public void InvalidArguments_Throw()
         {
@@ -244,6 +292,7 @@ namespace Match3.Presentation.Tests
         [TestCase("playAgainButton")]
         [TestCase("outcomeActionText")]
         [TestCase("outcomeMenuButton")]
+        [TestCase("outcomeDimmer")]
         [TestCase("gameplayMenuButton")]
         public void Initialize_MissingReference_Throws(string field)
         {

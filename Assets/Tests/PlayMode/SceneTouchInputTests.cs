@@ -583,6 +583,127 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.gameObject.activeInHierarchy, Is.True);
         }
 
+        [UnityTest]
+        public IEnumerator OutcomeDimmer_CoversTheScreen_WhileTheCardAndButtonsStayInSafeArea(
+            [Values("Won", "Lost", "AllLevelsComplete")] string outcome, [Values(false, true)] bool asymmetricSafeArea)
+        {
+            string expectedTitle = ReachOutcome(outcome);
+            var safe = hud.GetComponentInParent<SafeAreaLayout>();
+            if (asymmetricSafeArea)
+            {
+                safe.enabled = false;
+                safe.ApplyLayout(new Rect(120f, 90f, Screen.width - 200f, Screen.height - 190f),
+                    new Vector2Int(Screen.width, Screen.height), safe.GetComponentInParent<Canvas>().scaleFactor);
+            }
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Outcome));
+            Assert.That(Read<TMPro.TMP_Text>(hud, "outcomeTitleText").text, Is.EqualTo(expectedTitle));
+            var dimmer = Read<GameObject>(hud, "outcomeDimmer");
+            Assert.That(dimmer.activeInHierarchy, Is.True);
+            Rect dim = ScreenRect((RectTransform)dimmer.transform);
+            Assert.That(dim.xMin, Is.EqualTo(0f).Within(0.1f));
+            Assert.That(dim.yMin, Is.EqualTo(0f).Within(0.1f));
+            Assert.That(dim.width, Is.EqualTo(Screen.width).Within(0.1f));
+            Assert.That(dim.height, Is.EqualTo(Screen.height).Within(0.1f));
+
+            Rect safeRect = ScreenRect(safe.SafeAreaRoot);
+            if (asymmetricSafeArea) Assert.That(safeRect.width, Is.LessThan(Screen.width), "The inset must be in effect.");
+            var card = Read<GameObject>(hud, "outcomePanel").transform.Find("Card");
+            Rect cardRect = ScreenRect((RectTransform)card);
+            Assert.That(safeRect.Contains(cardRect.min) && safeRect.Contains(cardRect.max), Is.True);
+            foreach (string field in new[] { "playAgainButton", "outcomeMenuButton" })
+            {
+                Rect button = ScreenRect((RectTransform)Read<Button>(hud, field).transform);
+                Assert.That(safeRect.Contains(button.min) && safeRect.Contains(button.max), Is.True, field);
+            }
+            // The card's own sorting Canvas draws it, and takes its touches, above the later full-screen dimmer.
+            var cardCanvas = card.GetComponent<Canvas>();
+            Assert.That(cardCanvas.overrideSorting, Is.True);
+            Assert.That(cardCanvas.sortingOrder, Is.GreaterThan(dimmer.GetComponentInParent<Canvas>().sortingOrder));
+            Assert.That(card.GetComponent<GraphicRaycaster>(), Is.Not.Null);
+            foreach (string field in new[] { "playAgainButton", "outcomeMenuButton" })
+            {
+                var button = Read<Button>(hud, field);
+                var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+                var pointer = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+                    { position = CenterOf(button) };
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointer, hits);
+                Assert.That(hits, Is.Not.Empty, field);
+                Assert.That(hits[0].gameObject.transform.IsChildOf(button.transform), Is.True,
+                    field + ": the top UI hit is the card's button, not the dimmer.");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OutcomeThenMenu_HiddenCardAndDimmerDoNotInterceptMenuTouches([Values(false, true)] bool won)
+        {
+            ReachOutcome(won ? "Won" : "Lost");
+            yield return null;
+            Assert.That(flow.ReturnToMenu(), Is.True);
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            var menu = Read<MainMenuView>(flow, "mainMenu");
+            var play = Read<Button>(menu, "playButton");
+            var privacy = Read<Button>(menu, "privacyButton");
+            var card = Read<GameObject>(hud, "outcomePanel").transform.Find("Card");
+
+            Assert.That(Read<GameObject>(hud, "outcomeDimmer").activeInHierarchy, Is.False, "The menu is not dimmed.");
+            Assert.That(card.gameObject.activeInHierarchy, Is.False, "The outcome card is not drawn on the menu.");
+            // Precondition: the card's area overlaps the menu buttons, so a stray card raycast would be caught.
+            Assert.That(ScreenRect((RectTransform)card).Overlaps(ScreenRect((RectTransform)play.transform)), Is.True);
+            // The same UI raycast the input module uses must not reach anything on the hidden card,
+            // including where its own buttons are (a tap there would otherwise be swallowed silently).
+            foreach (string field in new[] { "playAgainButton", "outcomeMenuButton" })
+            {
+                var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+                var pointer = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+                    { position = CenterOf(Read<Button>(hud, field)) };
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointer, hits);
+                Assert.That(hits.Any(hit => hit.gameObject.transform.IsChildOf(card)), Is.False, field);
+            }
+
+            var progress = bootstrap.LevelProgress;
+            Vector2 point = CenterOf(privacy);
+            QueuePress(30, point); yield return null; yield return null;
+            QueueRelease(30, point); yield return null; yield return null;
+            Assert.That(openedUrls, Is.EqualTo(new[] { GameFlowController.PrivacyPolicyUrl }));
+            Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.MainMenu));
+
+            point = CenterOf(play);
+            QueuePress(31, point); yield return null; yield return null;
+            QueueRelease(31, point); yield return null; yield return null;
+            AssertFreshLevel(progress);
+            Assert.That(flow.CurrentLevelIndex, Is.EqualTo(won ? 1 : 0));
+            Assert.That(Read<GameObject>(hud, "outcomeDimmer").activeInHierarchy, Is.False);
+        }
+
+        // Reaches an outcome through the same resolved-move facts the controller reports; returns its title.
+        private string ReachOutcome(string outcome)
+        {
+            if (outcome == "Lost")
+            {
+                for (int i = 0, moves = bootstrap.LevelProgress.MovesRemaining; i < moves; i++)
+                    ReportMove(new ResolutionResult(Array.Empty<TileType>()));
+                return "Out of Moves";
+            }
+            int count = outcome == "AllLevelsComplete" ? Read<LevelCatalog>(flow, "catalog").Count : 1;
+            for (int index = 0; index < count; index++)
+            {
+                var progress = bootstrap.LevelProgress;
+                ReportMove(new ResolutionResult(Enumerable.Repeat(progress.GoalTileType, progress.GoalTarget)));
+                if (index + 1 < count) Assert.That(flow.Next(), Is.True);
+            }
+            return outcome == "AllLevelsComplete" ? "All Levels Complete" : "Level Complete!";
+        }
+
+        private static Vector2 CenterOf(Button button)
+        {
+            var rect = (RectTransform)button.transform;
+            return RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+        }
+
         private IEnumerator VerifyOutcomeTouch(int expectedLevelIndex)
         {
             var before = bootstrap.LevelProgress;
