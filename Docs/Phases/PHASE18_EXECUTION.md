@@ -256,6 +256,18 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 
 **Product decisions** remain as recorded in section 3 (level indicator, overlay cues first, audio only with mute, haptics deferred). **Open fact:** the LG G7's Android version and display mode are not yet known; they are needed only for Phase 17 Step 17 and 18.5, not for 18.1.
 
+## 18.1 result — full-screen outcome dimmer (2026-11-22)
+
+**Changed:** `SampleScene.unity` (new root-level `OutcomeDimmer`; `OutcomePanel` Image removed; `Card` gets an override-sorting Canvas and GraphicRaycaster, copied from `ConfirmationCard`), `LevelHudView.cs` (`outcomeDimmer` field and startup check; panel and dimmer active only while the level is over and the HUD is visible), `TestHud.cs`, and tests. Commits `3beca88` (scene + code) and `e69add5` (tests).
+
+**Finding during implementation:** with only the dimmer gated, the hidden card's buttons still received UI raycasts on the menu (`Graphic.Raycast` stops consulting parent CanvasGroups at an override-sorting Canvas), overlapping the lower part of the Privacy button. The approved fix deactivates the panel together with the dimmer. No exception or input lock was introduced.
+
+**Tests:** EditMode **632 passed**; PlayMode **365 passed, 3 explicit timing skips, 0 failed** (baseline 354 + 11 new: both Show/SetVisible call orders, the missing-reference case, Won / Lost / All Levels Complete × normal / asymmetric geometry with real UI raycasts on the card buttons, and EventSystem touches on Privacy and Play after outcome → Menu with a raycast check at the hidden card's button positions).
+
+**Editor evidence** (`Builds/Validation/Phase18Step1/`, ignored): before, a 100 / 70 / 60 / 80 px undimmed strip with asymmetric insets for all three outcomes; after, full-screen dimming, card and buttons inside SafeArea and no text overflow for all three outcomes at all five sizes plus asymmetric insets (18 captures), and an undimmed menu after an outcome. Temporary presets and the temporary progression key were removed; the Editor's real progression key was never written.
+
+**Notes for later steps:** "All Levels Complete" nearly fills the card width (no overflow); consider it in the 18.2 outcome styling. Physical S23 check in 18.5.
+
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
 - Recruit **12 or more** independent eligible testers each continuously opted in for **14 days** before production-access application; prefer 15–20 for buffer and real feedback. Current checkpoint from the handoff: **1 non-owner opt-in**. Count is a time-sensitive operational fact and must be rechecked, not assumed unchanged.
