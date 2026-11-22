@@ -25,6 +25,7 @@ namespace Match3.Presentation.Tests
         public Button PlayAgain;
         public TMP_Text OutcomeAction;
         public Button OutcomeMenu;
+        public GameObject OutcomeDimmer;
 
         public static TestHud Create()
         {
@@ -47,6 +48,11 @@ namespace Match3.Presentation.Tests
             hud.PlayAgain = AddButton(hud.OutcomePanel, "PlayAgain");
             hud.OutcomeAction = AddText(hud.PlayAgain.gameObject, "OutcomeAction");
             hud.OutcomeMenu = AddButton(hud.OutcomePanel, "Menu");
+            // In the scene it sits under the root Canvas, outside the HUD. Here it is parented to Root only so
+            // tests that destroy Root also clean it up; the view toggles its own active state either way.
+            hud.OutcomeDimmer = new GameObject("OutcomeDimmer");
+            hud.OutcomeDimmer.transform.SetParent(hud.Root.transform);
+            hud.OutcomeDimmer.SetActive(false);
 
             hud.View = hud.Root.AddComponent<LevelHudView>();
             Set(hud.View, "movesText", hud.Moves);
@@ -60,6 +66,7 @@ namespace Match3.Presentation.Tests
             Set(hud.View, "playAgainButton", hud.PlayAgain);
             Set(hud.View, "outcomeActionText", hud.OutcomeAction);
             Set(hud.View, "outcomeMenuButton", hud.OutcomeMenu);
+            Set(hud.View, "outcomeDimmer", hud.OutcomeDimmer);
             Set(hud.View, "goalIcon", hud.GoalIcon);
             // The same distinct generated sprite per color that the tile tests use.
             Set(hud.View, "redGoalSprite", TestTiles.SpriteFor(TileType.Red));

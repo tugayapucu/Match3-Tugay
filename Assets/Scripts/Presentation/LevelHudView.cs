@@ -25,6 +25,9 @@ namespace Match3.Presentation
         [SerializeField] private Button playAgainButton;
         [SerializeField] private TMP_Text outcomeActionText;
         [SerializeField] private Button outcomeMenuButton;
+        // Full-screen dimmer under the root Canvas, outside SafeArea (like ConfirmationDimmer). It and the
+        // outcome panel are active only while the level is over and the HUD is visible.
+        [SerializeField] private GameObject outcomeDimmer;
 
         // Shows which gem to collect. The HUD keeps its own references to the same PNGs as the tiles,
         // so it does not depend on TileView just to borrow its sprite mapping.
@@ -44,6 +47,7 @@ namespace Match3.Presentation
         private bool actionsAvailable = true;
         private bool gameplayActionsAvailable = true;
         private bool levelOver;
+        private bool hudVisible = true;
 
         public void Initialize(Action onRestartRequested, Action onOutcomeRequested, Action onMenuRequested)
         {
@@ -69,10 +73,10 @@ namespace Match3.Presentation
         {
             if (movesText == null || scoreText == null || goalText == null || restartButton == null || gameplayMenuButton == null || goalIcon == null
                 || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null
-                || outcomeActionText == null || outcomeMenuButton == null)
+                || outcomeActionText == null || outcomeMenuButton == null || outcomeDimmer == null)
             {
                 throw new InvalidOperationException(
-                    "Assign every HUD text, the goal icon, all four buttons and the outcome panel before initializing.");
+                    "Assign every HUD text, the goal icon, all four buttons, the outcome panel and its dimmer before initializing.");
             }
 
             // Every goal color is checked now, so a missing sprite fails at startup rather than on some later level.
@@ -155,8 +159,17 @@ namespace Match3.Presentation
                 outcomeScoreText.text = progress.Score.ToString();
             }
 
-            outcomePanel.SetActive(levelOver);
+            RefreshOutcome();
             RefreshActionAvailability();
+        }
+
+        // The card has its own sorting Canvas, which stops UI raycasts from consulting this HUD's
+        // CanvasGroup, and the dimmer lives outside it. So both are deactivated, not just faded, while hidden.
+        private void RefreshOutcome()
+        {
+            bool showOutcome = levelOver && hudVisible;
+            outcomePanel.SetActive(showOutcome);
+            outcomeDimmer.SetActive(showOutcome);
         }
 
         // False while a move is animating, so a player click can never ask for a restart mid-move.
@@ -210,6 +223,8 @@ namespace Match3.Presentation
             visibility.alpha = visible ? 1f : 0f;
             visibility.interactable = visible;
             visibility.blocksRaycasts = visible;
+            hudVisible = visible;
+            RefreshOutcome();
         }
 
         // LevelProgress only accepts a normal color as the goal, so anything else is a programming error.
