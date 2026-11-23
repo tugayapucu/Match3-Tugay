@@ -205,6 +205,7 @@ Avoid confusion with the existing selection brackets and **Nova Gem corner brack
    - the human loads the upload keystore in the Editor; no password, keystore path or key material passes to the agent;
    - guarded build with explicit `BuildPlayerOptions` **`subtarget = Generic`** (never the MCP default that previously selected PVRTC) and the preflight asserts: release AAB, ETC2, version code/name, package, IL2CPP Release ARM64, alias, symbols, Diagnostics off, no overwrite, all 6 adaptive icon sizes;
    - AAB validation: bundletool, signature and upload certificate, manifest and permission diff against code 4, native libraries and 16 KB static alignment (no claim of 16 KB device validation without such a device);
+   - **font distribution gate:** inspect the actual AAB for Fredoka data (the TTF files or the generated TMP atlases); if font data is packaged, make sure the required copyright notice and OFL accompany the distribution before shipping (`Docs/Art/README.md`, Phase 18 Fredoka section). Do not assume the TTFs are absent;
    - signing fields cleared afterwards; the **human closes Unity before** the four known build-noise files are restored; readback after reopening.
 3. **Immediately before the Internal rollout**, record the S23's current saved progression as seen in the app (menu label Play / Continue / Play Again and, where shown, the level), with a screenshot, so the in-place update can be checked against it.
 4. **Human-approved Internal upload and rollout**, then an **in-place Google Play update** on the S23. Verify installer/signature, save persistence, launch, menu, board input, confirm/Back, outcomes, level flow, privacy link, and any new cues or sounds. Use the guarded foreground/one-action/screenshot procedure.
@@ -267,6 +268,19 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 **Editor evidence** (`Builds/Validation/Phase18Step1/`, ignored): before, a 100 / 70 / 60 / 80 px undimmed strip with asymmetric insets for all three outcomes; after, full-screen dimming, card and buttons inside SafeArea and no text overflow for all three outcomes at all five sizes plus asymmetric insets (18 captures), and an undimmed menu after an outcome. Temporary presets and the temporary progression key were removed; the Editor's real progression key was never written.
 
 **Notes for later steps:** "All Levels Complete" nearly fills the card width (no overflow); consider it in the 18.2 outcome styling. Physical S23 check in 18.5.
+
+## 18.2 design approval and specification corrections (2026-11-24)
+
+**Approved and frozen (human, after ChatGPT review):** B4-A "Top mission HUD", Claude Design **Final Polish v3** export in ignored `Builds/Validation/Phase18Step2/design_final/`: `Galaxplode B4-A Final Polish.dc.html` (1a Tall 1080×2340, 1b Compact 1080×1200, 1f–1i Regular 1080×1920 / 720×1280 / 808 u stress test / goal states), `RegularHUD.dc.html`, `RegularScreen.dc.html` and `handoff/B4A_Visual_Spec.md` (§9 Regular internals). The archived v1/v2 files are not used; some titles inside the export still say "v2". `gems/*.png` are preview crops and are never imported; Unity keeps the original Prismatic Energy sprites.
+
+**Decisions:** three responsive tiers chosen by SafeArea height (Tall: HUD 700 u, controls 2 × 360×144 at 120 u; Regular: 440 u, 2 × 340×136 at 72 u; Compact: 112 u, 2 × 340×112 at 48 u), each keeping today's cell size on every screen; 36 u side margin for the HUD only, `BoardCameraFitter` keeps 48 u; board panel padding 0.2 cell on every tier; Fredoka Medium / SemiBold for the HUD and gameplay controls only (menu, outcome and confirmation need a separate visual checkpoint); selection tint and special-gem glow deferred to 18.3; Core, gameplay, board fitting and the 18.1 outcome dimmer unchanged.
+
+**Corrections to the export (these override it):**
+
+1. **Compact bottom spacing.** The `BottomControls` anchor offset stays **48 u**: the distance from the SafeArea bottom to the bottom of the button rect, lip included. The actual gap to the physical screen edge is 48 u plus any bottom inset (for example a gesture bar). The buttons' soft drop shadow is decorative and counts toward neither. The export's "53" (table) and "29 u" (notes) are superseded; at 1080×1200 the board-to-controls gap becomes about 42 u, the same as the HUD-to-board gap, and cells stay 102.44 px.
+2. **No tabular figures.** Fredoka has no `tnum` feature and proportional digits, and TextMeshPro does not apply OpenType number features. Every changing number sits in a fixed-width box with stable alignment (§9 table for Regular; Tall and Compact boxes are sized by the same rule in their steps). The widest digit is "2" (about 0.59 em Medium), slightly wider than "0"; box widths are checked against "22" / "222222" worst cases.
+3. **Pressed buttons.** The pressed sprite moves only the button face down by the lip height; the label stays stationary and is not a child of the moving face. The export's §9 sentence and the Regular HTML, which move the label with the face, are preview discrepancies. The button rect and hit area never move.
+4. **Font fallback.** The export's "dynamic fallback asset for localisation" is not used: the Fredoka assets fall back to the existing LiberationSans SDF, which is Static. No further fallback font or localisation work is in scope.
 
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
