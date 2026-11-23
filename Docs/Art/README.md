@@ -1,5 +1,24 @@
 # Art Provenance
 
+## Phase 18 — Fredoka font (HUD and gameplay controls)
+
+**Fredoka** by Milena Brandão and Hafontia, "Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)", licensed under the **SIL Open Font License 1.1** with no Reserved Font Name. The licence is kept beside the fonts as `Assets/Fonts/Fredoka/OFL.txt`.
+
+| Item | Value |
+| --- | --- |
+| Official source | [google/fonts](https://github.com/google/fonts) `ofl/fredoka/`, commit `a60a77e14f28abd4ef243a1b5dfc48df0cec5205` |
+| Variable source `Fredoka[wdth,wght].ttf` | SHA-256 `2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8` (not stored in the repository) |
+| `OFL.txt` | SHA-256 `5c9e7eee5c6b25f4b05b8d53b2e470ea4962f9ced742d044a98f7d95d1375bab` |
+| Tool | fontTools 4.68.0 (pure-Python wheel, hash-pinned in [requirements-fonts.txt](requirements-fonts.txt)), installed in a virtual environment outside the repository |
+| `Fredoka-Medium.ttf` | wght 500, wdth 100 (the font's own Medium instance); SHA-256 `b35d81b4161a69d875971fbf9367bdc73ce0368cd3446fce476dd5ee4a522f81` |
+| `Fredoka-SemiBold.ttf` | wght 600, wdth 100 (the font's own SemiBold instance); SHA-256 `2663f28819e41dab4dc7c62dd7526982a024ba443dd3fc87535d955cf44e4cce` |
+
+TextMeshPro reads only a variable font's default instance, which for Fredoka is Light (300), so [GenerateFredokaStatic.py](GenerateFredokaStatic.py) cuts the two static weights. It downloads the pinned files, checks their hashes and keeps the source's timestamps, so every run is byte-identical (verified three times, once in a fresh hash-checked environment). The static cuts are Modified Versions under the OFL: they keep the copyright and licence fields in their name table and stay under the OFL. Their outlines still overlap where the variable font's do; the font assets use SDFAA, which renders from an anti-aliased bitmap, so overlaps do not create artefacts.
+
+**TextMeshPro font assets** (`Assets/Fonts/Fredoka/Fredoka-Medium SDF.asset`, `Fredoka-SemiBold SDF.asset`): Static atlas, SDFAA (the unhinted variant, the usual choice for text drawn at many sizes; LiberationSans uses the hinted one), sampling 90, padding 9, 1024 × 1024, one non-readable Alpha8 atlas texture like LiberationSans SDF, and the same `TextMeshPro/Mobile/Distance Field` shader. Characters: ASCII 32–126 plus U+00B7 "·", added to each asset before it was switched to Static. Fallback: the existing LiberationSans SDF, which is also Static; no further fallback or localisation is planned. (LiberationSans SDF's own fallback list continues to TextMeshPro's pre-existing Dynamic `LiberationSans SDF - Fallback`, committed empty; HUD text never reaches it because every HUD character is in the Fredoka assets' own tables, which `FredokaFontAssetTests` checks without fallbacks.) The underlay material for the goal count is added in the HUD step that uses it.
+
+**Distribution notice (release gate, 18.5):** whether the TTF files or only the generated atlases end up in the Android package is checked on the real AAB, not assumed. If font data is packaged, the copyright notice and OFL must accompany the distribution before shipping; an optional README acknowledgement can wait for Phase 23.
+
 ## Phase 17 — Galaxplode app icon and store graphics
 
 Design **A**, chosen by the human on 2026-11-20 from three rendered candidates: the **Spectrum Core** special gem with a soft warm glow on a navy space background. It is composed only from project-owned inputs:
