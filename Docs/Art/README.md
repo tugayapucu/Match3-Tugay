@@ -8,7 +8,7 @@
 | --- | --- |
 | Official source | [google/fonts](https://github.com/google/fonts) `ofl/fredoka/`, commit `a60a77e14f28abd4ef243a1b5dfc48df0cec5205` |
 | Variable source `Fredoka[wdth,wght].ttf` | SHA-256 `2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8` (not stored in the repository) |
-| `OFL.txt` | SHA-256 `5c9e7eee5c6b25f4b05b8d53b2e470ea4962f9ced742d044a98f7d95d1375bab` |
+| `OFL.txt` | SHA-256 `5c9e7eee5c6b25f4b05b8d53b2e470ea4962f9ced742d044a98f7d95d1375bab` (the LF file as published and as committed; a Windows checkout with `core.autocrlf` may write it with CRLF) |
 | Tool | fontTools 4.68.0 (pure-Python wheel, hash-pinned in [requirements-fonts.txt](requirements-fonts.txt)), installed in a virtual environment outside the repository |
 | `Fredoka-Medium.ttf` | wght 500, wdth 100 (the font's own Medium instance); SHA-256 `b35d81b4161a69d875971fbf9367bdc73ce0368cd3446fce476dd5ee4a522f81` |
 | `Fredoka-SemiBold.ttf` | wght 600, wdth 100 (the font's own SemiBold instance); SHA-256 `2663f28819e41dab4dc7c62dd7526982a024ba443dd3fc87535d955cf44e4cce` |
