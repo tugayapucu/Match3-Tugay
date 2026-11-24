@@ -8,13 +8,12 @@ namespace Match3.Presentation
 {
     // Shows the current level's numbers and outcome, and forwards navigation clicks. It owns no rules:
     // LevelProgress calculates values, Bootstrap shows them, and GameFlow supplies navigation callbacks.
-    // The scene owns the static labels (MOVES, GOAL, SCORE, FINAL SCORE); this view writes only the changing values.
+    // The scene owns the static labels (MOVES, GOAL, SCORE, FINAL SCORE); only the changing values are written.
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class LevelHudView : MonoBehaviour
     {
-        [SerializeField] private TMP_Text movesText;
-        [SerializeField] private TMP_Text scoreText;
-        [SerializeField] private TMP_Text goalText;
+        // Writes moves, score, goal count and goal icon; this view picks the goal sprite and decides when.
+        [SerializeField] private HudStatsView stats;
         [SerializeField] private Button restartButton;
         [SerializeField] private Button gameplayMenuButton;
 
@@ -29,9 +28,8 @@ namespace Match3.Presentation
         // outcome panel are active only while the level is over and the HUD is visible.
         [SerializeField] private GameObject outcomeDimmer;
 
-        // Shows which gem to collect. The HUD keeps its own references to the same PNGs as the tiles,
+        // Which gem to collect. The HUD keeps its own references to the same PNGs as the tiles,
         // so it does not depend on TileView just to borrow its sprite mapping.
-        [SerializeField] private Image goalIcon;
         [SerializeField] private Sprite redGoalSprite;
         [SerializeField] private Sprite greenGoalSprite;
         [SerializeField] private Sprite blueGoalSprite;
@@ -71,13 +69,14 @@ namespace Match3.Presentation
 
         public void ValidateConfiguration()
         {
-            if (movesText == null || scoreText == null || goalText == null || restartButton == null || gameplayMenuButton == null || goalIcon == null
+            if (stats == null || restartButton == null || gameplayMenuButton == null
                 || outcomePanel == null || outcomeTitleText == null || outcomeScoreText == null || playAgainButton == null
                 || outcomeActionText == null || outcomeMenuButton == null || outcomeDimmer == null)
             {
                 throw new InvalidOperationException(
-                    "Assign every HUD text, the goal icon, all four buttons, the outcome panel and its dimmer before initializing.");
+                    "Assign the stats view, every outcome text, all four buttons, the outcome panel and its dimmer before initializing.");
             }
+            stats.ValidateConfiguration();
 
             // Every goal color is checked now, so a missing sprite fails at startup rather than on some later level.
             if (redGoalSprite == null || greenGoalSprite == null || blueGoalSprite == null
@@ -147,10 +146,7 @@ namespace Match3.Presentation
                 throw new InvalidOperationException($"Assign the {progress.GoalTileType} goal sprite before showing it.");
             }
 
-            movesText.text = progress.MovesRemaining.ToString();
-            scoreText.text = progress.Score.ToString();
-            goalText.text = $"{progress.GoalProgress}/{progress.GoalTarget}";
-            goalIcon.sprite = goalSprite;
+            stats.Show(progress, goalSprite);
 
             levelOver = progress.Status != LevelStatus.Playing;
             if (levelOver)

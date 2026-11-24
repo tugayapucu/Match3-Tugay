@@ -1131,6 +1131,7 @@ GameObject:
   - component: {fileID: 298532434}
   - component: {fileID: 298532436}
   - component: {fileID: 298532435}
+  - component: {fileID: 298532437}
   m_Layer: 0
   m_Name: TopBar
   m_TagString: Untagged
@@ -1198,6 +1199,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 298532433}
   m_CullTransparentMesh: 1
+--- !u!114 &298532437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 298532433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c089f407a0082d42a7ced004394980f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.HudStatsView
+  movesText: {fileID: 1967568564}
+  scoreText: {fileID: 210788900}
+  goalText: {fileID: 598193199}
+  goalIcon: {fileID: 1553525677}
 --- !u!1 &320460727
 GameObject:
   m_ObjectHideFlags: 0
@@ -2351,10 +2368,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 365974633}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 56}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 41.469666, y: 0}
+  m_SizeDelta: {x: 258.53033, y: 56}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &598193199
 MonoBehaviour:
@@ -4298,10 +4315,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 365974633}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 44}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: -6}
+  m_SizeDelta: {x: 33.469666, y: 44}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1553525677
 MonoBehaviour:
@@ -4519,9 +4536,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfd2df54874ca6447a4baea75eabdda4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Match3.Presentation::Match3.Presentation.LevelHudView
-  movesText: {fileID: 1967568564}
-  scoreText: {fileID: 210788900}
-  goalText: {fileID: 598193199}
+  stats: {fileID: 298532437}
   restartButton: {fileID: 955792122}
   gameplayMenuButton: {fileID: 103741260}
   outcomePanel: {fileID: 294397937}
@@ -4531,7 +4546,6 @@ MonoBehaviour:
   outcomeActionText: {fileID: 224799968}
   outcomeMenuButton: {fileID: 1261407125}
   outcomeDimmer: {fileID: 1003019715}
-  goalIcon: {fileID: 1553525677}
   redGoalSprite: {fileID: 21300000, guid: 0bb7ff5fdd2c81548b8b5c44ca7a25e8, type: 3}
   greenGoalSprite: {fileID: 21300000, guid: e84b6dd113ca07b469c32bab702691d5, type: 3}
   blueGoalSprite: {fileID: 21300000, guid: d4853dff1d7791744b7de9a07e0b11b3, type: 3}
