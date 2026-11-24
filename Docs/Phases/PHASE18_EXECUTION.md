@@ -294,6 +294,14 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 
 **Tests:** EditMode **641 passed** (632 + 9 new); PlayMode **365 passed, 3 explicit timing skips, 0 failed** (unchanged from 18.1). Android target, 1080×1920 Game view; SampleScene reopened and clean afterwards.
 
+## 18.2 Step 2 result — HUD tier selection (2026-11-24)
+
+**Changed:** new `HudTierLayout.cs` (Presentation, pure static math: `HudTier`, per-tier `HudTierMetrics`, `Select(safeSizeInCanvasUnits, boardSideMargin)`, `HudWidth`, `HudSideMargin = 36`) (`a74eb8e`) and `HudTierLayoutTests` (`4f077f8`). Nothing uses it yet; SampleScene, `SafeAreaLayout`, `BoardCameraFitter`, `BoardCameraFraming`, HUD bindings, art and settings are unchanged.
+
+**Rule:** the largest of Tall / Regular whose reserved height (HUD + offsets + buttons + 2 × 32 u fitter gap) still leaves the board region at least as tall as it is wide (safe width − 2 × the fitter's 48 u margin); otherwise Compact. The cell is min(region width, height) / 8.2 and the width does not depend on the HUD, so the cell never changes; Compact reserves exactly today's 360 u (24 + 112 + 48 + 112 + 64 = 24 + 96 + 48 + 128 + 64). Reserved heights: Tall 1052 u, Regular 736 u, so Tall from safe height ≥ width + 956 and Regular from ≥ width + 640 (1080 wide: 2036 / 1720; 940: 1896 / 1580; 880: 1836 / 1520).
+
+**Tests (42 new):** the approved matrix (1080×2340 / 2400 / 2160, 1440×2960, 1080×1920 and 720×1280, both 1920 inset cases, 1080×1440 / 1200, S23 insets, both test-suite inset cases) with expected tier and cell from the real `BoardCameraFraming.ContentRegion`; exact boundaries and ±0.1 u at three widths; the threshold at every whole width 700–1080; a sweep of 26 000 safe sizes (9 widths × heights 300–3200) proving the cell equals today's or both layouts have no room; metrics, HUD-width independence from the 48 u board margin, no-room and invalid input. EditMode **683 passed** (641 + 42); PlayMode **365 passed, 3 explicit skips, 0 failed**.
+
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
 - Recruit **12 or more** independent eligible testers each continuously opted in for **14 days** before production-access application; prefer 15–20 for buffer and real feedback. Current checkpoint from the handoff: **1 non-owner opt-in**. Count is a time-sensitive operational fact and must be rechecked, not assumed unchanged.
