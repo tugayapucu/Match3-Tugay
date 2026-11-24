@@ -773,6 +773,29 @@ namespace Match3.Presentation.Tests
                 .Invoke(bootstrap, new object[] { result });
         }
 
+        [UnityTest]
+        public IEnumerator Scene_StatsViewIsTheTopBarAndShowsTheSessionValues()
+        {
+            var stats = Read<HudStatsView>(hud, "stats");
+            Transform topBar = hud.GetComponentInParent<SafeAreaLayout>().TopBar;
+            Assert.That(stats.transform, Is.SameAs(topBar));
+            var moves = Read<TMPro.TMP_Text>(stats, "movesText");
+            var score = Read<TMPro.TMP_Text>(stats, "scoreText");
+            var goal = Read<TMPro.TMP_Text>(stats, "goalText");
+            var icon = Read<Image>(stats, "goalIcon");
+            Assert.That(moves.transform, Is.SameAs(topBar.Find("MovesGroup/MovesText")));
+            Assert.That(score.transform, Is.SameAs(topBar.Find("ScoreGroup/ScoreText")));
+            Assert.That(goal.transform, Is.SameAs(topBar.Find("GoalGroup/GoalRow/GoalText")));
+            Assert.That(icon.transform, Is.SameAs(topBar.Find("GoalGroup/GoalRow/GoalIcon")));
+
+            LevelProgress progress = bootstrap.LevelProgress;
+            Assert.That(moves.text, Is.EqualTo(progress.MovesRemaining.ToString()));
+            Assert.That(score.text, Is.EqualTo(progress.Score.ToString()));
+            Assert.That(goal.text, Is.EqualTo($"{progress.GoalProgress}/{progress.GoalTarget}"));
+            Assert.That(icon.sprite, Is.SameAs(Read<Sprite>(hud, progress.GoalTileType.ToString().ToLowerInvariant() + "GoalSprite")));
+            yield break;
+        }
+
         private static T Read<T>(object target, string name)
         {
             return (T)target.GetType().GetField(name, Fields).GetValue(target);

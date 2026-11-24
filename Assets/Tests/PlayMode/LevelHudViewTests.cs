@@ -283,8 +283,7 @@ namespace Match3.Presentation.Tests
             Assert.Throws<ArgumentNullException>(() => hud.View.Show(null));
         }
 
-        [TestCase("goalText")]
-        [TestCase("goalIcon")]
+        [TestCase("stats")]
         [TestCase("orangeGoalSprite")]
         [TestCase("outcomePanel")]
         [TestCase("outcomeTitleText")]
@@ -300,6 +299,31 @@ namespace Match3.Presentation.Tests
                 .SetValue(hud.View, null);
 
             Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }, () => { }));
+        }
+
+        // The stats view's own references are checked at the same startup point as LevelHudView's.
+        [TestCase("movesText")]
+        [TestCase("scoreText")]
+        [TestCase("goalText")]
+        [TestCase("goalIcon")]
+        public void Initialize_MissingStatsReference_Throws(string field)
+        {
+            typeof(HudStatsView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(hud.Stats, null);
+
+            Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }, () => { }));
+        }
+
+        [Test]
+        public void StatsView_NullArguments_ThrowWithoutWriting()
+        {
+            hud.View.Show(new LevelProgress(20, TileType.Red, 25, 100));
+
+            Assert.Throws<ArgumentNullException>(() => hud.Stats.Show(null, TestTiles.SpriteFor(TileType.Blue)));
+            Assert.Throws<ArgumentNullException>(() => hud.Stats.Show(new LevelProgress(7, TileType.Blue, 9, 100), null));
+            Assert.That(hud.Moves.text, Is.EqualTo("20"));
+            Assert.That(hud.Goal.text, Is.EqualTo("0/25"));
+            Assert.That(hud.GoalIcon.sprite, Is.SameAs(TestTiles.SpriteFor(TileType.Red)));
         }
     }
 }

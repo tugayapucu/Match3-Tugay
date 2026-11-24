@@ -13,6 +13,7 @@ namespace Match3.Presentation.Tests
 
         public GameObject Root;
         public LevelHudView View;
+        public HudStatsView Stats;
         public TMP_Text Moves;
         public TMP_Text Score;
         public TMP_Text Goal;
@@ -33,14 +34,22 @@ namespace Match3.Presentation.Tests
             // Inactive while wiring, so Awake (which hooks the button) sees every reference.
             hud.Root = new GameObject("TestHud");
             hud.Root.SetActive(false);
-            hud.Moves = AddText(hud.Root, "Moves");
-            hud.Score = AddText(hud.Root, "Score");
-            hud.Goal = AddText(hud.Root, "Goal");
+            // Like the scene's TopBar: the stats view sits on its own object above the value texts.
+            var statsObject = new GameObject("Stats");
+            statsObject.transform.SetParent(hud.Root.transform);
+            hud.Moves = AddText(statsObject, "Moves");
+            hud.Score = AddText(statsObject, "Score");
+            hud.Goal = AddText(statsObject, "Goal");
             hud.Restart = AddButton(hud.Root, "Restart");
             hud.GameplayMenu = AddButton(hud.Root, "GameplayMenu");
             var iconObject = new GameObject("GoalIcon");
-            iconObject.transform.SetParent(hud.Root.transform);
+            iconObject.transform.SetParent(statsObject.transform);
             hud.GoalIcon = iconObject.AddComponent<Image>();
+            hud.Stats = statsObject.AddComponent<HudStatsView>();
+            SetStats(hud.Stats, "movesText", hud.Moves);
+            SetStats(hud.Stats, "scoreText", hud.Score);
+            SetStats(hud.Stats, "goalText", hud.Goal);
+            SetStats(hud.Stats, "goalIcon", hud.GoalIcon);
             hud.OutcomePanel = new GameObject("OutcomePanel");
             hud.OutcomePanel.transform.SetParent(hud.Root.transform);
             hud.OutcomeTitle = AddText(hud.OutcomePanel, "OutcomeTitle");
@@ -55,9 +64,7 @@ namespace Match3.Presentation.Tests
             hud.OutcomeDimmer.SetActive(false);
 
             hud.View = hud.Root.AddComponent<LevelHudView>();
-            Set(hud.View, "movesText", hud.Moves);
-            Set(hud.View, "scoreText", hud.Score);
-            Set(hud.View, "goalText", hud.Goal);
+            Set(hud.View, "stats", hud.Stats);
             Set(hud.View, "restartButton", hud.Restart);
             Set(hud.View, "gameplayMenuButton", hud.GameplayMenu);
             Set(hud.View, "outcomePanel", hud.OutcomePanel);
@@ -67,7 +74,6 @@ namespace Match3.Presentation.Tests
             Set(hud.View, "outcomeActionText", hud.OutcomeAction);
             Set(hud.View, "outcomeMenuButton", hud.OutcomeMenu);
             Set(hud.View, "outcomeDimmer", hud.OutcomeDimmer);
-            Set(hud.View, "goalIcon", hud.GoalIcon);
             // The same distinct generated sprite per color that the tile tests use.
             Set(hud.View, "redGoalSprite", TestTiles.SpriteFor(TileType.Red));
             Set(hud.View, "greenGoalSprite", TestTiles.SpriteFor(TileType.Green));
@@ -96,6 +102,11 @@ namespace Match3.Presentation.Tests
         private static void Set(LevelHudView view, string field, object value)
         {
             typeof(LevelHudView).GetField(field, Fields).SetValue(view, value);
+        }
+
+        private static void SetStats(HudStatsView view, string field, object value)
+        {
+            typeof(HudStatsView).GetField(field, Fields).SetValue(view, value);
         }
     }
 }
