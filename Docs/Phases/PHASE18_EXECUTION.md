@@ -302,6 +302,18 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 
 **Tests (42 new):** the approved matrix (1080×2340 / 2400 / 2160, 1440×2960, 1080×1920 and 720×1280, both 1920 inset cases, 1080×1440 / 1200, S23 insets, both test-suite inset cases) with expected tier and cell from the real `BoardCameraFraming.ContentRegion`; exact boundaries and ±0.1 u at three widths; the threshold at every whole width 700–1080; a sweep of 26 000 safe sizes (9 widths × heights 300–3200) proving the cell equals today's or both layouts have no room; metrics, HUD-width independence from the 48 u board margin, no-room and invalid input. EditMode **683 passed** (641 + 42); PlayMode **365 passed, 3 explicit skips, 0 failed**.
 
+**Review outcome (human, ChatGPT, Codex):** approved. Carried into layout integration: (1) keeping the cell size does not prove the controls fit horizontally (for example a 700 u wide SafeArea selects Tall, whose 760 u button row is wider than the SafeArea); before tiers are activated, every control must fit inside the SafeArea, with horizontal-fit tests at narrow widths and tier boundaries and, if needed, a stated minimum width plus an explicit fallback or adaptive button-size policy (falling back to Compact alone is not enough); (2) the Compact HUD width is calculated from the actual board panel (8 cells + 0.2 cell padding per side) and centred on the board, respecting asymmetric insets, not hardcoded.
+
+## 18.2 Step 3 result — HudStatsView wrapper (2026-11-24)
+
+**Changed:** new `HudStatsView` (writes moves, score, goal count and goal icon only) on the existing `TopBar`; `LevelHudView` replaces its `movesText` / `scoreText` / `goalText` / `goalIcon` fields with one `stats` reference, checks it at startup and delegates `Show` to it after resolving the goal sprite. Outcome visibility, confirmation, buttons and actions stay in `LevelHudView` / `GameFlowController`. `HudTierLayout` is still unused; no level or progress bindings yet (`b99fc39` code and scene, `64772cc` tests).
+
+**Scene:** `HudStatsView` references the same four objects (same fileIDs) the old fields did; every other reference is unchanged. The scene file also now stores the live values of the two rects `GoalRow`'s HorizontalLayoutGroup drives (GoalIcon 33.47 × 44, GoalText 258.53 × 56), previously saved as 0; the Editor showed these values before the change too.
+
+**Evidence** (`Builds/Validation/Phase18Step2/step3/`, ignored): reference and RectTransform dumps before and after; Play mode at 1080×1920 from Level 2's start, stepped 240 frames — **before and after captures are pixel-identical** (0 differing pixels).
+
+**Tests:** fixture builds the stats view like the scene; missing `stats` and each missing stats reference fail at `Initialize`; null arguments leave the display unchanged; a scene test checks `stats` is the TopBar's and shows the session's values. EditMode **683 passed**; PlayMode **370 passed** (365 − 2 replaced cases + 7 new), **3 explicit skips, 0 failed**.
+
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
 - Recruit **12 or more** independent eligible testers each continuously opted in for **14 days** before production-access application; prefer 15–20 for buffer and real feedback. Current checkpoint from the handoff: **1 non-owner opt-in**. Count is a time-sensitive operational fact and must be rechecked, not assumed unchanged.
