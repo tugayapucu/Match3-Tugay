@@ -964,6 +964,65 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
+        public IEnumerator Scene_RealGoalMove_UpdatesCompactHudFromTheResolvedSession()
+        {
+            var progress = bootstrap.LevelProgress;
+            var board = Read<Board>(bootstrap, "board");
+            var scratch = new Board(board.Width, board.Height);
+            var goalMove = (from y in Enumerable.Range(0, board.Height)
+                            from x in Enumerable.Range(0, board.Width)
+                            let first = new GridPosition(x, y)
+                            from second in new[] { new GridPosition(x + 1, y), new GridPosition(x, y + 1) }
+                            where board.IsInBounds(second)
+                            select (first, second)).FirstOrDefault(pair =>
+            {
+                scratch.CopyTilesFrom(board);
+                scratch.TrySwapAdjacent(pair.first, pair.second);
+                return MatchFinder.FindMatches(scratch).Any(cell => scratch.GetTile(cell) == progress.GoalTileType);
+            });
+            Assert.That(goalMove.first, Is.Not.EqualTo(goalMove.second), "The starting board must offer a goal match.");
+
+            var stats = Read<HudStatsView>(hud, "stats");
+            var fill = Read<Image>(stats, "goalFill");
+            int movesBefore = progress.MovesRemaining;
+            int scoreBefore = progress.Score;
+            int goalBefore = progress.GoalProgress;
+            Assert.That(goalBefore, Is.Zero);
+            Assert.That(fill.enabled, Is.False);
+
+            Vector2 firstPoint = inputCamera.WorldToScreenPoint(boardView.GetTileView(goalMove.first).transform.position);
+            Vector2 secondPoint = inputCamera.WorldToScreenPoint(boardView.GetTileView(goalMove.second).transform.position);
+            QueuePress(1, firstPoint);
+            yield return null;
+            QueueRelease(1, firstPoint);
+            yield return null;
+            Assert.That(controller.SelectedPosition, Is.EqualTo(goalMove.first));
+            QueuePress(2, secondPoint);
+            yield return null;
+            QueueRelease(2, secondPoint);
+            yield return null;
+            Assert.That(bootstrap.IsBusy, Is.True, "The touch must enter normal move resolution.");
+
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (bootstrap.IsBusy)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The real move did not settle.");
+                yield return null;
+            }
+
+            Assert.That(bootstrap.LevelProgress, Is.SameAs(progress));
+            Assert.That(progress.MovesRemaining, Is.EqualTo(movesBefore - 1));
+            Assert.That(progress.Score, Is.GreaterThan(scoreBefore));
+            Assert.That(progress.GoalProgress, Is.GreaterThan(goalBefore));
+            Assert.That(Read<TMPro.TMP_Text>(stats, "movesText").text, Is.EqualTo(HudFormat.Count(progress.MovesRemaining)));
+            Assert.That(Read<TMPro.TMP_Text>(stats, "scoreText").text, Is.EqualTo(HudFormat.Count(progress.Score)));
+            Assert.That(Read<TMPro.TMP_Text>(stats, "goalCountText").text, Is.EqualTo(HudFormat.Count(progress.GoalProgress)));
+            Assert.That(Read<TMPro.TMP_Text>(stats, "goalTotalText").text, Is.EqualTo(HudFormat.OutOf(progress.GoalTarget)));
+            Assert.That(fill.enabled, Is.True);
+            Assert.That(fill.rectTransform.anchorMax.x, Is.EqualTo((float)progress.GoalProgress / progress.GoalTarget).Within(.0001f));
+        }
+
+        [UnityTest]
         public IEnumerator CompactContent_ExpandedOrScaled_RecoversWithUnchangedCellSize([Values(700, 1080)] int width)
         {
             var layout = hud.GetComponentInParent<SafeAreaLayout>();
