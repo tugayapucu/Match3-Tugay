@@ -36,7 +36,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(hud.Moves.text, Is.EqualTo("20"));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/25"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 25"));
             Assert.That(hud.GoalIcon.sprite, Is.SameAs(TestTiles.SpriteFor(TileType.Red)));
             Assert.That(hud.OutcomePanel.activeSelf, Is.False);
         }
@@ -51,7 +52,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(hud.Moves.text, Is.EqualTo("19"));
             Assert.That(hud.Score.text, Is.EqualTo("300"));
-            Assert.That(hud.Goal.text, Is.EqualTo("2/25"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("2"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 25"));
             Assert.That(hud.OutcomePanel.activeSelf, Is.False);
         }
 
@@ -66,7 +68,8 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.OutcomePanel.activeSelf, Is.True);
             Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
             Assert.That(hud.OutcomeScore.text, Is.EqualTo("300"));
-            Assert.That(hud.Goal.text, Is.EqualTo("3/3"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("3"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 3"));
         }
 
         [Test]
@@ -118,7 +121,8 @@ namespace Match3.Presentation.Tests
 
             Assert.Throws<InvalidOperationException>(() => hud.View.Show(new LevelProgress(9, TileType.Blue, 5, 100)));
             Assert.That(hud.Moves.text, Is.EqualTo("20"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/25"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 25"));
             Assert.That(hud.GoalIcon.sprite, Is.SameAs(TestTiles.SpriteFor(TileType.Red)));
         }
 
@@ -304,7 +308,11 @@ namespace Match3.Presentation.Tests
         // The stats view's own references are checked at the same startup point as LevelHudView's.
         [TestCase("movesText")]
         [TestCase("scoreText")]
-        [TestCase("goalText")]
+        [TestCase("goalCountText")]
+        [TestCase("goalTotalText")]
+        [TestCase("levelNumberText")]
+        [TestCase("levelTotalText")]
+        [TestCase("goalFill")]
         [TestCase("goalIcon")]
         public void Initialize_MissingStatsReference_Throws(string field)
         {
@@ -312,6 +320,57 @@ namespace Match3.Presentation.Tests
                 .SetValue(hud.Stats, null);
 
             Assert.Throws<InvalidOperationException>(() => hud.View.Initialize(() => { }, () => { }, () => { }));
+        }
+
+        [TestCase("MovesRemaining", -1)]
+        [TestCase("Score", -1)]
+        [TestCase("GoalProgress", -1)]
+        [TestCase("GoalTarget", 0)]
+        public void StatsView_RejectedFormatting_LeavesEveryValueAndFillUnchanged(string property, int value)
+        {
+            var original = new LevelProgress(20, TileType.Red, 25, 100);
+            original.ApplyValidMove(new ResolutionResult(new[] { TileType.Red }));
+            hud.View.SetLevel(2, 6);
+            hud.View.Show(original);
+            var invalid = new LevelProgress(7, TileType.Blue, 9, 50);
+            typeof(LevelProgress).GetField("<" + property + ">k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(invalid, value);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => hud.Stats.Show(invalid, TestTiles.SpriteFor(TileType.Blue)));
+
+            Assert.That(hud.Moves.text, Is.EqualTo("19"));
+            Assert.That(hud.Score.text, Is.EqualTo("100"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("1"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 25"));
+            Assert.That(hud.LevelNumber.text, Is.EqualTo("2"));
+            Assert.That(hud.LevelTotal.text, Is.EqualTo("/ 6"));
+            Assert.That(hud.GoalIcon.sprite, Is.SameAs(TestTiles.SpriteFor(TileType.Red)));
+            Assert.That(hud.GoalFill.enabled, Is.True);
+            Assert.That(hud.GoalFill.rectTransform.anchorMax, Is.EqualTo(new Vector2(1f / 25, 1)));
+        }
+
+        [TestCase(0, 6)]
+        [TestCase(7, 6)]
+        [TestCase(1, 0)]
+        [TestCase(1, -1)]
+        public void SetLevel_InvalidPair_LeavesBothTextsUnchanged(int number, int count)
+        {
+            hud.View.SetLevel(2, 6);
+            Assert.Throws<ArgumentOutOfRangeException>(() => hud.View.SetLevel(number, count));
+            Assert.That(hud.LevelNumber.text, Is.EqualTo("2"));
+            Assert.That(hud.LevelTotal.text, Is.EqualTo("/ 6"));
+        }
+
+        [Test]
+        public void SetLevel_UsesBothSuppliedValues_AndDoesNotChangeSessionValues()
+        {
+            hud.View.Show(new LevelProgress(20, TileType.Red, 25, 100));
+            hud.View.SetLevel(22, 22);
+            Assert.That(hud.LevelNumber.text, Is.EqualTo("22"));
+            Assert.That(hud.LevelTotal.text, Is.EqualTo("/ 22"));
+            Assert.That(hud.Moves.text, Is.EqualTo("20"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalFill.enabled, Is.False);
         }
 
         [Test]
@@ -322,7 +381,8 @@ namespace Match3.Presentation.Tests
             Assert.Throws<ArgumentNullException>(() => hud.Stats.Show(null, TestTiles.SpriteFor(TileType.Blue)));
             Assert.Throws<ArgumentNullException>(() => hud.Stats.Show(new LevelProgress(7, TileType.Blue, 9, 100), null));
             Assert.That(hud.Moves.text, Is.EqualTo("20"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/25"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 25"));
             Assert.That(hud.GoalIcon.sprite, Is.SameAs(TestTiles.SpriteFor(TileType.Red)));
         }
     }

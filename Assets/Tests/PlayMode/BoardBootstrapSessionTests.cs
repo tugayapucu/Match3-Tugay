@@ -46,7 +46,8 @@ namespace Match3.Presentation.Tests
             Assert.That(bootstrap.LevelProgress.Score, Is.Zero);
             Assert.That(bootstrap.LevelProgress.GoalProgress, Is.Zero);
             Assert.That(controller.SelectedPosition, Is.Null);
-            Assert.That(hud.Goal.text, Is.EqualTo("0/18"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 18"));
             AssertNoSelectionHighlights();
             AssertViewsMatchBoard();
 

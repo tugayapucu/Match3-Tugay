@@ -933,26 +933,74 @@ namespace Match3.Presentation.Tests
         }
 
         [UnityTest]
-        public IEnumerator Scene_StatsViewIsTheTopBarAndShowsTheSessionValues()
+        public IEnumerator Scene_StatsViewIsTheCompactPrefabAndShowsTheSessionValues()
         {
             var stats = Read<HudStatsView>(hud, "stats");
             Transform topBar = hud.GetComponentInParent<SafeAreaLayout>().TopBar;
-            Assert.That(stats.transform, Is.SameAs(topBar));
+            Transform compact = topBar.Find("CompactHud");
+            Assert.That(stats.transform, Is.SameAs(compact));
             var moves = Read<TMPro.TMP_Text>(stats, "movesText");
             var score = Read<TMPro.TMP_Text>(stats, "scoreText");
-            var goal = Read<TMPro.TMP_Text>(stats, "goalText");
+            var goal = Read<TMPro.TMP_Text>(stats, "goalCountText");
+            var total = Read<TMPro.TMP_Text>(stats, "goalTotalText");
             var icon = Read<Image>(stats, "goalIcon");
-            Assert.That(moves.transform, Is.SameAs(topBar.Find("MovesGroup/MovesText")));
-            Assert.That(score.transform, Is.SameAs(topBar.Find("ScoreGroup/ScoreText")));
-            Assert.That(goal.transform, Is.SameAs(topBar.Find("GoalGroup/GoalRow/GoalText")));
-            Assert.That(icon.transform, Is.SameAs(topBar.Find("GoalGroup/GoalRow/GoalIcon")));
+            Assert.That(moves.transform, Is.SameAs(compact.Find("Content/Moves/Value")));
+            Assert.That(score.transform, Is.SameAs(compact.Find("Content/Score/Value")));
+            Assert.That(goal.transform, Is.SameAs(compact.Find("Content/Goal/Data/Values/Count")));
+            Assert.That(icon.transform, Is.SameAs(compact.Find("Content/Goal/Halo/Icon")));
 
             LevelProgress progress = bootstrap.LevelProgress;
             Assert.That(moves.text, Is.EqualTo(progress.MovesRemaining.ToString()));
             Assert.That(score.text, Is.EqualTo(progress.Score.ToString()));
-            Assert.That(goal.text, Is.EqualTo($"{progress.GoalProgress}/{progress.GoalTarget}"));
+            Assert.That(goal.text, Is.EqualTo(HudFormat.Count(progress.GoalProgress)));
+            Assert.That(total.text, Is.EqualTo(HudFormat.OutOf(progress.GoalTarget)));
+            var catalog = Read<LevelCatalog>(flow, "catalog");
+            Assert.That(Read<TMPro.TMP_Text>(stats, "levelNumberText").text,
+                Is.EqualTo(HudFormat.Count(flow.CurrentLevelIndex + 1)));
+            Assert.That(Read<TMPro.TMP_Text>(stats, "levelTotalText").text,
+                Is.EqualTo(HudFormat.OutOf(catalog.Count)));
             Assert.That(icon.sprite, Is.SameAs(Read<Sprite>(hud, progress.GoalTileType.ToString().ToLowerInvariant() + "GoalSprite")));
             yield break;
+        }
+
+        [UnityTest]
+        public IEnumerator CompactContent_ExpandedOrScaled_RecoversWithUnchangedCellSize([Values(700, 1080)] int width)
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            var content = (RectTransform)layout.TopBar.Find("CompactHud/Content");
+            var canvas = layout.GetComponentInParent<Canvas>();
+            float scale = canvas.scaleFactor;
+            float height = width == 1080 ? 1000 : Screen.height;
+            var area = new Rect((Screen.width - width) * .5f, 0, width, height);
+            layout.enabled = false;
+            layout.ApplyLayout(area, new Vector2Int(Screen.width, Screen.height), scale);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            yield return null;
+
+            var geometry = HudTierLayout.CompactHud(area.size / scale, layout.SideMargin);
+            Assert.That(geometry.Mode, Is.EqualTo(width == 1080 ? CompactHudMode.Expanded : CompactHudMode.Scaled));
+            Assert.That(content.rect.width, Is.EqualTo(722).Within(.01f));
+            Assert.That(content.localScale.x, Is.EqualTo(geometry.ContentScale));
+            Assert.That(layout.TopBar.rect.height, Is.EqualTo(112));
+            float expectedCell = Mathf.Min(width / scale - 96, height / scale - 360)
+                / BoardCameraFraming.BoardEnvelopeSize * scale;
+            Vector3 low = inputCamera.WorldToScreenPoint(new Vector3(-4, -4, 0));
+            Vector3 high = inputCamera.WorldToScreenPoint(new Vector3(4, 4, 0));
+            Assert.That((high.x - low.x) / 8, Is.EqualTo(expectedCell).Within(.01f));
+            AssertCameraFitAndPicking();
+
+            layout.ApplyLayout(Screen.safeArea, new Vector2Int(Screen.width, Screen.height), scale);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            yield return null;
+            Assert.That(content.localScale, Is.EqualTo(Vector3.one));
+            Assert.That(content.rect.width, Is.EqualTo(layout.TopBar.rect.width).Within(.01f));
+            Assert.That(layout.TopBar.rect.height, Is.EqualTo(112));
+            low = inputCamera.WorldToScreenPoint(new Vector3(-4, -4, 0));
+            high = inputCamera.WorldToScreenPoint(new Vector3(4, 4, 0));
+            Assert.That((high.x - low.x) / 8, Is.EqualTo(120).Within(.01f));
+            AssertCameraFitAndPicking();
         }
 
         private static T Read<T>(object target, string name)

@@ -8,6 +8,7 @@ namespace Match3.Presentation
     public sealed class SafeAreaLayout : MonoBehaviour
     {
         [SerializeField] private RectTransform topBar;
+        [SerializeField] private RectTransform compactContent;
         [SerializeField] private RectTransform bottomControls;
         [SerializeField] private RectTransform menuButton;
         [SerializeField] private RectTransform restartButton;
@@ -36,6 +37,11 @@ namespace Match3.Presentation
             if (canvas == null || topBar == null || bottomControls == null)
             {
                 throw new InvalidOperationException("Assign a Canvas, TopBar and BottomControls to SafeAreaLayout.");
+            }
+
+            if (compactContent == null || compactContent == topBar || !compactContent.IsChildOf(topBar))
+            {
+                throw new InvalidOperationException("Assign the Compact HUD content inside TopBar to SafeAreaLayout.");
             }
 
             // The buttons are sized here but must sit in the row the fitter reads, or the board could overlap them.
@@ -100,10 +106,12 @@ namespace Match3.Presentation
             CompactHudGeometry hud = HudTierLayout.CompactHud(safeSize, sideMargin);
             ControlsGeometry row = HudTierLayout.FitControls(tier.Tier, safeSize.x);
 
-            // Only the width varies; the height the fitter reads stays the tier's. hud.ContentScale has no content
-            // to scale until the Compact HUD content exists.
+            // The shell and the rectangle the fitter reads stay full-height. Only the content scales;
+            // always assign the scale, including 1 on recovery from a narrow SafeArea.
             topBar.anchoredPosition = new Vector2(0f, -tier.TopOffset);
             topBar.sizeDelta = new Vector2(hud.Width, tier.HudHeight);
+            compactContent.sizeDelta = new Vector2(hud.ContentWidth, tier.HudHeight);
+            compactContent.localScale = new Vector3(hud.ContentScale, hud.ContentScale, 1f);
 
             // The scene anchors Menu to the row's left edge and Restart to its right edge, so the gap is what
             // remains between them.

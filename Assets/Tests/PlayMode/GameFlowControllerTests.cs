@@ -47,6 +47,12 @@ namespace Match3.Presentation.Tests
             bootstrapObject.SetActive(true);
         }
 
+        private void AssertFlowLevelDisplay(int expectedIndex)
+        {
+            Assert.That(hud.LevelNumber.text, Is.EqualTo(HudFormat.Count(expectedIndex + 1)));
+            Assert.That(hud.LevelTotal.text, Is.EqualTo(HudFormat.OutOf(flowCatalog.Count)));
+        }
+
         [TearDown]
         public void CleanFlowPreferences()
         {
@@ -75,6 +81,7 @@ namespace Match3.Presentation.Tests
             Assert.That(menu.Background.activeSelf || menu.Controls.activeSelf, Is.False);
             var board = CurrentBoard();
             Assert.That(flow.CurrentLevelIndex, Is.EqualTo(expected == 2 ? 0 : expected));
+            AssertFlowLevelDisplay(expected == flowCatalog.Count ? 0 : expected); // Play, Continue or completed replay.
             Assert.That(bootstrap.LevelProgress.GoalTileType, Is.EqualTo(flowCatalog[flow.CurrentLevelIndex].GoalTileType));
             Assert.That(flow.Play(), Is.False);
             Assert.That(CurrentBoard(), Is.SameAs(board));
@@ -182,6 +189,7 @@ namespace Match3.Presentation.Tests
             Assert.That(CurrentBoard(), Is.SameAs(nextBoard), "A duplicate outcome click cannot start another session.");
             Assert.That(flow.Next(), Is.False);
             Assert.That(flow.CurrentLevelIndex, Is.EqualTo(1));
+            AssertFlowLevelDisplay(1); // Next after the accepted win.
             Assert.That(CurrentBoard(), Is.Not.SameAs(board));
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1), "Next navigates; it does not save.");
         }
@@ -200,12 +208,14 @@ namespace Match3.Presentation.Tests
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));
             Assert.That(flow.Retry(), Is.True);
             Assert.That(flow.Retry(), Is.False);
+            AssertFlowLevelDisplay(1);
             Assert.That(CurrentBoard(), Is.Not.SameAs(board));
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             var retry = CurrentBoard();
             Assert.That(flow.Restart(), Is.True);
             Assert.That(flow.Confirm(), Is.True);
             Assert.That(CurrentBoard(), Is.Not.SameAs(retry));
+            AssertFlowLevelDisplay(1); // Confirmed Restart retains the current level.
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
             Assert.That(flow.ReturnToMenu(), Is.True);
             Assert.That(flow.Confirm(), Is.True);
@@ -216,6 +226,7 @@ namespace Match3.Presentation.Tests
             Assert.That(flow.ReturnToMenu(), Is.False);
             Assert.That(flow.Play(), Is.True);
             Assert.That(ReadTiles(), Is.EqualTo(tiles));
+            AssertFlowLevelDisplay(1); // Continue after returning to the menu.
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(1));
             yield return null;
             AssertViewsMatchBoard();
@@ -247,10 +258,12 @@ namespace Match3.Presentation.Tests
             PrepareFlow(2); InitializeFlow(); flow.Play();
             yield return null;
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
+            AssertFlowLevelDisplay(0);
             ReportValidMove(TileType.Red);
             Assert.That(flow.Progression, Is.EqualTo(2));
             Assert.That(flow.Next(), Is.True);
             Assert.That(flow.CurrentLevelIndex, Is.EqualTo(1));
+            AssertFlowLevelDisplay(flowCatalog.Count - 1);
             ReportValidMove(TileType.Blue);
             Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Outcome));
             Assert.That(hud.OutcomeAction.text, Is.EqualTo("Play Again"));
@@ -259,6 +272,7 @@ namespace Match3.Presentation.Tests
             hud.PlayAgain.onClick.Invoke();
             Assert.That(flow.PlayAgain(), Is.False);
             Assert.That(flow.CurrentLevelIndex, Is.Zero);
+            AssertFlowLevelDisplay(0); // Final Play Again returns to the first catalog entry.
             Assert.That(PlayerPrefs.GetInt(flowKey), Is.EqualTo(2));
             Assert.That(flow.ReturnToMenu(), Is.True);
             Assert.That(flow.Confirm(), Is.True);

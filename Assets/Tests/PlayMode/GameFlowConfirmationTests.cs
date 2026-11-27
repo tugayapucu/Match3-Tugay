@@ -60,7 +60,8 @@ namespace Match3.Presentation.Tests
             Assert.That(progress.GoalProgress, Is.Zero);
             Assert.That(hud.Moves.text, Is.EqualTo("1"));
             Assert.That(hud.Score.text, Is.EqualTo("100"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/1"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 1"));
             Assert.That(controller.enabled, Is.True);
             Assert.That(controller.SelectedPosition, Is.EqualTo(selected));
             Assert.That(cue.activeSelf, Is.True);
@@ -100,6 +101,7 @@ namespace Match3.Presentation.Tests
             if (intent == ConfirmationIntent.Restart)
             {
                 Assert.That(flow.Mode, Is.EqualTo(GameFlowMode.Playing));
+                AssertFlowLevelDisplay(1);
                 Assert.That(CurrentBoard(), Is.Not.SameAs(board));
                 Assert.That(bootstrap.LevelProgress, Is.Not.SameAs(progress));
                 Assert.That(StartingSnapshot(), Is.Not.SameAs(snapshot));

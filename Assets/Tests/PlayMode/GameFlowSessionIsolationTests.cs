@@ -227,7 +227,8 @@ namespace Match3.Presentation.Tests
             Assert.That(bootstrap.LevelProgress.GoalProgress, Is.Zero);
             Assert.That(bootstrap.LevelProgress.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(hud.Moves.text, Is.EqualTo(level.StartingMoveCount.ToString()));
-            Assert.That(hud.Goal.text, Is.EqualTo($"0/{level.GoalTarget}"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo(HudFormat.OutOf(level.GoalTarget)));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
             Assert.That(hud.OutcomePanel.activeSelf, Is.False);
             Assert.That(prompt.Background.activeSelf || prompt.Card.activeSelf, Is.False);

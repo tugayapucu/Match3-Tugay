@@ -185,6 +185,7 @@ namespace Match3.Presentation
         {
             // Build first; bad configuration must not change the current flow state.
             bootstrap.StartLevel(catalog[index], HandleLevelEnded);
+            hud.SetLevel(index + 1, catalog.Count);
             CurrentLevelIndex = index;
             PendingConfirmation = null;
             Mode = GameFlowMode.Playing;

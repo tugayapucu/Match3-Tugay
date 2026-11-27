@@ -25,6 +25,8 @@ namespace Match3.Presentation.Tests
             topBar.pivot = new Vector2(0.5f, 1f);
             topBar.anchoredPosition = new Vector2(0f, -24f);
             topBar.sizeDelta = new Vector2(1008f, 112f);
+            var content = CreateRect("Content", topBar);
+            content.sizeDelta = new Vector2(1008f, 112f);
 
             var controls = CreateRect("BottomControls", hud);
             controls.anchorMin = controls.anchorMax = new Vector2(0.5f, 0f);
@@ -48,6 +50,7 @@ namespace Match3.Presentation.Tests
 
             layout = safeRoot.gameObject.AddComponent<SafeAreaLayout>();
             Set("topBar", topBar);
+            Set("compactContent", content);
             Set("bottomControls", controls);
             Set("menuButton", menu);
             Set("restartButton", restart);
@@ -157,7 +160,7 @@ namespace Match3.Presentation.Tests
             broken.SetActive(false);
             broken.transform.SetParent(canvasObject.transform, false);
             var brokenLayout = broken.AddComponent<SafeAreaLayout>();
-            foreach (string name in new[] { "topBar", "bottomControls", "menuButton", "restartButton" })
+            foreach (string name in new[] { "topBar", "compactContent", "bottomControls", "menuButton", "restartButton" })
             {
                 Copy(name, brokenLayout);
             }
@@ -194,6 +197,47 @@ namespace Match3.Presentation.Tests
             Assert.That(right.xMin - left.xMax, Is.EqualTo(gap).Within(0.001f));
             Assert.That(left.yMin, Is.EqualTo(row.yMin).Within(0.001f));
             Assert.That(right.yMin, Is.EqualTo(row.yMin).Within(0.001f));
+        }
+
+        [TestCase(1080, 1200, CompactHudMode.Aligned)]
+        [TestCase(1080, 1000, CompactHudMode.Expanded)]
+        [TestCase(700, 1920, CompactHudMode.Scaled)]
+        [TestCase(1080, 200, CompactHudMode.Expanded)]
+        public void Content_FollowsTheWidthContract_AndRecoversWithoutChangingReservedHeight(
+            int width, int height, CompactHudMode expectedMode)
+        {
+            var screen = new Vector2Int(1080, 1920);
+            var area = new Rect((1080 - width) * .5f, 0, width, height);
+            layout.ApplyLayout(area, screen, 1);
+            var content = (RectTransform)layout.TopBar.Find("Content");
+            var geometry = HudTierLayout.CompactHud(area.size, layout.SideMargin);
+            Assert.That(geometry.Mode, Is.EqualTo(expectedMode));
+            Assert.That(content.sizeDelta, Is.EqualTo(new Vector2(geometry.ContentWidth, 112)));
+            Assert.That(content.localScale, Is.EqualTo(new Vector3(geometry.ContentScale, geometry.ContentScale, 1)));
+            Assert.That(content.rect.width * content.localScale.x, Is.EqualTo(layout.TopBar.rect.width).Within(.001f));
+            Assert.That(layout.TopBar.rect.height, Is.EqualTo(112));
+
+            layout.ApplyLayout(new Rect(0, 0, 1080, 1920), screen, 1);
+            Assert.That(content.localScale, Is.EqualTo(Vector3.one));
+            Assert.That(content.rect.width, Is.EqualTo(1008).Within(.001f));
+            Assert.That(content.rect.height, Is.EqualTo(112));
+            Assert.That(layout.TopBar.rect.height, Is.EqualTo(112));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Awake_WithoutContentInsideTopBar_Throws(bool missing)
+        {
+            var broken = new GameObject("BrokenContentLayout", typeof(RectTransform));
+            broken.SetActive(false);
+            broken.transform.SetParent(canvasObject.transform, false);
+            var target = broken.AddComponent<SafeAreaLayout>();
+            foreach (string field in new[] { "topBar", "bottomControls", "menuButton", "restartButton" }) Copy(field, target);
+            typeof(SafeAreaLayout).GetField("compactContent", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(target, missing ? null : broken.transform);
+            LogAssert.Expect(LogType.Exception, new Regex("InvalidOperationException: Assign the Compact HUD content inside TopBar"));
+            broken.SetActive(true);
+            Object.DestroyImmediate(broken);
         }
 
         private void Copy(string field, SafeAreaLayout target)

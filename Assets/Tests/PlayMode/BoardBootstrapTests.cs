@@ -117,7 +117,8 @@ namespace Match3.Presentation.Tests
             Assert.That(controller.enabled, Is.True);
             Assert.That(hud.Moves.text, Is.EqualTo("7"));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/12"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 12"));
             Assert.That(hud.OutcomePanel.activeSelf, Is.False);
             Assert.That(hud.Restart.interactable, Is.True);
         }
@@ -150,7 +151,8 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.Moves.text, Is.EqualTo("4"));
             Assert.That(level.Score, Is.GreaterThan(0));
             Assert.That(hud.Score.text, Is.EqualTo(level.Score.ToString()));
-            Assert.That(hud.Goal.text, Is.EqualTo($"{level.GoalProgress}/50"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo(HudFormat.Count(level.GoalProgress)));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 50"));
         }
 
         [UnityTest]
@@ -170,7 +172,8 @@ namespace Match3.Presentation.Tests
             Assert.That(hud.Restart.interactable, Is.True);
             Assert.That(hud.Moves.text, Is.EqualTo("5"));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
-            Assert.That(hud.Goal.text, Is.EqualTo("0/50"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 50"));
         }
 
         [UnityTest]
@@ -260,7 +263,8 @@ namespace Match3.Presentation.Tests
             AssertNoSelectionHighlights();
             Assert.That(hud.OutcomePanel.activeSelf, Is.True);
             Assert.That(hud.OutcomeTitle.text, Is.EqualTo("Level Complete!"));
-            Assert.That(hud.Goal.text, Is.EqualTo("3/3"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("3"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo("/ 3"));
         }
 
         [UnityTest]
@@ -798,7 +802,8 @@ namespace Match3.Presentation.Tests
 
             Assert.That(hud.Moves.text, Is.EqualTo(startingMoveCount.ToString()));
             Assert.That(hud.Score.text, Is.EqualTo("0"));
-            Assert.That(hud.Goal.text, Is.EqualTo($"0/{level.GoalTarget}"));
+            Assert.That(hud.GoalCount.text, Is.EqualTo("0"));
+            Assert.That(hud.GoalTotal.text, Is.EqualTo(HudFormat.OutOf(level.GoalTarget)));
             Assert.That(hud.OutcomePanel.activeSelf, Is.False, "A fresh level hides the outcome panel.");
             Assert.That(hud.Restart.interactable, Is.True);
 

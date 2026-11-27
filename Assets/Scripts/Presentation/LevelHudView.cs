@@ -12,7 +12,7 @@ namespace Match3.Presentation
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class LevelHudView : MonoBehaviour
     {
-        // Writes moves, score, goal count and goal icon; this view picks the goal sprite and decides when.
+        // Writes level and progress values; this view picks the goal sprite and decides when.
         [SerializeField] private HudStatsView stats;
         [SerializeField] private Button restartButton;
         [SerializeField] private Button gameplayMenuButton;
@@ -204,6 +204,12 @@ namespace Match3.Presentation
         private void HandleMenuClicked()
         {
             onMenuRequested?.Invoke();
+        }
+
+        // Flow supplies the one-based catalog position and total; this only forwards display values.
+        public void SetLevel(int number, int count)
+        {
+            stats.ShowLevel(number, count);
         }
 
         // Flow knows the catalog position; this view does not decide whether the final level was won.
