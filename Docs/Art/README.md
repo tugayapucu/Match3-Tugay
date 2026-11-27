@@ -44,6 +44,18 @@ Compact use. Unity's Linear-space blending can differ from the sRGB previews;
 stretched seams, edge appearance and very small fill fractions still need the 5.5
 visual review. Import alone does not bind these sprites to the scene.
 
+**Compact consumer (18.2 Step 5.5):** `Assets/Prefabs/CompactHud.prefab` uses the shell,
+shadow, track and fill as sliced Images with `pixelsPerUnitMultiplier = 1`, preserving
+the source-to-Canvas border sizes above. The halo is a simple 80 u Image around the
+original 72 u goal gem. All decorative Images and TMP texts have raycast targets off.
+The shell stays 112 u tall; only its contents scale below the 722 u layout minimum.
+Actual-resolution Linear-space captures, short-screen shadow overlap and zero / 1/30 /
+half / complete fills were inspected in `Builds/Validation/Phase18Step2/step5_5/`;
+the base appearance and geometry have human approval. The approved MOVES-only
+character-spacing refinement (10 to 5) and settled-button recaptures are recorded in
+`step5_5/review-corrections/`, independently reviewed and approved by Claude.
+No source sprites or font assets were changed by the consumer step.
+
 ## Phase 18 — Fredoka font (HUD and gameplay controls)
 
 **Fredoka** by Milena Brandão and Hafontia, "Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)", licensed under the **SIL Open Font License 1.1** with no Reserved Font Name. The licence is kept beside the fonts as `Assets/Fonts/Fredoka/OFL.txt`.
