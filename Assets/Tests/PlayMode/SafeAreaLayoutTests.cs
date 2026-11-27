@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -115,6 +116,100 @@ namespace Match3.Presentation.Tests
             Assert.That(playAgain.rect.xMax, Is.LessThan(card.rect.xMax));
             Assert.That(playAgain.rect.yMin, Is.GreaterThan(card.rect.yMin));
             Assert.That(playAgain.rect.yMax, Is.LessThan(card.rect.yMax));
+        }
+
+        // Expanded (short board), Scaled-width bar (content scaling arrives with the Compact HUD content), and a
+        // row below the 220 u button minimum that still fits.
+        [TestCase(0, 460, 1080, 1000, 722f, 340f, TestName = "Expanded_1080x1000")]
+        [TestCase(190, 0, 700, 1920, 628f, 298f, TestName = "NarrowBar_700x1920")]
+        [TestCase(290, 0, 500, 1920, 428f, 198f, TestName = "BelowButtonMinimum_500x1920")]
+        public void CompactModes_SizeTheBarAndTheRow(int x, int y, int width, int height, float barWidth, float buttonWidth)
+        {
+            var safeArea = new Rect(x, y, width, height);
+            layout.ApplyLayout(safeArea, new Vector2Int(1080, 1920), 1f);
+
+            Assert.That(layout.TopBar.sizeDelta, Is.EqualTo(new Vector2(barWidth, 112f)));
+            Assert.That(layout.TopBar.anchoredPosition, Is.EqualTo(new Vector2(0f, -24f)));
+            AssertRow(buttonWidth);
+            Assert.That(barWidth, Is.LessThanOrEqualTo(width - 2f * HudTierLayout.HudSideMargin));
+            Assert.That(layout.BottomControls.sizeDelta.x, Is.LessThanOrEqualTo(width - 2f * HudTierLayout.HudSideMargin));
+        }
+
+        [Test]
+        public void ApplyLayout_AfterANarrowSafeArea_ReturnsToTheFullLayout()
+        {
+            layout.ApplyLayout(new Rect(290, 0, 500, 1920), new Vector2Int(1080, 1920), 1f);
+            layout.ApplyLayout(new Rect(0, 0, 1080, 1920), new Vector2Int(1080, 1920), 1f);
+
+            // 8.4 cells of 120 u: float rounding can give 1008.0001.
+            Assert.That(layout.TopBar.sizeDelta.x, Is.EqualTo(1008f).Within(0.001f));
+            Assert.That(layout.TopBar.sizeDelta.y, Is.EqualTo(112f));
+            AssertRow(340f);
+        }
+
+        [TestCase("menuButton", true, TestName = "MissingMenu")]
+        [TestCase("restartButton", true, TestName = "MissingRestart")]
+        [TestCase("menuButton", false, TestName = "MenuOutsideTheRow")]
+        [TestCase("restartButton", false, TestName = "RestartOutsideTheRow")]
+        public void Awake_WithoutBothButtonsInsideTheRow_Throws(string field, bool missing)
+        {
+            var broken = new GameObject("BrokenLayout", typeof(RectTransform));
+            broken.SetActive(false);
+            broken.transform.SetParent(canvasObject.transform, false);
+            var brokenLayout = broken.AddComponent<SafeAreaLayout>();
+            foreach (string name in new[] { "topBar", "bottomControls", "menuButton", "restartButton" })
+            {
+                Copy(name, brokenLayout);
+            }
+            var outside = (RectTransform)new GameObject("Outside", typeof(RectTransform)).transform;
+            outside.SetParent(broken.transform, false);
+            typeof(SafeAreaLayout).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(brokenLayout, missing ? null : outside);
+
+            LogAssert.Expect(LogType.Exception,
+                new Regex("InvalidOperationException: Assign the Menu and Restart buttons inside BottomControls"));
+            broken.SetActive(true);
+            // Removed before the next frame, so a broken layout never runs Update.
+            Object.DestroyImmediate(broken);
+        }
+
+        // Menu sits on the row's left edge and Restart on its right edge; the tier's gap is what is left between.
+        private void AssertRow(float buttonWidth)
+        {
+            var controls = layout.BottomControls;
+            var menu = (RectTransform)controls.Find("MenuButton");
+            var restart = (RectTransform)controls.Find("RestartButton");
+            float gap = HudTierLayout.Compact.ButtonGap;
+
+            Assert.That(controls.sizeDelta, Is.EqualTo(new Vector2(2f * buttonWidth + gap, 112f)));
+            Assert.That(controls.anchoredPosition, Is.EqualTo(new Vector2(0f, 48f)));
+            Assert.That(menu.sizeDelta, Is.EqualTo(new Vector2(buttonWidth, 112f)));
+            Assert.That(restart.sizeDelta, Is.EqualTo(new Vector2(buttonWidth, 112f)));
+
+            Rect row = controls.rect;
+            Rect left = LocalRect(menu, controls);
+            Rect right = LocalRect(restart, controls);
+            Assert.That(left.xMin, Is.EqualTo(row.xMin).Within(0.001f));
+            Assert.That(right.xMax, Is.EqualTo(row.xMax).Within(0.001f));
+            Assert.That(right.xMin - left.xMax, Is.EqualTo(gap).Within(0.001f));
+            Assert.That(left.yMin, Is.EqualTo(row.yMin).Within(0.001f));
+            Assert.That(right.yMin, Is.EqualTo(row.yMin).Within(0.001f));
+        }
+
+        private void Copy(string field, SafeAreaLayout target)
+        {
+            FieldInfo info = typeof(SafeAreaLayout).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic);
+            info.SetValue(target, info.GetValue(layout));
+        }
+
+        // A child's rect in its parent's local space (no rotation or scale in this fixture).
+        private static Rect LocalRect(RectTransform child, RectTransform parent)
+        {
+            var corners = new Vector3[4];
+            child.GetWorldCorners(corners);
+            Vector3 min = parent.InverseTransformPoint(corners[0]);
+            Vector3 max = parent.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         private void Set(string field, RectTransform value)

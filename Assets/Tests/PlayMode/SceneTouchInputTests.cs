@@ -353,6 +353,8 @@ namespace Match3.Presentation.Tests
             LogAssert.Expect(LogType.Warning,
                 "Board camera fitting paused: the HUD and bottom controls leave no room. Keeping the current camera until the layout changes.");
             layout.ApplyLayout(new Rect(0f, 0f, Screen.width, 200f * scale), screenSize, scale);
+            // No room for the board: the bar keeps its minimum content width and its full height.
+            Assert.That(layout.TopBar.rect.size, Is.EqualTo(new Vector2(HudTierLayout.CompactMinContentWidth, 112f)));
             for (int frame = 0; frame < 4; frame++)
             {
                 yield return null;
@@ -372,9 +374,166 @@ namespace Match3.Presentation.Tests
             inputCamera.orthographicSize = 77f;
             inputCamera.transform.position = new Vector3(12f, 13f, previousPosition.z);
             layout.ApplyLayout(Screen.safeArea, screenSize, scale);
+            CompactHudGeometry recovered = HudTierLayout.CompactHud(Screen.safeArea.size / scale, layout.SideMargin);
+            Assert.That(recovered.Mode, Is.EqualTo(CompactHudMode.Aligned));
+            Assert.That(recovered.ContentScale, Is.EqualTo(1f));
+            Assert.That(layout.TopBar.rect.width, Is.EqualTo(recovered.Width).Within(0.001f));
+            Assert.That(layout.TopBar.rect.height, Is.EqualTo(112f));
             yield return null;
             yield return null;
             AssertCameraFitAndPicking();
+        }
+
+        // Compact reserves exactly the height the old 96 u bar and 128 u buttons did, so every cell keeps its size:
+        // 120 px at 1080x1920 and 95.61 px with the 120/90 inset (an 880x1730 SafeArea).
+        [UnityTest]
+        public IEnumerator CameraFit_KeepsTheCellSizeOfThePreviousLayout([Values(false, true)] bool inset)
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            float scale = layout.GetComponentInParent<Canvas>().scaleFactor;
+            Rect safe = inset ? new Rect(120f, 90f, Screen.width - 200f, Screen.height - 190f) : Screen.safeArea;
+            layout.enabled = false;
+            layout.ApplyLayout(safe, new Vector2Int(Screen.width, Screen.height), scale);
+            yield return null;
+
+            const float PreviousReservedHeight = 24f + 96f + 48f + 128f + 2f * SafeAreaLayout.BoardControlGap;
+            float expected = Mathf.Min(safe.width / scale - 2f * layout.SideMargin, safe.height / scale - PreviousReservedHeight)
+                / BoardCameraFraming.BoardEnvelopeSize * scale;
+            Vector3 low = inputCamera.WorldToScreenPoint(new Vector3(-4f, -4f, 0f));
+            Vector3 high = inputCamera.WorldToScreenPoint(new Vector3(4f, 4f, 0f));
+            Assert.That((high.x - low.x) / 8f, Is.EqualTo(expected).Within(0.01f));
+            Assert.That((high.y - low.y) / 8f, Is.EqualTo(expected).Within(0.01f));
+            if (Screen.width == 1080 && Screen.height == 1920)
+            {
+                Assert.That(expected, Is.EqualTo(inset ? 95.609756f : 120f).Within(0.001f));
+            }
+            AssertCameraFitAndPicking();
+        }
+
+        [UnityTest]
+        public IEnumerator Scene_ButtonRowUsesTheHudButtons_EdgeAligned_WithTheirStyleKept()
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            var menu = Read<RectTransform>(layout, "menuButton");
+            var restart = Read<RectTransform>(layout, "restartButton");
+            Assert.That(menu, Is.SameAs(Read<Button>(hud, "gameplayMenuButton").transform));
+            Assert.That(restart, Is.SameAs(Read<Button>(hud, "restartButton").transform));
+
+            Assert.That(menu.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(menu.anchorMax, Is.EqualTo(Vector2.zero));
+            Assert.That(menu.pivot, Is.EqualTo(Vector2.zero));
+            Assert.That(menu.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(restart.anchorMin, Is.EqualTo(new Vector2(1f, 0f)));
+            Assert.That(restart.anchorMax, Is.EqualTo(new Vector2(1f, 0f)));
+            Assert.That(restart.pivot, Is.EqualTo(new Vector2(1f, 0f)));
+            Assert.That(restart.anchoredPosition, Is.EqualTo(Vector2.zero));
+
+            Rect row = ScreenRect(layout.BottomControls);
+            Rect left = ScreenRect(menu);
+            Rect right = ScreenRect(restart);
+            float scale = layout.GetComponentInParent<Canvas>().scaleFactor;
+            Assert.That(left.xMin, Is.EqualTo(row.xMin).Within(0.1f));
+            Assert.That(right.xMax, Is.EqualTo(row.xMax).Within(0.1f));
+            Assert.That((right.xMin - left.xMax) / scale, Is.EqualTo(HudTierLayout.Compact.ButtonGap).Within(0.1f));
+
+            foreach (RectTransform button in new[] { menu, restart })
+            {
+                var image = button.GetComponent<Image>();
+                Assert.That(image.color, Is.EqualTo(new Color(0.95f, 0.55f, 0.2f, 1f)), button.name);
+                Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), button.name);
+                Assert.That(button.GetComponent<Button>().transition, Is.EqualTo(Selectable.Transition.ColorTint), button.name);
+                var label = button.GetComponentInChildren<TMPro.TMP_Text>();
+                Assert.That(label.enableAutoSizing, Is.True, button.name);
+                Assert.That(label.fontSizeMin, Is.EqualTo(24f), button.name);
+                Assert.That(label.fontSizeMax, Is.EqualTo(32f), button.name);
+                Assert.That(label.textWrappingMode, Is.EqualTo(TMPro.TextWrappingModes.NoWrap), button.name);
+                label.ForceMeshUpdate();
+                Assert.That(label.fontSize, Is.EqualTo(32f), button.name + ": full-size buttons keep the 32 u label.");
+            }
+            yield break;
+        }
+
+        // Labels are checked by their drawn glyph quads (the mesh TMP renders, SDF padding included), not by
+        // textBounds, which follows the advance width. At the 220 u button minimum (a 544 u SafeArea) both labels
+        // keep 32 u, fit on one line and draw entirely inside their buttons.
+        [UnityTest]
+        public IEnumerator MinimumWidthButtons_LabelsDrawInsideTheirButtons()
+        {
+            yield return ApplyCenteredSafeArea(544f);
+
+            foreach (string field in new[] { "gameplayMenuButton", "restartButton" })
+            {
+                RectTransform button = (RectTransform)Read<Button>(hud, field).transform;
+                Assert.That(button.rect.width, Is.EqualTo(HudTierLayout.MinButtonWidth).Within(0.001f), field);
+                var label = button.GetComponentInChildren<TMPro.TMP_Text>();
+                Assert.That(label.fontSize, Is.EqualTo(32f), field);
+                Assert.That(label.textInfo.lineCount, Is.EqualTo(1), field);
+                Rect quads = DrawnGlyphs(label, button);
+                Rect inside = button.rect;
+                Assert.That(quads.xMin, Is.GreaterThanOrEqualTo(inside.xMin), field);
+                Assert.That(quads.xMax, Is.LessThanOrEqualTo(inside.xMax), field);
+                Assert.That(quads.yMin, Is.GreaterThanOrEqualTo(inside.yMin), field);
+                Assert.That(quads.yMax, Is.LessThanOrEqualTo(inside.yMax), field);
+            }
+        }
+
+        // Below the 220 u minimum the layout is unsupported: auto-size shrinks the label on one line, but it does not
+        // guarantee the drawn text fits. At 98 u buttons (a 300 u SafeArea) "Restart" auto-sizes to about 26.8 u and
+        // its Bold glyphs end about 0.9 u past the button edge. This records that behaviour; it claims no fit.
+        [UnityTest]
+        public IEnumerator BelowMinimumButtons_LabelsAutoSizeOnOneLine_WithoutAFitGuarantee()
+        {
+            yield return ApplyCenteredSafeArea(300f);
+
+            var restart = (RectTransform)Read<Button>(hud, "restartButton").transform;
+            Assert.That(restart.rect.width, Is.EqualTo(98f).Within(0.001f));
+            var label = restart.GetComponentInChildren<TMPro.TMP_Text>();
+            Assert.That(label.fontSize, Is.InRange(24f, 31.99f), "Restart auto-sizes down, no lower than 24 u.");
+            Assert.That(label.textInfo.lineCount, Is.EqualTo(1), "NoWrap keeps the label on one line.");
+            Rect quads = DrawnGlyphs(label, restart);
+            Assert.That(quads.width, Is.LessThan(restart.rect.width + 2f), "Measured overshoot stays about 1 u.");
+        }
+
+        private IEnumerator ApplyCenteredSafeArea(float canvasWidth)
+        {
+            var layout = hud.GetComponentInParent<SafeAreaLayout>();
+            float scale = layout.GetComponentInParent<Canvas>().scaleFactor;
+            layout.enabled = false;
+            layout.ApplyLayout(new Rect((Screen.width - canvasWidth * scale) * 0.5f, 0f, canvasWidth * scale, Screen.height),
+                new Vector2Int(Screen.width, Screen.height), scale);
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            foreach (string field in new[] { "gameplayMenuButton", "restartButton" })
+            {
+                Read<Button>(hud, field).GetComponentInChildren<TMPro.TMP_Text>().ForceMeshUpdate();
+            }
+        }
+
+        // The union of the visible characters' quads, in the button's local space. The label's text area is its own
+        // rect minus its margins; the label rect itself is the button rect (stretched, zero offsets), checked here.
+        private static Rect DrawnGlyphs(TMPro.TMP_Text label, RectTransform button)
+        {
+            Rect labelOnScreen = ScreenRect(label.rectTransform);
+            Rect buttonOnScreen = ScreenRect(button);
+            Assert.That(labelOnScreen.xMin, Is.EqualTo(buttonOnScreen.xMin).Within(0.1f), button.name);
+            Assert.That(labelOnScreen.xMax, Is.EqualTo(buttonOnScreen.xMax).Within(0.1f), button.name);
+            Assert.That(label.margin, Is.EqualTo(Vector4.zero), button.name + ": no margins, so the text area is the button.");
+
+            float xMin = float.MaxValue, yMin = float.MaxValue, xMax = float.MinValue, yMax = float.MinValue;
+            TMPro.TMP_TextInfo info = label.textInfo;
+            for (int i = 0; i < info.characterCount; i++)
+            {
+                TMPro.TMP_CharacterInfo character = info.characterInfo[i];
+                if (!character.isVisible) continue;
+                Vector3 low = button.InverseTransformPoint(label.transform.TransformPoint(character.vertex_BL.position));
+                Vector3 high = button.InverseTransformPoint(label.transform.TransformPoint(character.vertex_TR.position));
+                xMin = Mathf.Min(xMin, low.x);
+                yMin = Mathf.Min(yMin, low.y);
+                xMax = Mathf.Max(xMax, high.x);
+                yMax = Mathf.Max(yMax, high.y);
+            }
+            Assert.That(xMax, Is.GreaterThan(xMin), button.name + ": the label must draw visible characters.");
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
         }
 
         [UnityTest]
