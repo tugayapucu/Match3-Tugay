@@ -3,7 +3,7 @@
 **Status:** APPROVED for execution 2026-11-22 (human; ChatGPT and Codex reviews). Each step still stops for review; no build, upload, install or push without separate approval  
 **Project:** Galaxplode · Unity 6000.5.10f1 · Android portrait · six-level Match-3  
 **Date:** 2026-11-22  
-**Primary developer:** Claude · **Planning/review:** ChatGPT · **Independent review:** Codex (as requested)  
+**Primary developer:** Codex · **Planning/architecture/coordination:** ChatGPT · **Independent review:** Claude (human role change, 2026-11-27)
 **Human approval:** visual direction, scene edits, physical-device actions, build/signing, push, Play Console operations and release
 
 > **Planning basis:** The Phase 18 roadmap in `PLAN.md` §24, the Phase 17 handoff, the earlier Phase 18 draft, and Claude's 2026-11-22 repository inspection. Repo-specific statements below reflect **Claude's inspection report** and must be reconfirmed during Step 18.0. This document is a proposed execution plan, not authorization to implement or release anything.
@@ -337,6 +337,18 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 **Tests:** fixture updated in the same commit (bar 1008 / 864.59 × 112, row 712 × 112, HUD margin 36 u). New: Expanded, 700 and 500 wide bar and row sizes, edge alignment and gap, recovery to the full layout, missing or misplaced button references; in the scene, cell sizes of the previous layout, bar width during no-room (722 u) and after recovery (Aligned), button wiring and kept style, and label quads at 220 u and 98 u. EditMode **735 passed**; PlayMode **383 passed** (370 + 13), **3 explicit skips, 0 failed**.
 
 **Rollback:** revert `5c747ee` before `016ff92`; close Unity before reverting `016ff92` (it contains the open scene).
+
+## 18.2 Step 5.4 result — Compact HUD sprite import (2026-11-27)
+
+**Changed (independently reviewed by Claude; approved, no blocking findings):** generated the five PNGs into `Assets/Art/Hud/Compact/` using the already-committed `GenerateHudSprites.py` (`571b4c2`). Before requesting import, every PNG's SHA-256 matched `step5_4/run1/`; `run1/` and `run2/` also match. Unity created both folder metas (`Hud.meta`, `Hud/Compact.meta`) and five PNG metas. Exact dimensions, borders, hashes and the design-export SHA-256 are recorded in `Docs/Art/README.md`. This plan's role line now reflects the human's switch to Codex developer / Claude reviewer / ChatGPT planning.
+
+**Import and readback:** Sprite / Single, centered pivot, Full Rect, 200 PPU, `NPOTScale.None`, input alpha with Alpha Is Transparency, sRGB, no mipmaps, non-readable, Bilinear / Clamp, uncompressed, maximum 512; Android RGBA32 override at 512, uncompressed. Crunch and fallback physics shapes are off. Actual imported texture and sprite sizes equal the source sizes for all five; borders and pivots match. No scene, prefab, runtime, Core, ProjectSettings or TMP/font asset changes.
+
+**Tests:** `CompactHudSpriteImportTests` adds five parameterized EditMode cases covering the imported result and every setting above, including the absence of physics shapes. Focused **5/5 passed**. Full EditMode **740 passed** (735 + 5), **0 failed**, 8.93 s. Full PlayMode **383 passed, 3 explicit hardware-timing skips, 0 failed**, 104.67 s (unchanged). Android active and actual Game view **1080×1920** verified before the full suites and afterwards. No compilation errors. The final PlayMode Console contains four expected missing/misplaced-button exceptions declared by `SafeAreaLayoutTests`, the expected no-room camera warning declared by `SceneTouchInputTests.CameraFit_NoRoom_WarnsOnceKeepsCamera_AndRecoversWhenLayoutChanges`, and MCP / test-framework messages; no unexpected project errors. An MCP WebSocket warning appeared during the earlier EditMode runs.
+
+**Evidence:** importer readback, full-suite XML and job results, final Console and Editor state in `Builds/Validation/Phase18Step2/step5_4/` (ignored). Unity ended on clean `SampleScene`, Play Mode stopped, not compiling/updating, still `0.1.0 (4)`. No settings were restored through Git. No Android build or device/Console actions were performed. After Claude's approval, the human separately authorized three local commits (sprites/metas, import tests, documentation) and a push; check the exact staged diff immediately before each commit. Step 5.5 remains separately gated.
+
+**Risks / next gate:** these assets are not bound to the HUD until 5.5. Linear-space appearance, stretched seams and small fill fractions still require that visual gate; the shadow/track/fill are fixed-height Compact sprites. The 5.3 board shift and Expanded HUD still await final human visual acceptance. **Rollback before any consumer exists:** remove only this step's new sprites/metas and test/metafile, and revert its documentation changes; stop Unity before removing imported assets. Stop for separate 5.5 approval.
 
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
