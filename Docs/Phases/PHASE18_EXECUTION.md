@@ -314,6 +314,30 @@ The Main Menu (title, Play, Privacy Policy) fits inside the screen with no clipp
 
 **Tests:** fixture builds the stats view like the scene; missing `stats` and each missing stats reference fail at `Initialize`; null arguments leave the display unchanged; a scene test checks `stats` is the TopBar's and shows the session's values. EditMode **683 passed**; PlayMode **370 passed** (365 − 2 replaced cases + 7 new), **3 explicit skips, 0 failed**.
 
+## 18.2 Steps 5.1–5.2 result — HUD formatting and Compact geometry (2026-11-26)
+
+**Changed (pure Presentation code, no scene):** `HudFormat` (`708d581`, tests `e26d9ac`): invariant-culture counts, `"/ N"` totals and a goal fill clamped to 0–1; negative values are caller bugs and throw. `HudTierLayout` gains `CompactHud` and `FitControls` (`4ac9d8e`, tests `585b4e8`).
+
+**Compact width contract** (SafeArea W × H in Canvas units): cell c = min(W − 96, H − 360) / 8.2 only when both are positive, otherwise 0 (arithmetic only, never `ContentRegion` on unusable sizes); board panel P = 8.4c; widest HUD Wh = max(0, W − 72); minimum content width 722 u. **Aligned** when P ≥ 722 (W ≥ 800.8095… and H ≥ 1064.8095…): width P. **Expanded** when P < 722 and W ≥ 794: 722 u, wider than the panel (1080×1000, and the 200/220 u no-room cases). **Scaled** when W < 794: content laid out at 722 u and scaled by Wh / 722. The HUD height never changes. **Controls:** design size while it fits Wh (Compact / Regular / Tall from W 784 / 792 / 832); otherwise two equal buttons (Wh − gap) / 2 with gap and height kept; the 220 u minimum holds down to W 544 (Compact) / 552 (Regular, Tall); the row fits only while Wh ≥ gap, which is all it claims.
+
+**Tests (52 new):** boundaries derived from the constants, each below / at / above (the exact point asserts the 722 u width, not the mode); the approved matrix; ~433 000 SafeArea sizes; button thresholds, the floor and the narrower-than-gap case. EditMode **735 passed**; PlayMode **370 passed, 3 explicit skips, 0 failed**. Approved by Codex and ChatGPT with one correction: **rollback reverts each test commit before its code** (`585b4e8` before `4ac9d8e`, `e26d9ac` before `708d581`); the 5.1 and 5.2 pairs are independent.
+
+## 18.2 Step 5.3 result — Compact geometry in the scene (2026-11-27)
+
+**Changed:** `SafeAreaLayout` sizes the HUD from the Compact tier on every screen (tier selection still inactive): `TopBar` width from `CompactHud`, height 112 and offset −24, `BottomControls` from `FitControls` at offset +48, and both buttons' size; the 900 u rule is gone. New `menuButton` / `restartButton` references must be children of `BottomControls` or `Awake` throws. Content scale is not applied yet: there is no Compact content until 5.5, so **the finished Scaled layout is not validated**. `BoardCameraFitter`, Core, gameplay, progression, confirmation and outcome code are unchanged (`016ff92` code, scene and fixture; `5c747ee` tests).
+
+**Scene (the six approved operations only):** TopBar 900×96 → 1008×112; BottomControls 640×128 → 712×112; Menu anchored and pivoted bottom-left (0,0) and Restart bottom-right (1,0), both at position (0,0) and 340×112 (gap 32 u between them); both labels auto-size 24–32 u with NoWrap (font size 32, colour, sprite and ColorTint transition unchanged); the two layout references. Verified by a component dump before and after and by the scene diff.
+
+**Visible change:** the bar spans the board panel (1008 u at 1080 wide) and the buttons grow and move to the row edges. Cell sizes are unchanged in every case; **the board sits 16 u lower** (bar bottom 120 → 136, button top 176 → 160), accepted subject to visual review. The old Moves / Goal / Score groups stretch into the bar until 5.5.
+
+**Labels:** checked by their drawn glyph quads, not `textBounds`. At the 220 u minimum both stay 32 u on one line, inside their buttons. Below it there is no fit guarantee: at 98 u buttons "Restart" auto-sizes to 26.8 u but its Bold glyphs end 0.86 u past the button edge. Label margins could extend the fit and would need a separate approval.
+
+**Evidence** (`Builds/Validation/Phase18Step2/step5_3/`, ignored): before/after captures of Level 2's start in Play mode stepped frame by frame. These are **geometry simulations** (SafeAreas applied inside a 1080×1920 Game view: full, 880×1730 inset, 1080×1200, 1080×1000 Expanded, 700 wide), not actual-resolution renders; the actual-resolution matrix stays planned for 5.6. Measured cells 120 / 95.61 / 102.44 / 78.05 / 73.66 px before and after; board centre 16 px lower in each.
+
+**Tests:** fixture updated in the same commit (bar 1008 / 864.59 × 112, row 712 × 112, HUD margin 36 u). New: Expanded, 700 and 500 wide bar and row sizes, edge alignment and gap, recovery to the full layout, missing or misplaced button references; in the scene, cell sizes of the previous layout, bar width during no-room (722 u) and after recovery (Aligned), button wiring and kept style, and label quads at 220 u and 98 u. EditMode **735 passed**; PlayMode **383 passed** (370 + 13), **3 explicit skips, 0 failed**.
+
+**Rollback:** revert `5c747ee` before `016ff92`; close Unity before reverting `016ff92` (it contains the open scene).
+
 ## 5. Parallel Phase 17 work (independent of Phase 18)
 
 - Recruit **12 or more** independent eligible testers each continuously opted in for **14 days** before production-access application; prefer 15–20 for buffer and real feedback. Current checkpoint from the handoff: **1 non-owner opt-in**. Count is a time-sensitive operational fact and must be rechecked, not assumed unchanged.
